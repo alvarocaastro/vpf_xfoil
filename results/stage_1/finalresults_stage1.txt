@@ -1,0 +1,44 @@
+================================================================================
+STAGE 1: AUTOMATED AIRFOIL SELECTION - FINAL RESULTS
+================================================================================
+
+OBJECTIVE
+--------
+Compare multiple airfoil candidates under identical reference conditions
+and automatically select the best performing airfoil for turbofan fan
+blade applications based on aerodynamic efficiency, stall characteristics,
+and drag performance.
+
+METHODOLOGY
+-----------
+Reference Conditions:
+  - Mach Number: 0.2 (incompressible, XFOIL limitation)
+  - Reynolds Number: 3.0e6 (representative of fan blade conditions)
+  - Angle of Attack Range: -5.0° to 20.0°
+  - Alpha Step: 0.15°
+  - Ncrit: 7.0 (clean flow conditions)
+
+Selection Criteria:
+  - Maximum aerodynamic efficiency (CL/CD)
+  - Stall angle (angle at which lift drops significantly)
+  - Average drag coefficient (lower is better)
+
+SELECTED AIRFOIL
+---------------
+Selected Airfoil: NACA 65-410
+
+This airfoil was selected as the best candidate based on the combined
+scoring algorithm that weights maximum efficiency, stall characteristics,
+and drag performance.
+
+RESULTS LOCATION
+----------------
+Selection results: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_1\airfoil_selection
+Selected airfoil file: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_1\airfoil_selection\selected_airfoil.dat
+
+FILES GENERATED
+--------------
+- airfoil_selection/*_polar.txt: Polar data for each candidate airfoil
+- airfoil_selection/selected_airfoil.dat: Name of selected airfoil
+
+================================================================================

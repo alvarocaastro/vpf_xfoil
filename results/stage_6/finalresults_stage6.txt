@@ -1,0 +1,66 @@
+================================================================================
+STAGE 6: VARIABLE PITCH FAN (VPF) ANALYSIS - FINAL RESULTS
+================================================================================
+
+OBJECTIVE
+--------
+Analyze how optimal aerodynamic incidence varies across flight conditions
+and demonstrate how a Variable Pitch Fan (VPF) could maintain optimal
+efficiency by adjusting blade pitch to match changing flow conditions.
+
+PHYSICAL PRINCIPLE
+-----------------
+In a turbofan fan, the optimal angle of attack (alpha_opt) varies with:
+  - Flight condition (altitude, velocity, engine power)
+  - Blade section (root, mid-span, tip)
+  - Reynolds number
+
+A Variable Pitch Fan can adjust blade pitch to maintain optimal
+incidence, maximizing aerodynamic efficiency (CL/CD) across all
+operating conditions.
+
+METHODOLOGY
+-----------
+  - Compute optimal incidence (alpha_opt) for each condition/section
+    using the SECOND efficiency peak (alpha >= 3°)
+  - Use cruise condition as reference
+  - Calculate pitch adjustment: delta_pitch = alpha_opt_condition - alpha_opt_cruise
+  - Analyze efficiency improvements from optimal pitch
+
+
+KEY RESULTS
+-----------
+Optimal Angle of Attack (alpha_opt):",
+  - Average: 6.52°",
+  - Range: 5.35° to 7.30°",
+  - Maximum Efficiency (CL/CD): 105.16 (average)",
+
+RESULTS LOCATION
+----------------
+Figures: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_6\figures
+Tables: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_4\tables
+
+FILES GENERATED
+--------------
+Tables:
+  - vpf_optimal_pitch.csv: Optimal angle of attack for each condition
+  - vpf_pitch_adjustment.csv: Required pitch adjustments relative to cruise
+
+Figures:
+  - alpha_opt_vs_condition.png: Optimal angle vs flight condition
+  - pitch_adjustment_vs_condition.png: Required pitch adjustment
+  - efficiency_curves_with_opt.png: Efficiency curves with optimal points
+  - section_comparison.png: Comparison across blade sections
+
+INTERPRETATION
+-------------
+Positive pitch adjustment indicates the blade should be rotated to
+increase angle of attack relative to cruise condition.
+
+Negative pitch adjustment indicates the blade should be rotated to
+decrease angle of attack relative to cruise condition.
+
+The magnitude of adjustment shows how much pitch change is needed to
+maintain optimal efficiency.
+
+================================================================================

@@ -1,0 +1,44 @@
+================================================================================
+STAGE 5: PUBLICATION-QUALITY FIGURES - FINAL RESULTS
+================================================================================
+
+OBJECTIVE
+--------
+Generate high-quality figures suitable for inclusion in academic thesis
+and publications. All figures are created with professional formatting,
+clear labels, units, and legends.
+
+FIGURE SPECIFICATIONS
+---------------------
+  - Resolution: 300 DPI (publication quality)
+  - Format: PNG
+  - Size: 6.0 × 4.5 inches (standard academic format)
+  - Grid: Enabled for readability
+  - Labels: Clear axis labels with units
+  - Legends: Included for multi-curve plots
+
+FIGURES GENERATED
+----------------
+Total Figures: 57
+
+Individual Plots (per flight condition × blade section):
+  - cl_alpha_{condition}_{section}.png: CL vs alpha
+  - cd_alpha_{condition}_{section}.png: CD vs alpha
+  - efficiency_{condition}_{section}.png: CL/CD vs alpha with maximum
+  - polar_{condition}_{section}.png: Polar curve (CL vs CD)
+
+Summary Plots:
+  - alpha_opt_vs_condition.png: Optimal angle vs flight condition
+  - efficiency_vs_reynolds_{condition}.png: Efficiency vs Reynolds
+  - efficiency_by_section_{condition}.png: Efficiency comparison by section
+
+RESULTS LOCATION
+----------------
+All figures: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_5\figures
+
+USAGE
+-----
+Figures can be directly included in LaTeX documents using:
+  \includegraphics[width=0.8\textwidth]{path/to/figure.png}
+
+================================================================================

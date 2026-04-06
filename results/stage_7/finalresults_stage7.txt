@@ -1,0 +1,63 @@
+================================================================================
+STAGE 7: SPECIFIC FUEL CONSUMPTION (SFC) IMPACT ANALYSIS - FINAL RESULTS
+================================================================================
+
+OBJECTIVE
+--------
+Estimate the impact of Variable Pitch Fan (VPF) aerodynamic improvements
+on overall turbofan engine Specific Fuel Consumption (SFC). This stage
+connects fan blade aerodynamic efficiency with engine-level fuel
+consumption performance.
+
+PHYSICAL PRINCIPLE
+-----------------
+Specific Fuel Consumption (SFC) = fuel_flow / thrust
+
+Lower SFC indicates better propulsion efficiency. Improving fan
+aerodynamic efficiency (CL/CD) can improve:
+  - Fan efficiency
+  - Propulsive efficiency
+  - Overall engine SFC
+
+METHODOLOGY
+-----------
+Simplified Propulsion Model:
+  - Fan efficiency improvement: eta_fan_new = eta_fan_baseline × (CL_CD_new / CL_CD_baseline)
+  - SFC reduction: SFC_new = SFC_baseline / (1 + efficiency_gain)
+
+Baseline Engine Parameters:
+  - Baseline SFC (cruise): ~0.55 lb/(lbf·hr)
+  - Baseline fan efficiency: ~0.88
+  - Bypass ratio: ~10.0
+
+RESULTS LOCATION
+----------------
+Figures: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_7\figures
+Tables: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_4\tables
+Summary: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_7\sfc_analysis_summary.txt
+
+FILES GENERATED
+--------------
+Tables:
+  - sfc_analysis.csv: SFC analysis results for all flight conditions
+
+Figures:
+  - sfc_vs_condition.png: SFC comparison (baseline vs VPF)
+  - sfc_reduction_percent.png: Percentage SFC reduction
+  - fan_efficiency_improvement.png: Fan efficiency gains
+  - efficiency_vs_sfc.png: Aerodynamic efficiency vs SFC relationship
+
+INTERPRETATION
+-------------
+The analysis shows estimated SFC reductions achievable through VPF
+implementation. These are simplified estimates based on:
+  - Proportional relationship between aerodynamic and fan efficiency
+  - Simplified propulsion model
+  - Representative baseline engine parameters
+
+Actual SFC improvements would depend on:
+  - Engine design details
+  - Operating point
+  - Integration with other engine systems
+
+================================================================================

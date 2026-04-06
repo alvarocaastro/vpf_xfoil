@@ -1,0 +1,53 @@
+================================================================================
+STAGE 4: PERFORMANCE METRICS AND TABLES - FINAL RESULTS
+================================================================================
+
+OBJECTIVE
+--------
+Compute key aerodynamic performance metrics from simulation results and
+export comprehensive summary tables for analysis and LaTeX integration.
+
+METRICS COMPUTED
+---------------
+For each flight condition × blade section combination:
+  - Maximum Efficiency: (CL/CD)_max
+  - Optimal Angle of Attack: alpha_opt = argmax(CL/CD) for alpha >= 3°
+    (Second efficiency peak, relevant for turbomachinery)
+  - Maximum Lift Coefficient: CL_max
+  - Lift at Optimal Angle: CL_at_opt
+  - Drag at Optimal Angle: CD_at_opt
+
+IMPORTANT NOTE ON ALPHA_OPT
+---------------------------
+The optimal angle of attack is computed using the SECOND efficiency peak
+(ignoring alpha < 3°). This is because:
+  - The first CL/CD peak at low alpha is typically an artifact of
+    laminar separation bubble effects.
+  - The second peak represents the actual relevant operating condition
+    for turbomachinery applications.
+  - This approach ensures realistic optimal incidence angles for fan
+    blade design.
+
+TABLES GENERATED
+---------------
+Location: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_4\tables
+
+Generated Tables:
+  - summary_table.csv: Comprehensive summary with all metrics
+  - efficiency_by_condition.csv: Maximum efficiency by condition and section
+  - alpha_opt_by_condition.csv: Optimal angle of attack by condition
+  - alpha_opt_second_peak.csv: Optimal angle (second peak) with details
+  - clcd_max_by_section.csv: Maximum CL/CD by blade section
+
+METRICS SUMMARY
+--------------
+Total Cases Analyzed: 12
+  - Flight Conditions: 4
+  - Blade Sections: 3
+
+USAGE
+-----
+All tables are in CSV format and can be directly imported into LaTeX
+using packages such as csvsimple or pgfplotstable.
+
+================================================================================

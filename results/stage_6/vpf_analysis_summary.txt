@@ -1,0 +1,80 @@
+======================================================================
+VARIABLE PITCH FAN (VPF) AERODYNAMIC ANALYSIS SUMMARY
+======================================================================
+
+This analysis demonstrates how optimal blade incidence varies
+across flight conditions and quantifies the pitch adjustments
+required for a Variable Pitch Fan mechanism to maintain optimal
+aerodynamic efficiency.
+
+----------------------------------------------------------------------
+1. OPTIMAL INCIDENCE VARIATION
+----------------------------------------------------------------------
+
+Flight Condition: CLIMB
+  mid_span    : alpha_opt =   5.95°  (CL/CD_max =  106.68, Re = 4.00e+06)
+  root        : alpha_opt =   6.10°  (CL/CD_max =   93.66, Re = 2.20e+06)
+  tip         : alpha_opt =   7.30°  (CL/CD_max =  118.44, Re = 6.20e+06)
+
+Flight Condition: CRUISE
+  mid_span    : alpha_opt =   6.25°  (CL/CD_max =  102.28, Re = 3.20e+06)
+  root        : alpha_opt =   5.35°  (CL/CD_max =   89.05, Re = 1.80e+06)
+  tip         : alpha_opt =   7.30°  (CL/CD_max =  112.20, Re = 5.00e+06)
+
+Flight Condition: DESCENT
+  mid_span    : alpha_opt =   6.25°  (CL/CD_max =  104.63, Re = 3.60e+06)
+  root        : alpha_opt =   5.95°  (CL/CD_max =   91.35, Re = 2.00e+06)
+  tip         : alpha_opt =   7.15°  (CL/CD_max =  115.73, Re = 5.60e+06)
+
+Flight Condition: TAKEOFF
+  mid_span    : alpha_opt =   7.15°  (CL/CD_max =  110.18, Re = 4.50e+06)
+  root        : alpha_opt =   6.25°  (CL/CD_max =   96.66, Re = 2.50e+06)
+  tip         : alpha_opt =   7.30°  (CL/CD_max =  121.06, Re = 7.00e+06)
+
+----------------------------------------------------------------------
+2. PITCH ADJUSTMENT REQUIREMENTS
+----------------------------------------------------------------------
+
+Pitch adjustments relative to CRUISE condition:
+
+Flight Condition: CLIMB
+  mid_span    : delta_pitch =  -0.30°  (alpha_opt =   5.95°)
+  root        : delta_pitch = +  0.75°  (alpha_opt =   6.10°)
+  tip         : delta_pitch = +  0.00°  (alpha_opt =   7.30°)
+
+CRUISE: Reference condition (delta_pitch = 0°)
+
+Flight Condition: DESCENT
+  mid_span    : delta_pitch = +  0.00°  (alpha_opt =   6.25°)
+  root        : delta_pitch = +  0.60°  (alpha_opt =   5.95°)
+  tip         : delta_pitch =  -0.15°  (alpha_opt =   7.15°)
+
+Flight Condition: TAKEOFF
+  mid_span    : delta_pitch = +  0.90°  (alpha_opt =   7.15°)
+  root        : delta_pitch = +  0.90°  (alpha_opt =   6.25°)
+  tip         : delta_pitch = +  0.00°  (alpha_opt =   7.30°)
+
+----------------------------------------------------------------------
+3. AERODYNAMIC IMPLICATIONS
+----------------------------------------------------------------------
+
+Key Findings:
+
+• Optimal incidence varies significantly across flight conditions.
+  This variation represents the pitch adjustment that a VPF
+  mechanism could apply to maintain peak efficiency.
+
+• Different blade sections (root, mid_span, tip) show different
+  optimal angles due to varying Reynolds numbers and local
+  flow conditions.
+
+• A variable pitch mechanism allows the fan to operate at
+  maximum efficiency across all flight regimes, improving
+  overall engine performance and fuel efficiency.
+
+• The analysis uses the SECOND efficiency peak (alpha >= 3°)
+  to avoid the laminar separation bubble artifact at low angles,
+  ensuring results are representative of real turbomachinery
+  operation.
+
+======================================================================

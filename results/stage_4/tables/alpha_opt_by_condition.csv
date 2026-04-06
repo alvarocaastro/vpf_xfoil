@@ -1,0 +1,13 @@
+flight_condition,blade_section,alpha_opt_deg,max_efficiency
+climb,mid_span,5.950000,106.684322
+climb,root,6.100000,93.658310
+climb,tip,7.300000,118.440367
+cruise,mid_span,6.250000,102.284866
+cruise,root,5.350000,89.046243
+cruise,tip,7.300000,112.203883
+descent,mid_span,6.250000,104.631685
+descent,root,5.950000,91.346863
+descent,tip,7.150000,115.728745
+takeoff,mid_span,7.150000,110.183930
+takeoff,root,6.250000,96.663534
+takeoff,tip,7.300000,121.060291

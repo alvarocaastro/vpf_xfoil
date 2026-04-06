@@ -1,0 +1,97 @@
+# Configuration file for VFP Aerodynamic Analysis Pipeline
+# This file contains all simulation parameters and output settings
+
+# Reference Mach number for XFOIL simulations (incompressible baseline)
+reference_mach: 0.2
+
+# Target Mach numbers for compressibility correction (per flight condition)
+target_mach:
+  takeoff: 0.30
+  climb: 0.70
+  cruise: 0.85
+  descent: 0.75
+
+# Reynolds numbers for each flight condition and blade section
+reynolds:
+  takeoff:
+    root: 2.5e6
+    mid_span: 4.5e6
+    tip: 7.0e6
+  climb:
+    root: 2.2e6
+    mid_span: 4.0e6
+    tip: 6.2e6
+  cruise:
+    root: 1.8e6
+    mid_span: 3.2e6
+    tip: 5.0e6
+  descent:
+    root: 2.0e6
+    mid_span: 3.6e6
+    tip: 5.6e6
+
+# Ncrit (transition parameter) for each flight condition
+# Lower values (4-6) = more turbulent (turbomachinery)
+# Higher values (~9) = clean wind tunnel conditions
+ncrit:
+  takeoff: 5.0
+  climb: 6.0
+  cruise: 7.0
+  descent: 6.0
+
+# Angle of attack range for simulations
+alpha:
+  min: -5.0
+  max: 23.0
+  step: 0.15
+
+# Angle of attack range for airfoil selection stage
+selection_alpha:
+  min: -5.0
+  max: 20.0
+  step: 0.15
+
+# Selection stage parameters
+selection:
+  reynolds: 3.0e6
+  ncrit: 7.0
+
+# Output directories (relative to project root)
+output:
+  figures: results/stage_5/figures
+  polars: results/stage_2/polars
+  tables: results/stage_4/tables
+  compressibility: results/stage_3/compressibility
+  airfoil_selection: results/stage_1/airfoil_selection
+  figures_vpf: results/stage_6/figures
+  vpf_analysis_summary: results/stage_6/vpf_analysis_summary.txt
+  figures_cascade: results/stage_7/figures
+  cascade_dataset: results/stage_7/cascade_dataset.csv
+  figures_sfc: results/stage_7/figures
+  sfc_analysis_summary: results/stage_7/sfc_analysis_summary.txt
+
+# Plot settings
+plotting:
+  dpi: 300
+  format: png
+  figure_size:
+    width: 6.0
+    height: 4.5
+  style:
+    grid: true
+    grid_alpha: 0.7
+    grid_linestyle: ":"
+    linewidth: 1.6
+
+# Flight conditions
+flight_conditions:
+  - takeoff
+  - climb
+  - cruise
+  - descent
+
+# Blade sections
+blade_sections:
+  - root
+  - mid_span
+  - tip

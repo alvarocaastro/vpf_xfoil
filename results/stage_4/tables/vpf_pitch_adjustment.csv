@@ -1,0 +1,13 @@
+condition,section,alpha_opt,delta_pitch
+climb,mid_span,5.950000,-0.300000
+climb,root,6.100000,0.750000
+climb,tip,7.300000,0.000000
+cruise,mid_span,6.250000,0.000000
+cruise,root,5.350000,0.000000
+cruise,tip,7.300000,0.000000
+descent,mid_span,6.250000,0.000000
+descent,root,5.950000,0.600000
+descent,tip,7.150000,-0.150000
+takeoff,mid_span,7.150000,0.900000
+takeoff,root,6.250000,0.900000
+takeoff,tip,7.300000,0.000000

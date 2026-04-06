@@ -1,0 +1,77 @@
+================================================================================
+STAGE 2: XFOIL AERODYNAMIC SIMULATIONS - FINAL RESULTS
+================================================================================
+
+OBJECTIVE
+--------
+Perform detailed aerodynamic analysis of the selected airfoil across
+multiple flight conditions and blade sections to characterize performance
+under realistic operating conditions.
+
+SIMULATION PARAMETERS
+---------------------
+Mach Number: 0.2 (incompressible baseline, XFOIL limitation)
+Angle of Attack Range: -5.0° to 23.0°
+Alpha Step: 0.15°
+
+Flight Conditions Analyzed:
+  - Takeoff: Ncrit = 5.0
+  - Climb: Ncrit = 6.0
+  - Cruise: Ncrit = 7.0
+  - Descent: Ncrit = 6.0
+
+Blade Sections Analyzed:
+  - Root
+  - Mid Span
+  - Tip
+
+REYNOLDS NUMBERS BY CONDITION AND SECTION
+------------------------------------------
+
+Takeoff:
+  root        : Re = 2.50e+06
+  mid_span    : Re = 4.50e+06
+  tip         : Re = 7.00e+06
+
+Climb:
+  root        : Re = 2.20e+06
+  mid_span    : Re = 4.00e+06
+  tip         : Re = 6.20e+06
+
+Cruise:
+  root        : Re = 1.80e+06
+  mid_span    : Re = 3.20e+06
+  tip         : Re = 5.00e+06
+
+Descent:
+  root        : Re = 2.00e+06
+  mid_span    : Re = 3.60e+06
+  tip         : Re = 5.60e+06
+
+SIMULATION RESULTS
+------------------
+Total Simulations Executed: 12
+  - Flight Conditions: 4
+  - Blade Sections: 3
+  - Total: 4 × 3 = 12
+
+RESULTS LOCATION
+----------------
+Polar data: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_2\polars
+Detailed results: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_2\final_analysis
+
+FILES GENERATED
+--------------
+For each flight condition × blade section combination:
+  - polar.csv: Complete polar data (alpha, CL, CD, CM, CL/CD)
+  - cl_alpha.csv: Lift coefficient vs angle of attack
+  - cd_alpha.csv: Drag coefficient vs angle of attack
+  - cl_alpha_plot.png: CL vs alpha plot
+  - cd_alpha_plot.png: CD vs alpha plot
+  - efficiency_plot.png: CL/CD vs alpha with maximum marked
+  - polar_plot.png: Polar curve (CL vs CD)
+
+Organized polar files:
+  - {condition}_{section}.csv in polars/ directory
+
+================================================================================

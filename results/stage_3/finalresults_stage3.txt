@@ -1,0 +1,55 @@
+================================================================================
+STAGE 3: COMPRESSIBILITY CORRECTIONS - FINAL RESULTS
+================================================================================
+
+OBJECTIVE
+--------
+Apply compressibility corrections to incompressible XFOIL results to
+account for compressibility effects at representative flight Mach numbers.
+This stage uses the Prandtl-Glauert correction model to estimate
+aerodynamic coefficients at higher Mach numbers.
+
+METHODOLOGY
+-----------
+Correction Model: Prandtl-Glauert
+  - Valid for Mach numbers < 0.8 (subsonic flow)
+  - Correction factor: beta = sqrt(1 - M²)
+  - Corrected CL: CL_corrected = CL_incompressible / beta
+  - CD: Not corrected (conservative approach, CD effects are complex)
+
+Reference Conditions:
+  - Reference Mach: 0.2 (XFOIL simulation baseline)
+
+TARGET MACH NUMBERS
+-------------------
+  - Takeoff: M = 0.30
+  - Climb: M = 0.70
+  - Cruise: M = 0.85
+  - Descent: M = 0.75
+
+CORRECTIONS APPLIED
+-------------------
+Flight Conditions: 4
+Blade Sections: 3
+Total Corrections: 4 × 3 = 12
+
+RESULTS LOCATION
+----------------
+Corrected data: C:\Users\Alvaro\OneDrive - Universidade de Vigo\Documentos\tfg\vpf_v2\vpf\results\stage_3
+
+FILES GENERATED
+--------------
+For each flight condition × blade section:
+  - corrected_polar.csv: Complete corrected polar data
+  - corrected_cl_alpha.csv: Corrected CL vs alpha
+  - corrected_efficiency.csv: Corrected CL/CD vs alpha
+  - corrected_plots.png: Comparison plots (original vs corrected)
+
+NOTES
+-----
+- Corrections are applied to lift coefficient (CL) only.
+- Drag coefficient (CD) is not corrected (conservative approach).
+- Prandtl-Glauert is valid for subsonic flow (M < 0.8).
+- Higher Mach numbers show larger corrections (beta decreases).
+
+================================================================================

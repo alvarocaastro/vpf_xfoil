@@ -1,0 +1,33 @@
+# Configuration file for Engine Performance Analysis
+# This file contains baseline turbofan engine parameters
+
+# Baseline Specific Fuel Consumption at cruise (lb/(lbf·hr))
+# Typical values for modern high-bypass turbofans: 0.5 - 0.6
+baseline_sfc: 0.55
+
+# Baseline fan efficiency (dimensionless, 0-1)
+# Typical values: 0.85 - 0.92 for modern turbofans
+fan_efficiency: 0.88
+
+# Bypass ratio
+# Typical values: 8-12 for modern high-bypass turbofans
+bypass_ratio: 10.0
+
+# Cruise velocity (m/s)
+# Typical cruise speed for commercial aircraft: ~250 m/s (Mach 0.85 at altitude)
+cruise_velocity: 250.0
+
+# Jet velocity (m/s)
+# Effective jet velocity for high-bypass turbofan
+jet_velocity: 350.0
+
+# Reference flight condition for baseline
+reference_condition: cruise
+
+# SFC values for other flight conditions (relative to cruise)
+# These represent typical SFC variations across flight phases
+sfc_multipliers:
+  takeoff: 1.15  # Higher SFC during takeoff
+  climb: 1.05    # Slightly higher during climb
+  cruise: 1.00   # Reference (baseline)
+  descent: 0.95  # Lower SFC during descent (idle thrust)

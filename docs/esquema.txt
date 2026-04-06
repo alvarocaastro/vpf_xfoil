@@ -1,0 +1,314 @@
+================================================================================
+ESQUEMA DEL DOCUMENTO - TFG: Variable Pitch Fan (VPF) Aerodynamic Analysis
+================================================================================
+
+1. INTRODUCCIÓN
+   - Contexto
+     * Motores turbofán en la aviación moderna
+     * Importancia del fan en motores de alto bypass ratio
+     * Desafíos de eficiencia y consumo de combustible
+   
+   - Motivación
+     * Necesidad de mejorar la eficiencia aerodinámica del fan
+     * Concepto de Variable Pitch Fan (VPF) como solución potencial
+     * Limitaciones de los fans de pitch fijo (FPF)
+     * Oportunidades de optimización mediante ajuste de incidencia
+   
+   - Objetivos
+     * Objetivo general: Analizar el comportamiento aerodinámico de perfiles
+       de álabes de fan y evaluar el potencial del concepto VPF
+     * Objetivos específicos:
+       - Seleccionar el perfil aerodinámico óptimo para aplicaciones de fan
+       - Caracterizar el rendimiento aerodinámico en múltiples condiciones
+       - Evaluar la variación del ángulo de incidencia óptimo
+       - Analizar el impacto potencial en consumo específico de combustible
+   
+   - Estructura del documento
+     * Descripción de capítulos y organización del trabajo
+
+
+2. MARCO TEÓRICO
+   
+   2.1. Motores Turbofán
+        - Explicación preliminar del turbofán
+          * Arquitectura básica (core, bypass, fan)
+          * Principio de funcionamiento
+          * Componentes principales
+        - Aportación del fan en motores de alto bypass ratio
+          * Generación de empuje
+          * Eficiencia propulsiva
+          * Relación bypass ratio y eficiencia
+        - Álabes del fan: preliminar
+          * Función en el sistema
+          * Condiciones operativas
+          * Desafíos de diseño
+        - Investigaciones actuales
+          * Tendencias en diseño de fans
+          * Tecnologías emergentes
+          * Estado del arte en VPF
+   
+   2.2. Álabes de Turbomáquinas
+        - Tipos de álabes
+          * Álabes de compresor axial
+          * Álabes de fan
+          * Características geométricas
+        - Física de los álabes
+          * Triángulos de velocidad
+          * Números de Reynolds en álabes
+          * Efectos de rotación
+          * Gradientes radiales
+        - Variable Pitch Fan (VPF) vs Fixed Pitch Fan (FPF)
+          * Concepto de VPF
+          * Ventajas y desventajas
+          * Aplicaciones actuales
+          * Potencial de mejora
+   
+   2.3. XFOIL: Simulación Aerodinámica
+        - Teoría de paneles y VLM (Vortex Lattice Method)
+          * Fundamentos del método
+          * Aplicación a perfiles aerodinámicos
+          * Ventajas del método
+        - Física interna de XFOIL
+          * Cálculo de capa límite
+          * Modelo de transición
+          * Parámetro Ncrit
+          * Solución viscosa
+        - Limitaciones de XFOIL
+          * Restricción a flujo incompresible (M < 0.3)
+          * Limitaciones en números de Reynolds muy altos
+          * Aproximaciones en modelos de turbulencia
+          * Limitaciones en ángulos de ataque extremos
+   
+   2.4. Correcciones de Compresibilidad
+        - Modelo de Prandtl-Glauert
+          * Fundamentos teóricos
+          * Transformación de compresibilidad
+          * Factor de corrección β = √(1 - M²)
+          * Aplicación a coeficientes aerodinámicos
+          * Validez y limitaciones (M < 0.8)
+        - Coeficiente de resistencia: diferentes contribuciones
+          * Resistencia de fricción
+          * Resistencia de presión
+          * Resistencia de onda (efectos transónicos)
+          * XFOIL no considera todas las contribuciones
+          * Justificación de aproximación conservadora
+
+
+3. METODOLOGÍA
+   
+   3.1. Descripción general del procedimiento
+        - Enfoque sistemático en 8 stages
+        - Pipeline automatizado en Python
+        - Reproducibilidad y trazabilidad
+        - Flujo de trabajo completo
+   
+   3.2. Stage 1: Selección automática del perfil aerodinámico
+        - Objetivo
+        - Metodología
+          * Candidatos analizados (NACA 65-210, 65-410, 63-215, 0012)
+          * Condiciones de referencia unificadas
+          * Algoritmo de puntuación combinado
+        - Justificación
+   
+   3.3. Stage 2: Simulaciones aerodinámicas XFOIL
+        - Objetivo
+        - Metodología
+          * Condiciones de vuelo (Takeoff, Climb, Cruise, Descent)
+          * Secciones radiales (root, mid-span, tip)
+          * Números de Reynolds característicos
+          * Parámetro Ncrit por condición
+          * Rango de ángulo de ataque
+        - Justificación
+          * Variación de Reynolds a lo largo del álabe
+          * Importancia de múltiples condiciones de vuelo
+   
+   3.4. Stage 3: Corrección de compresibilidad
+        - Objetivo
+        - Metodología
+          * Modelo Prandtl-Glauert
+          * Números de Mach objetivo por condición
+          * Corrección de CL, aproximación conservadora para CD
+        - Justificación
+          * Necesidad de corregir efectos de compresibilidad
+          * Validez del modelo para flujo subsónico
+   
+   3.5. Stage 4: Cálculo de métricas de rendimiento
+        - Objetivo
+        - Metodología
+          * Eficiencia máxima (CL/CD)max
+          * Ángulo de ataque óptimo (segundo pico, α ≥ 3°)
+          * Coeficientes en condiciones óptimas
+        - Justificación del segundo pico de eficiencia
+          * Artefacto de burbuja de separación laminar
+          * Condición operativa relevante para turbomaquinaria
+   
+   3.6. Stage 5: Generación de figuras
+        - Objetivo
+        - Metodología
+          * Figuras individuales y resumen
+          * Especificaciones técnicas (300 DPI, formato académico)
+        - Justificación
+   
+   3.7. Stage 6: Análisis de Variable Pitch Fan (VPF)
+        - Objetivo
+        - Metodología
+          * Cálculo de incidencia óptima por condición
+          * Ajustes de pitch relativos a crucero
+          * Análisis de mejoras de eficiencia
+        - Justificación
+          * Relevancia del concepto VPF
+          * Demostración cuantitativa de beneficios
+   
+   3.8. Stage 7: Análisis de teoría de cascadas
+        - Objetivo
+        - Metodología
+          * Parámetros de cascada (solidity, ángulos de flujo, incidencia)
+          * Conexión con resultados aerodinámicos
+        - Justificación
+          * Interpretación en contexto de turbomaquinaria
+   
+   3.9. Stage 8: Análisis de impacto en SFC
+        - Objetivo
+        - Metodología
+          * Modelo de propulsión simplificado
+          * Relación eficiencia aerodinámica - eficiencia fan - SFC
+          * Parámetros del motor baseline
+        - Justificación
+          * Conexión con rendimiento del motor
+          * Relevancia práctica del concepto
+   
+   3.10. Automatización y reproducibilidad
+         - Pipeline en Python
+         - Ventajas de la automatización
+         - Garantías de reproducibilidad
+
+
+4. RESULTADOS
+   
+   4.1. Selección del perfil aerodinámico (Stage 1)
+        - Comparación de candidatos
+        - Perfil seleccionado: NACA 65-410
+        - Justificación de la selección
+        - Polares comparativas
+   
+   4.2. Caracterización aerodinámica (Stage 2)
+        - Polares aerodinámicos por condición y sección
+        - Coeficientes de sustentación (CL vs α)
+        - Coeficientes de resistencia (CD vs α)
+        - Eficiencia aerodinámica (CL/CD vs α)
+        - Curvas polares (CL vs CD)
+        - Análisis de variación con Reynolds
+        - Análisis de variación con condición de vuelo
+   
+   4.3. Efectos de compresibilidad (Stage 3)
+        - Comparación resultados incompresibles vs corregidos
+        - Correcciones aplicadas por condición
+        - Impacto en coeficientes aerodinámicos
+        - Validación de aproximaciones
+   
+   4.4. Métricas de rendimiento (Stage 4)
+        - Eficiencia máxima por condición y sección
+        - Ángulos de ataque óptimos
+        - Tablas resumen
+        - Análisis estadístico
+        - Tendencias identificadas
+   
+   4.5. Análisis Variable Pitch Fan (Stage 6)
+        - Variación del ángulo óptimo con condición de vuelo
+        - Ajustes de pitch requeridos
+        - Mejoras de eficiencia potenciales
+        - Comparación entre secciones
+        - Interpretación de resultados
+   
+   4.6. Análisis de cascadas (Stage 7)
+        - Solidity por sección
+        - Ángulos de flujo estimados
+        - Incidencia del álabe
+        - Interpretación en contexto de turbomaquinaria
+        - Dataset consolidado
+   
+   4.7. Impacto en consumo específico de combustible (Stage 8)
+        - Mejoras estimadas en eficiencia del fan
+        - Reducciones estimadas de SFC
+        - Análisis por condición de vuelo
+        - Relación eficiencia aerodinámica - SFC
+        - Discusión de limitaciones del modelo
+
+
+5. DISCUSIÓN
+   
+   5.1. Interpretación de resultados principales
+        - Rendimiento aerodinámico del perfil seleccionado
+        - Variación con condiciones operativas
+        - Efectos de compresibilidad
+   
+   5.2. Implicaciones del concepto VPF
+        - Viabilidad técnica
+        - Beneficios potenciales
+        - Desafíos de implementación
+   
+   5.3. Limitaciones del estudio
+        - Limitaciones de XFOIL
+        - Aproximaciones en correcciones de compresibilidad
+        - Modelo simplificado de propulsión
+        - Análisis bidimensional vs tridimensional
+   
+   5.4. Comparación con literatura
+        - Resultados similares en la literatura
+        - Diferencias y similitudes
+        - Validación de metodología
+
+
+6. CONCLUSIONES
+   
+   6.1. Conclusiones principales
+        - Perfil seleccionado y su rendimiento
+        - Caracterización aerodinámica completa
+        - Variación del ángulo óptimo
+        - Potencial del concepto VPF
+        - Impacto estimado en SFC
+   
+   6.2. Contribuciones del trabajo
+        - Metodología sistemática y reproducible
+        - Análisis completo de múltiples condiciones
+        - Conexión aerodinámica - rendimiento motor
+        - Evaluación cuantitativa del concepto VPF
+   
+   6.3. Trabajo futuro
+        - Análisis tridimensional (CFD)
+        - Modelos de propulsión más sofisticados
+        - Consideración de efectos estructurales
+        - Optimización de geometría de álabe
+        - Validación experimental
+        - Análisis económico de implementación
+
+
+7. REFERENCIAS
+   - Bibliografía citada
+   - Normas y estándares
+   - Software utilizado (XFOIL, Python, etc.)
+
+
+8. ANEXOS (opcional)
+   
+   A. Configuración del pipeline
+      - Archivos de configuración YAML
+      - Parámetros de simulación
+   
+   B. Resultados detallados
+      - Tablas completas de resultados
+      - Figuras adicionales
+   
+   C. Código fuente
+      - Estructura del proyecto
+      - Scripts principales
+      - Documentación técnica
+
+================================================================================
+NOTAS:
+- Cada sección debe incluir figuras y tablas relevantes
+- Las ecuaciones deben estar numeradas y referenciadas
+- Las figuras deben tener títulos descriptivos y leyendas
+- Las tablas deben estar formateadas profesionalmente
+- Todas las referencias deben estar correctamente citadas
+================================================================================
