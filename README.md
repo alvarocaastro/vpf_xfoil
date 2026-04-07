@@ -54,10 +54,10 @@ tfg_vpf/
 │   ├── stage_2/             # Análisis XFOIL a Mach 0.2
 │   ├── stage_3/             # Corrección de compresibilidad
 │   ├── stage_4/             # Métricas y tablas
-│   ├── stage_5/             # Figuras para tesis
-│   ├── stage_6/             # Análisis Variable Pitch Fan
-│   ├── stage_7/             # Análisis de Teoría de Cascadas
-│   └── stage_8/             # Análisis de Impacto SFC
+│   ├── stage_5/             # Figuras de resultados
+│   ├── stage_6/             # Análisis Aerodinámico Variable Pitch Fan
+│   ├── stage_7/             # Análisis Cinemático (Triángulos de Velocidad)
+│   └── stage_8/             # Análisis de Impacto SFC (con factor Dampening)
 │
 ├── scripts/                  # Scripts ejecutables
 │   └── main.py              # Entrypoint principal
@@ -131,15 +131,16 @@ python run_analysis.py
 
 Este comando ejecuta automáticamente:
 1. ✅ **Step 1**: Limpia resultados anteriores (todos los stage_*)
-2. ✅ **Step 2 / Stage 1**: Selección automática de perfil óptimo
-3. ✅ **Step 3 / Stage 2**: Análisis XFOIL a Mach 0.2 (12 simulaciones)
-4. ✅ **Step 4 / Stage 3**: Corrección de compresibilidad
-5. ✅ **Step 5 / Stage 4**: Cálculo de métricas de rendimiento
-6. ✅ **Step 6 / Stage 4**: Exportación de tablas CSV para LaTeX
-7. ✅ **Step 7 / Stage 5**: Generación de todas las figuras para tesis
-8. ✅ **Step 8 / Stage 6**: Análisis Variable Pitch Fan (VPF)
-9. ✅ **Step 9 / Stage 7**: Análisis de Teoría de Cascadas
-10. ✅ **Step 10 / Stage 8**: Análisis de Impacto en Consumo Específico de Combustible (SFC)
+1. **Step 1**: Limpia resultados anteriores (todos los stage_*)
+2. **Step 2 / Stage 1**: Selección automática de perfil óptimo
+3. **Step 3 / Stage 2**: Análisis XFOIL a Mach 0.2 (12 simulaciones)
+4. **Step 4 / Stage 3**: Corrección de compresibilidad
+5. **Step 5 / Stage 4**: Cálculo de métricas de rendimiento
+6. **Step 6 / Stage 4**: Exportación de tablas CSV para LaTeX
+7. **Step 7 / Stage 5**: Generación interpolada de gráficas
+8. **Step 8 / Stage 6**: Análisis Integrado de Variable Pitch Fan (VPF)
+9. **Step 9 / Stage 7**: Análisis Cinemático y Paso Mecánico
+10. **Step 10 / Stage 8**: Análisis de Impacto en SFC
 
 **Resultados organizados por stage**:
 - `results/stage_1/`: Selección de perfil (airfoil_selection/, selected_airfoil.dat)
@@ -147,11 +148,11 @@ Este comando ejecuta automáticamente:
 - `results/stage_3/`: Corrección de compresibilidad (<flight>/<section>/)
 - `results/stage_4/`: Métricas y tablas CSV (tables/)
 - `results/stage_5/`: Figuras para tesis (figures/)
-- `results/stage_6/`: Análisis VPF (figures/, tables/, vpf_analysis_summary.txt)
-- `results/stage_7/`: Análisis de cascadas (figures/, tables/, cascade_dataset.csv)
-- `results/stage_8/`: Análisis SFC (figures/, tables/, sfc_analysis_summary.txt)
+- `results/stage_6/`: Análisis VPF (figures/, tables/, finalresults_stage6.txt)
+- `results/stage_7/`: Análisis Cinemático (figures/, tables/, finalresults_stage7.txt)
+- `results/stage_8/`: Análisis SFC (figures/, tables/, finalresults_stage8.txt)
 
-**⚠️ Importante**: Cada ejecución borra resultados anteriores para garantizar reproducibilidad.
+**Nota**: Cada ejecución borra resultados anteriores para garantizar reproducibilidad.
 
 **Tiempo estimado**: ~15-20 minutos
 
@@ -171,50 +172,40 @@ El pipeline ejecuta secuencialmente 10 steps organizados en 8 stages:
 
 1. **Step 1: Limpieza de Resultados**
    - Elimina todos los resultados anteriores de `results/stage_*`
-   - Garantiza ejecución limpia y reproducible
 
 2. **Step 2 / Stage 1: Selección de Perfil**
    - Lee todos los `.dat` de `data/airfoils/`
    - Ejecuta simulaciones XFOIL comparativas
    - Calcula scores basados en eficiencia máxima, stall angle y drag promedio
-   - Selecciona el mejor perfil y guarda resultado en `results/stage_1/`
 
 3. **Step 3 / Stage 2: Análisis XFOIL a Mach 0.2**
    - Usa el perfil seleccionado en Stage 1
    - Simula 12 casos: 4 condiciones de vuelo × 3 secciones radiales
-   - Genera polares, gráficos y resúmenes en `results/stage_2/`
 
 4. **Step 4 / Stage 3: Corrección de Compresibilidad**
    - Aplica corrección Prandtl-Glauert a resultados de Stage 2
    - Mach numbers objetivo: Takeoff (0.30), Climb (0.70), Cruise (0.85), Descent (0.75)
-   - Genera resultados corregidos en `results/stage_3/`
 
 5. **Step 5 / Stage 4: Cálculo de Métricas de Rendimiento**
    - Calcula métricas aerodinámicas clave (eficiencia máxima, alpha_opt, CL_max)
-   - Usa el segundo pico de eficiencia (alpha >= 3°) para turbomaquinaria
 
 6. **Step 6 / Stage 4: Exportación de Tablas**
    - Genera tablas CSV listas para LaTeX
-   - Incluye tablas de eficiencia, alpha_opt, y resúmenes completos
 
 7. **Step 7 / Stage 5: Generación de Figuras**
-   - Crea todas las figuras de calidad para publicación
-   - CL vs alpha, CD vs alpha, eficiencia, polares, y comparaciones
+    - Exportación de métricas a formato gráfico PNG.
 
 8. **Step 8 / Stage 6: Análisis Variable Pitch Fan (VPF)**
-   - Analiza cómo el pitch variable puede mantener eficiencia óptima
-   - Calcula ajustes de pitch relativos a condición de crucero
-   - Genera figuras y tablas específicas de VPF
+   - Analiza óptimos aerodinámicos (Δα) relativos a condición de crucero.
+   - Genera figuras y tablas específicas de VPF.
 
-9. **Step 9 / Stage 7: Análisis de Teoría de Cascadas**
-   - Conecta resultados aerodinámicos con teoría de cascadas
-   - Calcula solidity, ángulos de flujo, e incidencia de blade
-   - Genera dataset consolidado de cascadas
+9. **Step 9 / Stage 7: Análisis Cinemático (Triángulos de Velocidad)**
+   - Conecta resultados aerodinámicos con un modelo físico motriz del actuador.
+   - Resuelve el triángulo de velocidad ($V_{ax}$, $U$, $\phi$) para separar la incidencia puramente aerodinámica del giro mecánico real de la pala ($\Delta\beta$).
 
 10. **Step 10 / Stage 8: Análisis de Impacto SFC**
-    - Estima mejoras en consumo específico de combustible
-    - Relaciona eficiencia aerodinámica con eficiencia del motor
-    - Genera análisis de impacto en SFC
+    - Evaluación de mejoras en SFC global.
+    - Empleo de factor empírico de transferencia para modelar flujos secundarios del rotor.
 
 ### Resultados Generados
 
@@ -347,28 +338,25 @@ target_mach:
 - **Tablas generadas**: Eficiencia por condición, alpha_opt, resúmenes completos
 - **Formato**: CSV listo para importación en LaTeX
 
-### Stage 5: Figuras para Tesis
+### Stage 5: Figuras para Documentación
 
-- **Tipos de figuras**: CL vs alpha, CD vs alpha, eficiencia, polares, comparaciones
-- **Calidad**: 300 DPI, etiquetas claras, grid, leyendas
-- **Formato**: PNG de alta resolución
+- **Tipos de figuras**: `efficiency_by_section`, `alpha_opt_vs_condition`.
+- **Formato**: Archivos PNG para integración en memoria.
 
 ### Stage 6: Análisis Variable Pitch Fan
 
-- **Objetivo**: Demostrar beneficios de pitch variable para mantener eficiencia óptima
-- **Resultados**: Ajustes de pitch, figuras comparativas, resumen interpretativo
+- **Objetivo**: Demostrar los beneficios de la optimización del paso aerodinámico (Delta Alpha).
+- **Resultados**: Curvas de comportamiento y variaciones angulares relativas.
 
-### Stage 7: Análisis de Teoría de Cascadas
+### Stage 7: Análisis Cinemático (Paso Físico Real)
 
-- **Objetivo**: Conectar resultados aerodinámicos con parámetros de cascadas
-- **Parámetros calculados**: Solidity, ángulos de flujo, incidencia de blade
-- **Resultados**: Dataset consolidado y figuras de cascadas
+- **Objetivo**: Añadir rigor al estimar cómo cambiar de condición de vuelo (ej: Takeoff a Cruise) altera masivamente el triángulo de velocidades y el `inflow angle`.
+- **Parámetros**: RPM Fan asimiladas y `target_mach` combinados para obtener el `Delta Beta` mecánico.
+- **Resultados**: Tablas desglosadas de $\Delta\alpha_{aero}$ vs $\Delta\beta_{mech}$.
 
-### Stage 8: Análisis de Impacto SFC
+### Stage 8: Análisis de SFC
 
-- **Objetivo**: Estimar mejoras en consumo específico de combustible
-- **Modelo**: Relaciones simplificadas de propulsión turbofan
-- **Resultados**: Reducciones estimadas de SFC, figuras comparativas
+- **Modelo**: Conversión de eficiencia perfil a eficiencia motor empleando `profile_efficiency_transfer` de mitigación (0.65 propuesto empíricamente en `engine_parameters.yaml`).
 
 ## 🧪 Testing
 

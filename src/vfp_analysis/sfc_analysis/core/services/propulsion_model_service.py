@@ -64,11 +64,26 @@ def compute_fan_efficiency_improvement(
 
     # Efficiency gain ratio
     efficiency_ratio = cl_cd_new / cl_cd_baseline
+    
+    # Read the engine parameters config to get the transfer coefficient
+    # For a quick fix, if it fails, default to 1.0 (legacy behaviour)
+    transfer_coeff = 1.0
+    import yaml
+    from pathlib import Path
+    try:
+        cfg_path = Path(__file__).resolve().parents[5] / "config" / "engine_parameters.yaml"
+        with cfg_path.open("r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f)
+            transfer_coeff = float(cfg.get("profile_efficiency_transfer", 1.0))
+    except Exception:
+        pass
 
-    # Apply proportional improvement to fan efficiency
-    # Cap at reasonable maximum (e.g., 0.95)
-    fan_efficiency_new = fan_efficiency_baseline * efficiency_ratio
-    fan_efficiency_new = min(fan_efficiency_new, 0.95)
+    # Apply proportional improvement to fan efficiency using dampening factor
+    eff_gain = (efficiency_ratio - 1.0) * transfer_coeff
+    fan_efficiency_new = fan_efficiency_baseline * (1.0 + eff_gain)
+
+    # Cap at reasonable maximum (e.g., 0.96)
+    fan_efficiency_new = min(fan_efficiency_new, 0.96)
 
     return fan_efficiency_new
 

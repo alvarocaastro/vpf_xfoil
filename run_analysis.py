@@ -82,6 +82,7 @@ from vfp_analysis.postprocessing.table_generator import (
     export_summary_table,
 )
 from vfp_analysis.vpf_analysis.application.run_vpf_analysis import run_vpf_analysis
+from vfp_analysis.kinematics_analysis.application.run_kinematics_stage import run_kinematics_stage
 from vfp_analysis.sfc_analysis.application.run_sfc_analysis import run_sfc_analysis
 
 # Configure logging
@@ -358,10 +359,15 @@ def step_8_vpf_analysis() -> None:
     run_vpf_analysis()
 
 
-def step_9_sfc_analysis() -> None:
-    """Step 9: Specific Fuel Consumption Impact analysis."""
+def step_9_kinematics_analysis() -> None:
+    """Step 9: Kinematic Velocity Triangles & Mechanical Pitch."""
+    run_kinematics_stage()
+
+
+def step_10_sfc_analysis() -> None:
+    """Step 10: Specific Fuel Consumption Impact analysis."""
     LOGGER.info("=" * 60)
-    LOGGER.info("STEP 9: Specific Fuel Consumption (SFC) Impact Analysis")
+    LOGGER.info("STEP 10: Specific Fuel Consumption (SFC) Impact Analysis")
     LOGGER.info("=" * 60)
 
     run_sfc_analysis()
@@ -398,16 +404,19 @@ def main() -> None:
         # Step 8: Variable Pitch Fan analysis
         step_8_vpf_analysis()
 
-        # Step 9: SFC Impact analysis
-        step_9_sfc_analysis()
+        # Step 9: Kinematic analysis (Velocity Triangles)
+        step_9_kinematics_analysis()
 
-        LOGGER.info("=" * 60)
+        # Step 10: SFC impact analysis
+        step_10_sfc_analysis()
+
+        LOGGER.info("=" * 80)
         LOGGER.info("Pipeline completed successfully!")
         LOGGER.info("=" * 60)
         LOGGER.info("Results available in:")
-        for stage_num in range(1, 8):
-            stage_dir = base_config.RESULTS_DIR / f"stage_{stage_num}"
-            LOGGER.info(f"  Stage {stage_num}: {stage_dir}")
+        for i in range(1, 9):
+            LOGGER.info(f"  Stage {i}: {base_config.RESULTS_DIR / f'stage_{i}'}")
+        LOGGER.info("=" * 80)
 
     except Exception as e:
         LOGGER.error(f"Pipeline failed with error: {e}", exc_info=True)

@@ -1,6 +1,6 @@
 ======================================================================
 STAGE 7: SPECIFIC FUEL CONSUMPTION (SFC) IMPACT ANALYSIS
-Generated: 2026-04-07 02:41:39
+Generated: 2026-04-07 02:56:38
 ======================================================================
 
 Estimates SFC reduction enabled by VPF optimised-pitch operation.

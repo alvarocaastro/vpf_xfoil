@@ -32,7 +32,7 @@ Flight Condition: TAKEOFF
 
 Flight Condition: CLIMB
   Baseline fan efficiency: 0.880
-  VPF fan efficiency:      0.924  (+ 5.02%)
+  VPF fan efficiency:      0.909  (+ 3.27%)
 
 Flight Condition: CRUISE
   Baseline fan efficiency: 0.880
@@ -40,11 +40,11 @@ Flight Condition: CRUISE
 
 Flight Condition: DESCENT
   Baseline fan efficiency: 0.880
-  VPF fan efficiency:      0.904  (+ 2.69%)
+  VPF fan efficiency:      0.895  (+ 1.75%)
 
 Flight Condition: TAKEOFF
   Baseline fan efficiency: 0.880
-  VPF fan efficiency:      0.950  (+ 7.95%)
+  VPF fan efficiency:      0.926  (+ 5.22%)
 
 ----------------------------------------------------------------------
 3. SPECIFIC FUEL CONSUMPTION IMPACT
@@ -52,8 +52,8 @@ Flight Condition: TAKEOFF
 
 Flight Condition: CLIMB
   Baseline SFC:  0.5775 lb/(lbf·hr)
-  VPF SFC:       0.5499 lb/(lbf·hr)
-  Reduction:      4.78%
+  VPF SFC:       0.5592 lb/(lbf·hr)
+  Reduction:      3.16%
 
 Flight Condition: CRUISE
   Baseline SFC:  0.5500 lb/(lbf·hr)
@@ -62,13 +62,13 @@ Flight Condition: CRUISE
 
 Flight Condition: DESCENT
   Baseline SFC:  0.5225 lb/(lbf·hr)
-  VPF SFC:       0.5088 lb/(lbf·hr)
-  Reduction:      2.62%
+  VPF SFC:       0.5135 lb/(lbf·hr)
+  Reduction:      1.72%
 
 Flight Condition: TAKEOFF
   Baseline SFC:  0.6325 lb/(lbf·hr)
-  VPF SFC:       0.5855 lb/(lbf·hr)
-  Reduction:      7.43%
+  VPF SFC:       0.6011 lb/(lbf·hr)
+  Reduction:      4.96%
 
 ----------------------------------------------------------------------
 4. KEY FINDINGS
@@ -80,7 +80,7 @@ Flight Condition: TAKEOFF
 • Improved fan efficiency directly reduces Specific Fuel
   Consumption, improving overall engine efficiency.
 
-• Average SFC reduction across all flight conditions: 3.71%
+• Average SFC reduction across all flight conditions: 2.46%
 
 • The Variable Pitch Fan concept demonstrates potential
   for meaningful fuel consumption improvements in turbofan

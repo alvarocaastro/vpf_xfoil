@@ -31,3 +31,29 @@ sfc_multipliers:
   climb: 1.05    # Slightly higher during climb
   cruise: 1.00   # Reference (baseline)
   descent: 0.95  # Lower SFC during descent (idle thrust)
+
+# ---------------------------------------------------------
+# NEW PARAMETERS FOR ADVANCED PHYSICS MODEL
+# ---------------------------------------------------------
+
+# Efficiency transfer coefficient (0.0 to 1.0)
+# Fraction of 2D profile efficiency gain that translates to 3D fan efficiency
+# (Accounts for 3D losses like tip clearance, secondary flows, shockwaves)
+profile_efficiency_transfer: 0.65
+
+# Kinematics geometry and velocities
+kinematics:
+  fan_rpm: 3000.0
+  speed_of_sound_m_s: 340.0
+  # Blade section radial positions (in meters)
+  # Typical for a 3-meter diameter fan (e.g., modern turbofan)
+  radii_m:
+    root: 0.50
+    mid_span: 1.00
+    tip: 1.50
+  # Typical flight Mach numbers per phase:
+  target_mach:
+    takeoff: 0.25
+    climb:   0.65
+    cruise:  0.85
+    descent: 0.75

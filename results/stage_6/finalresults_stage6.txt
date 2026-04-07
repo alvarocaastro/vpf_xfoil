@@ -1,6 +1,6 @@
 ======================================================================
 STAGE 6: VARIABLE PITCH FAN (VPF) ANALYSIS
-Generated: 2026-04-07 02:41:38
+Generated: 2026-04-07 02:56:36
 ======================================================================
 
 Computes α_opt per condition/section and pitch adjustments relative to cruise.

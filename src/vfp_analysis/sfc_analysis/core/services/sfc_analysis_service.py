@@ -73,8 +73,8 @@ def compute_sfc_analysis(
             engine_baseline.fan_efficiency,
         )
 
-        # Compute efficiency gain factor
-        efficiency_gain = (vpf_cl_cd - baseline_cl_cd) / baseline_cl_cd
+        # Compute efficiency gain factor (based on dampened fan efficiency, NOT raw 2D profile)
+        efficiency_gain = (fan_efficiency_new - engine_baseline.fan_efficiency) / engine_baseline.fan_efficiency
 
         # Get SFC baseline for this condition
         sfc_multiplier = sfc_multipliers.get(condition, 1.0)
