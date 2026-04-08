@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List
+from typing import List, Sequence
 
 import pandas as pd
 
@@ -10,6 +11,8 @@ from vfp_analysis.core.domain.airfoil import Airfoil
 from vfp_analysis.core.domain.scoring import AirfoilScore, score_airfoil
 from vfp_analysis.core.domain.simulation_condition import SimulationCondition
 from vfp_analysis.ports.xfoil_runner_port import XfoilRunnerPort
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -20,7 +23,14 @@ class AirfoilSelectionResult:
 
 
 class AirfoilSelectionService:
-    """Service that compares all airfoils and selects the best one."""
+    """Service that compares all candidate airfoils and selects the best one.
+
+    Each airfoil is evaluated at a common reference condition via XFOIL and
+    scored with a multi-criteria function that combines maximum aerodynamic
+    efficiency, stall angle, and mean drag (see ``scoring.score_airfoil``).
+    The highest-scoring airfoil is returned and its name persisted to disk
+    for traceability.
+    """
 
     def __init__(self, xfoil_runner: XfoilRunnerPort, results_dir: Path) -> None:
         self._xfoil = xfoil_runner
@@ -28,38 +38,79 @@ class AirfoilSelectionService:
 
     def run_selection(
         self,
-        airfoils: Iterable[Airfoil],
+        airfoils: Sequence[Airfoil],
         condition: SimulationCondition,
     ) -> AirfoilSelectionResult:
-        """Run XFOIL for all airfoils at a single reference condition."""
+        """Run XFOIL for all airfoils at a single reference condition.
+
+        Parameters
+        ----------
+        airfoils:
+            Ordered sequence of candidate airfoils.  A ``Sequence`` (not a
+            bare ``Iterable``) is required so the collection can be safely
+            iterated twice — once to run XFOIL and once to recover the
+            winning ``Airfoil`` object.
+        condition:
+            Shared simulation condition (Re, M, Ncrit, α-sweep) used for
+            the comparative evaluation.
+        """
 
         all_rows: List[pd.DataFrame] = []
         scores: List[AirfoilScore] = []
 
-        for airfoil in airfoils:
-            out_dir = self._results_dir / "airfoil_selection"
-            out_dir.mkdir(parents=True, exist_ok=True)
-            out_file = out_dir / f"{airfoil.name.replace(' ', '_')}_polar.txt"
+        out_dir = self._results_dir / "airfoil_selection"
+        out_dir.mkdir(parents=True, exist_ok=True)
 
-            self._xfoil.run_polar(airfoil.dat_path, condition, out_file)
+        LOGGER.info(
+            "Evaluating %d airfoil candidates at Re=%.2e, M=%.2f, Ncrit=%.1f",
+            len(airfoils),
+            condition.reynolds,
+            condition.mach_rel,
+            condition.ncrit,
+        )
+
+        for airfoil in airfoils:
+            out_file = out_dir / f"{airfoil.name.replace(' ', '_')}_polar.txt"
+            LOGGER.info("  Running XFOIL: %s", airfoil.name)
+
+            try:
+                self._xfoil.run_polar(airfoil.dat_path, condition, out_file)
+            except Exception as exc:
+                LOGGER.warning("  XFOIL failed for %s: %s — skipping.", airfoil.name, exc)
+                continue
 
             df = self._parse_polar_file(out_file, airfoil, condition)
             if df.empty:
+                LOGGER.warning("  Polar empty for %s — skipping.", airfoil.name)
                 continue
-            all_rows.append(df)
 
-            scores.append(score_airfoil(df))
+            score = score_airfoil(df)
+            LOGGER.info(
+                "  %s → (CL/CD)_max=%.2f  α_stall=%.1f°  C̄_D=%.5f  score=%.3f",
+                airfoil.name,
+                score.max_ld,
+                score.stall_alpha,
+                score.avg_cd,
+                score.total_score,
+            )
+            all_rows.append(df)
+            scores.append(score)
 
         polars = pd.concat(all_rows, ignore_index=True) if all_rows else pd.DataFrame()
 
         if not scores:
-            raise RuntimeError("No se pudieron puntuar perfiles (scores vacíos).")
+            raise RuntimeError(
+                "No airfoil could be scored (all XFOIL runs failed or produced empty polars)."
+            )
 
         best = max(scores, key=lambda s: s.total_score)
+        LOGGER.info("Selected airfoil: %s (score=%.3f)", best.airfoil, best.total_score)
 
-        selected_path = self._results_dir / "airfoil_selection" / "selected_airfoil.dat"
-        selected_path.write_text(best.airfoil, encoding="utf8")
+        selected_path = out_dir / "selected_airfoil.dat"
+        selected_path.write_text(best.airfoil, encoding="utf-8")
 
+        # Recover the full Airfoil object matching the winner.
+        # A Sequence is used (not a bare Iterable) to allow this second pass.
         best_airfoil = next(a for a in airfoils if a.name == best.airfoil)
 
         return AirfoilSelectionResult(best_airfoil=best_airfoil, scores=scores, polars=polars)

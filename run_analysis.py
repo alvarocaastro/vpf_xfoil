@@ -52,6 +52,8 @@ from vfp_analysis.config_loader import (
     get_output_dirs,
     get_reynolds_table,
     get_selection_alpha_range,
+    get_selection_ncrit,
+    get_selection_reynolds,
     get_target_mach,
 )
 from vfp_analysis.core.domain.airfoil import Airfoil
@@ -101,8 +103,8 @@ def step_1_clean_results() -> None:
     LOGGER.info("STEP 1: Cleaning previous results")
     LOGGER.info("=" * 60)
 
-    # Clean all stage directories
-    for stage_num in range(1, 8):
+    # Clean all stage directories (stages 1–8)
+    for stage_num in range(1, 9):
         stage_dir = base_config.RESULTS_DIR / f"stage_{stage_num}"
         if stage_dir.exists():
             LOGGER.info(f"Removing: {stage_dir}")
@@ -122,16 +124,15 @@ def step_2_airfoil_selection() -> Airfoil:
     stage1_dir.mkdir(parents=True, exist_ok=True)
 
     alpha_range = get_selection_alpha_range()
-    reynolds_table = get_reynolds_table()
 
     selection_condition = SimulationCondition(
         name="Selection",
         mach_rel=0.2,
-        reynolds=3.0e6,  # Default selection Reynolds
+        reynolds=get_selection_reynolds(),
         alpha_min=alpha_range["min"],
         alpha_max=alpha_range["max"],
         alpha_step=alpha_range["step"],
-        ncrit=7.0,
+        ncrit=get_selection_ncrit(),
     )
 
     # Build airfoils from data directory

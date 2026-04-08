@@ -93,6 +93,18 @@ def get_selection_alpha_range() -> Dict[str, float]:
     return {key: float(value) for key, value in alpha_raw.items()}
 
 
+def get_selection_reynolds() -> float:
+    """Get Reynolds number used in the airfoil selection stage."""
+    cfg = load_config()
+    return float(cfg["selection"]["reynolds"])
+
+
+def get_selection_ncrit() -> float:
+    """Get Ncrit used in the airfoil selection stage."""
+    cfg = load_config()
+    return float(cfg["selection"]["ncrit"])
+
+
 def get_output_dirs() -> Dict[str, Path]:
     """Get output directory paths from configuration."""
     cfg = load_config()

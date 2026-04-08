@@ -23,6 +23,9 @@ from vfp_analysis.config_loader import (
     get_flight_conditions,
     get_ncrit_table,
     get_reynolds_table,
+    get_selection_alpha_range,
+    get_selection_ncrit,
+    get_selection_reynolds,
     get_target_mach,
 )
 
@@ -50,12 +53,15 @@ def _footer() -> List[str]:
 # ---------------------------------------------------------------------------
 
 def generate_stage1_summary(stage_dir: Path, selected_airfoil_name: str) -> str:
-    alpha = get_alpha_range()
+    alpha = get_selection_alpha_range()
+    re    = get_selection_reynolds()
+    nc    = get_selection_ncrit()
     lines = _header(1, "AIRFOIL SELECTION")
     lines += [
         f"Selected airfoil : {selected_airfoil_name}",
         f"Alpha range      : {alpha['min']:.1f}° → {alpha['max']:.1f}° (step {alpha['step']:.2f}°)",
-        f"Reference Re     : 3.0e6  |  Ncrit: 7.0",
+        f"Reference Re     : {re:.2e}  |  Ncrit: {nc:.1f}",
+        "Scoring criteria : (CL/CD)_max (w=1.0)  +  α_stall·5 (w=5.0)  −  C̄_D·5000 (w=5000)",
         "",
         "Outputs:",
         f"  {stage_dir / 'airfoil_selection'}",
@@ -235,17 +241,60 @@ def generate_stage6_summary(stage_dir: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Stage 7 — SFC Analysis
+# Stage 7 — Kinematics Analysis
 # ---------------------------------------------------------------------------
 
 def generate_stage7_summary(stage_dir: Path) -> str:
-    tables_dir  = stage_dir.parent / "stage_4" / "tables"
+    tables_dir  = stage_dir / "tables"
+    figures_dir = stage_dir / "figures"
+    kin_file    = tables_dir / "kinematics_analysis.csv"
+
+    lines = _header(7, "KINEMATIC VELOCITY-TRIANGLE ANALYSIS")
+    lines += [
+        "Translates aerodynamic pitch angles into mechanical pitch commands",
+        "via the velocity triangle: Δβ_mech = Δα_aero + Δφ.",
+        "",
+    ]
+
+    if kin_file.exists():
+        try:
+            df = pd.read_csv(kin_file)
+            if not df.empty and "delta_beta_mech_deg" in df.columns:
+                # Exclude cruise (reference, Δβ=0) from range display
+                non_cruise = df[df["condition"] != "cruise"]
+                if not non_cruise.empty:
+                    lines += [
+                        f"Δφ range (non-cruise) : "
+                        f"{non_cruise['delta_beta_mech_deg'].min():.2f}° – "
+                        f"{non_cruise['delta_beta_mech_deg'].max():.2f}°",
+                    ]
+        except Exception:
+            pass
+
+    lines += [
+        "",
+        "Outputs:",
+        f"  {kin_file}",
+        f"  {figures_dir}",
+    ]
+    lines += _footer()
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Stage 8 — SFC Analysis
+# ---------------------------------------------------------------------------
+
+def generate_stage8_summary(stage_dir: Path) -> str:
+    tables_dir  = stage_dir / "tables"
     figures_dir = stage_dir / "figures"
     sfc_file    = tables_dir / "sfc_analysis.csv"
 
-    lines = _header(7, "SPECIFIC FUEL CONSUMPTION (SFC) IMPACT ANALYSIS")
+    lines = _header(8, "SPECIFIC FUEL CONSUMPTION (SFC) IMPACT ANALYSIS")
     lines += [
         "Estimates SFC reduction enabled by VPF optimised-pitch operation.",
+        "Fan efficiency transfer: η_fan,new = η_base·[1 + τ·((CL/CD)_new/(CL/CD)_base − 1)]",
+        "Dampening factor τ = 0.65 (accounts for 3-D tip-clearance and secondary-flow losses).",
         "",
     ]
 
@@ -253,10 +302,11 @@ def generate_stage7_summary(stage_dir: Path) -> str:
         try:
             df = pd.read_csv(sfc_file)
             if not df.empty and "sfc_reduction_percent" in df.columns:
+                mean_red = df["sfc_reduction_percent"].mean()
+                max_red  = df["sfc_reduction_percent"].max()
                 lines += [
-                    f"SFC reduction: {df['sfc_reduction_percent'].min():.2f}% – "
-                    f"{df['sfc_reduction_percent'].max():.2f}%  "
-                    f"(mean {df['sfc_reduction_percent'].mean():.2f}%)",
+                    f"SFC reduction range  : {df['sfc_reduction_percent'].min():.2f}% – {max_red:.2f}%",
+                    f"Envelope mean        : {mean_red:.2f}%",
                 ]
         except Exception:
             pass

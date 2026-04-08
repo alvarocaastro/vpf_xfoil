@@ -67,8 +67,8 @@ output:
   vpf_analysis_summary: results/stage_6/vpf_analysis_summary.txt
   figures_cascade: results/stage_7/figures
   cascade_dataset: results/stage_7/cascade_dataset.csv
-  figures_sfc: results/stage_7/figures
-  sfc_analysis_summary: results/stage_7/sfc_analysis_summary.txt
+  figures_sfc: results/stage_8/figures
+  sfc_analysis_summary: results/stage_8/sfc_analysis_summary.txt
 
 # Plot settings
 plotting:
