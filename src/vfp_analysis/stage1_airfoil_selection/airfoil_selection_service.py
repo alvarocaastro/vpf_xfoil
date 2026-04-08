@@ -8,9 +8,9 @@ from typing import List, Sequence
 import pandas as pd
 
 from vfp_analysis.core.domain.airfoil import Airfoil
-from vfp_analysis.stage1_airfoil_selection.scoring import AirfoilScore, score_airfoil
 from vfp_analysis.core.domain.simulation_condition import SimulationCondition
 from vfp_analysis.ports.xfoil_runner_port import XfoilRunnerPort
+from vfp_analysis.stage1_airfoil_selection.scoring import AirfoilScore, score_airfoil
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,14 +23,7 @@ class AirfoilSelectionResult:
 
 
 class AirfoilSelectionService:
-    """Service that compares all candidate airfoils and selects the best one.
-
-    Each airfoil is evaluated at a common reference condition via XFOIL and
-    scored with a multi-criteria function that combines maximum aerodynamic
-    efficiency, stall angle, and mean drag (see ``scoring.score_airfoil``).
-    The highest-scoring airfoil is returned and its name persisted to disk
-    for traceability.
-    """
+    """Compare all candidate airfoils and select the best one."""
 
     def __init__(self, xfoil_runner: XfoilRunnerPort, results_dir: Path) -> None:
         self._xfoil = xfoil_runner
@@ -41,19 +34,7 @@ class AirfoilSelectionService:
         airfoils: Sequence[Airfoil],
         condition: SimulationCondition,
     ) -> AirfoilSelectionResult:
-        """Run XFOIL for all airfoils at a single reference condition.
-
-        Parameters
-        ----------
-        airfoils:
-            Ordered sequence of candidate airfoils.  A ``Sequence`` (not a
-            bare ``Iterable``) is required so the collection can be safely
-            iterated twice — once to run XFOIL and once to recover the
-            winning ``Airfoil`` object.
-        condition:
-            Shared simulation condition (Re, M, Ncrit, α-sweep) used for
-            the comparative evaluation.
-        """
+        """Run XFOIL for all airfoils at a single reference condition."""
 
         all_rows: List[pd.DataFrame] = []
         scores: List[AirfoilScore] = []
@@ -76,21 +57,23 @@ class AirfoilSelectionService:
             try:
                 self._xfoil.run_polar(airfoil.dat_path, condition, out_file)
             except Exception as exc:
-                LOGGER.warning("  XFOIL failed for %s: %s — skipping.", airfoil.name, exc)
+                LOGGER.warning("  XFOIL failed for %s: %s - skipping.", airfoil.name, exc)
                 continue
 
             df = self._parse_polar_file(out_file, airfoil, condition)
             if df.empty:
-                LOGGER.warning("  Polar empty for %s — skipping.", airfoil.name)
+                LOGGER.warning("  Polar empty for %s - skipping.", airfoil.name)
                 continue
 
             score = score_airfoil(df)
             LOGGER.info(
-                "  %s → (CL/CD)_max=%.2f  α_stall=%.1f°  C̄_D=%.5f  score=%.3f",
+                "  %s -> (CL/CD)_2nd=%.2f  alpha_opt=%.1f deg  stall=%.1f deg  margin=%.1f deg  robustness=%.2f  score=%.3f",
                 airfoil.name,
                 score.max_ld,
+                score.alpha_opt,
                 score.stall_alpha,
-                score.avg_cd,
+                score.stability_margin,
+                score.robustness_ld,
                 score.total_score,
             )
             all_rows.append(df)
@@ -109,8 +92,6 @@ class AirfoilSelectionService:
         selected_path = out_dir / "selected_airfoil.dat"
         selected_path.write_text(best.airfoil, encoding="utf-8")
 
-        # Recover the full Airfoil object matching the winner.
-        # A Sequence is used (not a bare Iterable) to allow this second pass.
         best_airfoil = next(a for a in airfoils if a.name == best.airfoil)
 
         return AirfoilSelectionResult(best_airfoil=best_airfoil, scores=scores, polars=polars)
@@ -155,4 +136,3 @@ class AirfoilSelectionService:
                     }
                 )
         return pd.DataFrame(rows)
-

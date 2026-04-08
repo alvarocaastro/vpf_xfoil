@@ -5,6 +5,8 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from vfp_analysis.postprocessing.aerodynamics_utils import find_second_peak_row
+
 
 @dataclass(frozen=True)
 class AirfoilScore:
@@ -12,93 +14,76 @@ class AirfoilScore:
 
     airfoil: str
     max_ld: float
+    alpha_opt: float
     stall_alpha: float
-    avg_cd: float
+    stability_margin: float
+    robustness_ld: float
     total_score: float
 
 
 def score_airfoil(df: pd.DataFrame) -> AirfoilScore:
     """
-    Compute a multi-criteria score for a given airfoil polar table.
+    Compute a fan-oriented score for a given airfoil polar table.
 
-    The score combines three aerodynamic figures of merit relevant to
-    turbofan fan-blade selection:
+    The selection criterion is aligned with the rest of the project:
 
-    1. Maximum aerodynamic efficiency ``(CL/CD)_max``  — primary driver of
-       cruise fuel consumption (SFC ∝ 1/η_fan).
-    2. Stall angle ``α_stall`` — angle of attack at peak CL, representing
-       the usable incidence margin before separation.  A higher stall angle
-       is critical for the large velocity-triangle excursions that occur
-       during takeoff and climb in ultra-high-bypass configurations.
-    3. Mean drag coefficient ``C̄_D`` — penalises profiles with persistently
-       high viscous drag across the full operating range, not just at the
-       design point.
+    1. ``max_ld`` is taken from the second aerodynamic efficiency peak
+       (``alpha >= 3°``), not from the low-alpha laminar-bubble artefact.
+    2. ``stability_margin`` measures the incidence distance between the
+       operating point and stall: ``stall_alpha - alpha_opt``.
+    3. ``robustness_ld`` is the mean ``CL/CD`` in a narrow window around the
+       operating point (``alpha_opt ± 1°``), rewarding broad, stable peaks
+       instead of needle-like maxima.
 
-    Weighted composite score (all terms in comparable magnitude):
-    ::
+    Composite score:
 
-        S = w1·(CL/CD)_max  +  w2·α_stall [°]  −  w3·C̄_D
-
-    Default weights are calibrated so each term contributes roughly the
-    same dynamic range for NACA 65-series fan profiles:
-
-    * ``w1 = 1.0``   — (CL/CD)_max ≈ 60–120  → contribution ≈ 60–120
-    * ``w2 = 5.0``   — α_stall ≈ 12–22 °     → contribution ≈ 60–110
-    * ``w3 = 5000``  — C̄_D ≈ 0.006–0.015    → contribution ≈ 30–75
-
-    References
-    ----------
-    Saravanamuttoo et al., *Gas Turbine Theory*, 6th ed., §4.3.
-    Farokhi, *Aircraft Propulsion*, 2nd ed., §6.2.
+    ``S = 1.0 * max_ld + 0.5 * robustness_ld + 1.0 * stability_margin``
     """
 
     if df.empty:
         return AirfoilScore(
             airfoil="",
             max_ld=np.nan,
+            alpha_opt=np.nan,
             stall_alpha=np.nan,
-            avg_cd=np.nan,
+            stability_margin=np.nan,
+            robustness_ld=np.nan,
             total_score=np.nan,
         )
 
     airfoil_name = str(df["airfoil"].iloc[0])
 
-    valid = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["ld", "cd"])
+    valid = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["ld", "alpha", "cl"])
     if valid.empty:
         return AirfoilScore(
             airfoil=airfoil_name,
             max_ld=np.nan,
+            alpha_opt=np.nan,
             stall_alpha=np.nan,
-            avg_cd=np.nan,
+            stability_margin=np.nan,
+            robustness_ld=np.nan,
             total_score=np.nan,
         )
 
-    # Maximum aerodynamic efficiency
-    idx_max_ld = valid["ld"].idxmax()
-    max_ld = float(valid.loc[idx_max_ld, "ld"])
+    row_opt = find_second_peak_row(valid, "ld", alpha_min=3.0)
+    max_ld = float(row_opt["ld"])
+    alpha_opt = float(row_opt["alpha"])
 
-    # True stall angle: angle of attack at maximum CL.
-    # This differs from the alpha at max(CL/CD), which occurs well before
-    # stall.  The stall angle defines the usable incidence envelope of the
-    # blade, a key criterion for variable-pitch operation.
-    valid_cl = df.replace([np.inf, -np.inf], np.nan).dropna(subset=["cl"])
-    if valid_cl.empty:
-        stall_alpha = float(valid.loc[idx_max_ld, "alpha"])  # fallback
-    else:
-        idx_cl_max = valid_cl["cl"].idxmax()
-        stall_alpha = float(valid_cl.loc[idx_cl_max, "alpha"])
+    idx_cl_max = valid["cl"].idxmax()
+    stall_alpha = float(valid.loc[idx_cl_max, "alpha"])
+    stability_margin = max(0.0, stall_alpha - alpha_opt)
 
-    avg_cd = float(valid["cd"].mean())
+    df_window = valid[(valid["alpha"] >= alpha_opt - 1.0) & (valid["alpha"] <= alpha_opt + 1.0)]
+    robustness_ld = float(df_window["ld"].mean()) if not df_window.empty else max_ld
 
-    # Multi-criteria weighted score (see docstring for weight rationale)
-    total_score = 1.0 * max_ld + 5.0 * stall_alpha - 5000.0 * avg_cd
+    total_score = 1.0 * max_ld + 0.5 * robustness_ld + 1.0 * stability_margin
 
     return AirfoilScore(
         airfoil=airfoil_name,
         max_ld=max_ld,
+        alpha_opt=alpha_opt,
         stall_alpha=stall_alpha,
-        avg_cd=avg_cd,
+        stability_margin=stability_margin,
+        robustness_ld=robustness_ld,
         total_score=total_score,
     )
-
-

@@ -1,8 +1,8 @@
 """
 Tests for airfoil selection logic.
 
-Verifies that the scoring system correctly selects the best airfoil
-based on max(CL/CD), stall angle, and average drag.
+Verifies that the scoring system uses the second efficiency peak and rewards
+incidence stability around the operating point.
 """
 
 from __future__ import annotations
@@ -23,134 +23,100 @@ from vfp_analysis.stage1_airfoil_selection.scoring import AirfoilScore, score_ai
 class TestAirfoilSelection:
     """Test suite for airfoil selection algorithm."""
 
-    def test_selection_based_on_max_ld(self) -> None:
-        """Test that airfoil with highest max(CL/CD) is selected."""
-        # Airfoil A: high max L/D
-        df_a = pd.DataFrame(
+    def test_selection_uses_second_efficiency_peak(self) -> None:
+        """Low-alpha artefacts must not dominate the score."""
+        df = pd.DataFrame(
             {
-                "airfoil": ["Airfoil A"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 1.0],
-                "cd": [0.02, 0.03, 0.05, 0.08, 0.12],
-                "ld": [15.0, 20.0, 18.0, 13.75, 8.33],
+                "airfoil": ["Airfoil A"] * 6,
+                "alpha": [0.0, 2.0, 4.0, 6.0, 8.0, 10.0],
+                "cl": [0.2, 0.4, 0.7, 0.9, 1.0, 0.95],
+                "cd": [0.010, 0.012, 0.010, 0.0105, 0.0120, 0.0150],
+                "ld": [25.0, 40.0, 70.0, 85.0, 83.0, 63.33],
             }
         )
 
-        # Airfoil B: lower max L/D
+        score = score_airfoil(df)
+
+        assert score.alpha_opt == pytest.approx(6.0, abs=1e-6)
+        assert score.max_ld == pytest.approx(85.0, abs=1e-6)
+
+    def test_selection_rewards_stall_margin(self) -> None:
+        """Later stall should improve the score when efficiency is similar."""
+        df_a = pd.DataFrame(
+            {
+                "airfoil": ["Airfoil A"] * 6,
+                "alpha": [0.0, 4.0, 6.0, 8.0, 10.0, 12.0],
+                "cl": [0.2, 0.7, 0.95, 1.10, 1.20, 1.15],
+                "cd": [0.02, 0.014, 0.012, 0.013, 0.016, 0.020],
+                "ld": [10.0, 50.0, 79.17, 84.62, 75.0, 57.5],
+            }
+        )
         df_b = pd.DataFrame(
             {
-                "airfoil": ["Airfoil B"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.2, 0.4, 0.6, 0.7, 0.6],
-                "cd": [0.02, 0.03, 0.05, 0.08, 0.12],
-                "ld": [10.0, 13.33, 12.0, 8.75, 5.0],
+                "airfoil": ["Airfoil B"] * 6,
+                "alpha": [0.0, 4.0, 6.0, 8.0, 10.0, 12.0],
+                "cl": [0.2, 0.7, 0.95, 1.05, 0.95, 0.85],
+                "cd": [0.02, 0.014, 0.012, 0.0125, 0.016, 0.020],
+                "ld": [10.0, 50.0, 79.17, 84.0, 59.38, 42.5],
             }
         )
 
         score_a = score_airfoil(df_a)
         score_b = score_airfoil(df_b)
 
-        # Airfoil A should have higher total score (better max L/D)
+        assert score_a.stall_alpha == pytest.approx(10.0, abs=1e-6)
+        assert score_b.stall_alpha == pytest.approx(8.0, abs=1e-6)
+        assert score_a.stability_margin > score_b.stability_margin
         assert score_a.total_score > score_b.total_score
 
-    def test_selection_based_on_stall_angle(self) -> None:
-        """Test that higher stall angle contributes to better score.
-
-        The stall angle is defined as the angle of attack at peak CL, not the
-        angle at peak CL/CD.  Airfoil A reaches CL_max at α=20° while Airfoil B
-        stalls earlier at α=15°.  Both have the same max(CL/CD) and the same
-        avg_CD, so the stall-angle term in the scoring function drives the result.
-        """
-        # Airfoil A: stalls later (CL keeps rising to α=20°)
-        df_a = pd.DataFrame(
+    def test_selection_rewards_robust_operating_window(self) -> None:
+        """A broader efficiency plateau should beat a sharp isolated spike."""
+        df_plateau = pd.DataFrame(
             {
-                "airfoil": ["Airfoil A"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 1.2],   # CL_max=1.2 @ α=20° → stall_alpha=20°
-                "cd": [0.02, 0.03, 0.05, 0.08, 0.10],
-                "ld": [15.0, 20.0, 18.0, 13.75, 12.0],  # max(CL/CD)=20 @ α=5°
+                "airfoil": ["Plateau"] * 6,
+                "alpha": [0.0, 4.0, 5.0, 6.0, 7.0, 9.0],
+                "cl": [0.2, 0.7, 0.85, 1.0, 1.1, 1.2],
+                "cd": [0.02, 0.0135, 0.012, 0.012, 0.0128, 0.017],
+                "ld": [10.0, 51.85, 70.83, 83.33, 85.94, 70.59],
+            }
+        )
+        df_spike = pd.DataFrame(
+            {
+                "airfoil": ["Spike"] * 6,
+                "alpha": [0.0, 4.0, 5.0, 6.0, 7.0, 9.0],
+                "cl": [0.2, 0.7, 0.84, 1.0, 1.05, 1.15],
+                "cd": [0.02, 0.0135, 0.0108, 0.0140, 0.0168, 0.021],
+                "ld": [10.0, 51.85, 77.78, 71.43, 62.5, 54.76],
             }
         )
 
-        # Airfoil B: stalls earlier (CL drops after α=15°)
-        df_b = pd.DataFrame(
-            {
-                "airfoil": ["Airfoil B"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 0.8],   # CL_max=1.1 @ α=15° → stall_alpha=15°
-                "cd": [0.02, 0.03, 0.05, 0.08, 0.10],
-                "ld": [15.0, 20.0, 18.0, 13.75, 8.0],   # max(CL/CD)=20 @ α=5° (same)
-            }
-        )
+        score_plateau = score_airfoil(df_plateau)
+        score_spike = score_airfoil(df_spike)
 
-        score_a = score_airfoil(df_a)
-        score_b = score_airfoil(df_b)
-
-        # Stall angle must be the alpha at CL_max, not at max(CL/CD)
-        assert score_a.stall_alpha == pytest.approx(20.0, abs=1e-6), (
-            "stall_alpha should be alpha at CL_max (20°), not alpha at max(CL/CD) (5°)"
-        )
-        assert score_b.stall_alpha == pytest.approx(15.0, abs=1e-6), (
-            "stall_alpha should be alpha at CL_max (15°), not alpha at max(CL/CD) (5°)"
-        )
-
-        # Airfoil A has a higher stall angle with equal max(CL/CD) and avg_CD,
-        # so it must score higher
-        assert score_a.total_score > score_b.total_score
-
-    def test_selection_based_on_average_drag(self) -> None:
-        """Test that lower average drag contributes to better score."""
-        # Airfoil A: lower average drag
-        df_a = pd.DataFrame(
-            {
-                "airfoil": ["Airfoil A"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 1.0],
-                "cd": [0.01, 0.02, 0.03, 0.05, 0.08],  # Lower drag
-                "ld": [30.0, 30.0, 30.0, 22.0, 12.5],
-            }
-        )
-
-        # Airfoil B: higher average drag
-        df_b = pd.DataFrame(
-            {
-                "airfoil": ["Airfoil B"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 1.0],
-                "cd": [0.02, 0.04, 0.06, 0.10, 0.16],  # Higher drag
-                "ld": [15.0, 15.0, 15.0, 11.0, 6.25],
-            }
-        )
-
-        score_a = score_airfoil(df_a)
-        score_b = score_airfoil(df_b)
-
-        # Airfoil A should have lower average drag and higher score
-        assert score_a.avg_cd < score_b.avg_cd
-        assert score_a.total_score > score_b.total_score
+        assert score_plateau.robustness_ld > score_spike.robustness_ld
+        assert score_plateau.total_score > score_spike.total_score
 
     def test_selection_is_deterministic(self) -> None:
         """Verify that selection logic is deterministic (same input = same output)."""
         df = pd.DataFrame(
             {
-                "airfoil": ["Test Airfoil"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 1.0],
-                "cd": [0.02, 0.03, 0.05, 0.08, 0.12],
-                "ld": [15.0, 20.0, 18.0, 13.75, 8.33],
+                "airfoil": ["Test Airfoil"] * 6,
+                "alpha": [0.0, 4.0, 5.0, 6.0, 7.0, 9.0],
+                "cl": [0.2, 0.7, 0.85, 1.0, 1.1, 1.0],
+                "cd": [0.02, 0.0135, 0.012, 0.012, 0.0128, 0.017],
+                "ld": [10.0, 51.85, 70.83, 83.33, 85.94, 58.82],
             }
         )
 
-        # Score multiple times
         score1 = score_airfoil(df)
         score2 = score_airfoil(df)
         score3 = score_airfoil(df)
 
-        # All scores should be identical
         assert score1.total_score == score2.total_score == score3.total_score
         assert score1.max_ld == score2.max_ld == score3.max_ld
-        assert score1.stall_alpha == score2.stall_alpha == score3.stall_alpha
-        assert score1.avg_cd == score2.avg_cd == score3.avg_cd
+        assert score1.alpha_opt == score2.alpha_opt == score3.alpha_opt
+        assert score1.stability_margin == score2.stability_margin == score3.stability_margin
+        assert score1.robustness_ld == score2.robustness_ld == score3.robustness_ld
 
     def test_empty_dataframe_returns_nan_scores(self) -> None:
         """Test that empty DataFrame returns NaN scores."""
@@ -160,88 +126,73 @@ class TestAirfoilSelection:
 
         assert np.isnan(score.total_score)
         assert np.isnan(score.max_ld)
+        assert np.isnan(score.alpha_opt)
         assert np.isnan(score.stall_alpha)
-        assert np.isnan(score.avg_cd)
+        assert np.isnan(score.stability_margin)
+        assert np.isnan(score.robustness_ld)
         assert score.airfoil == ""
 
     def test_dataframe_with_invalid_ld_handled_correctly(self) -> None:
         """Test that DataFrame with invalid L/D values (inf, nan) is handled."""
         df = pd.DataFrame(
             {
-                "airfoil": ["Test"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 1.0],
-                "cd": [0.02, 0.0, 0.05, 0.08, 0.12],  # One zero drag -> inf L/D
-                "ld": [15.0, np.inf, 18.0, 13.75, 8.33],
+                "airfoil": ["Test"] * 6,
+                "alpha": [0.0, 4.0, 5.0, 6.0, 7.0, 9.0],
+                "cl": [0.2, 0.7, 0.85, 1.0, 1.1, 1.0],
+                "cd": [0.02, 0.0135, 0.0, 0.012, 0.0128, 0.017],
+                "ld": [10.0, 51.85, np.inf, 83.33, 85.94, 58.82],
             }
         )
 
         score = score_airfoil(df)
 
-        # Should handle inf values and compute score from valid data
         assert not np.isnan(score.total_score)
         assert score.max_ld > 0
 
     def test_best_airfoil_selected_from_multiple_candidates(self) -> None:
-        """Test that the best airfoil is correctly selected from multiple candidates."""
-        # Create three airfoils with different characteristics
+        """Test that a balanced high-efficiency profile can beat a symmetric profile."""
         airfoils_data = [
             {
-                "name": "High L/D",
+                "name": "Fan Candidate",
                 "df": pd.DataFrame(
                     {
-                        "airfoil": ["High L/D"] * 5,
-                        "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                        "cl": [0.3, 0.6, 0.9, 1.1, 1.0],
-                        "cd": [0.02, 0.03, 0.05, 0.08, 0.12],
-                        "ld": [15.0, 20.0, 18.0, 13.75, 8.33],  # Max: 20.0
+                        "airfoil": ["Fan Candidate"] * 6,
+                        "alpha": [0.0, 4.0, 5.0, 6.0, 7.0, 9.0],
+                        "cl": [0.2, 0.7, 0.9, 1.05, 1.15, 1.20],
+                        "cd": [0.02, 0.0135, 0.0113, 0.0107, 0.0116, 0.0175],
+                        "ld": [10.0, 51.85, 79.65, 98.13, 99.14, 68.57],
                     }
                 ),
             },
             {
-                "name": "Low Drag",
+                "name": "Symmetric Stable",
                 "df": pd.DataFrame(
                     {
-                        "airfoil": ["Low Drag"] * 5,
-                        "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                        "cl": [0.2, 0.4, 0.6, 0.7, 0.6],
-                        "cd": [0.01, 0.015, 0.02, 0.03, 0.05],  # Lower drag
-                        "ld": [20.0, 26.67, 30.0, 23.33, 12.0],  # Max: 30.0
-                    }
-                ),
-            },
-            {
-                "name": "High Stall",
-                "df": pd.DataFrame(
-                    {
-                        "airfoil": ["High Stall"] * 5,
-                        "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                        "cl": [0.25, 0.5, 0.75, 0.95, 1.1],  # Max at alpha=20
-                        "cd": [0.02, 0.03, 0.05, 0.08, 0.10],
-                        "ld": [12.5, 16.67, 15.0, 11.88, 11.0],  # Max: 16.67
+                        "airfoil": ["Symmetric Stable"] * 6,
+                        "alpha": [0.0, 4.0, 6.0, 8.0, 10.0, 12.0],
+                        "cl": [0.2, 0.7, 0.95, 1.08, 1.18, 1.20],
+                        "cd": [0.02, 0.0135, 0.0118, 0.0117, 0.0138, 0.0175],
+                        "ld": [10.0, 51.85, 80.51, 92.31, 85.51, 68.57],
                     }
                 ),
             },
         ]
 
         scores = [score_airfoil(data["df"]) for data in airfoils_data]
-
-        # Find best score
         best_score = max(scores, key=lambda s: s.total_score)
 
-        # "Low Drag" should win (highest max L/D = 30.0)
-        assert best_score.airfoil == "Low Drag"
-        assert best_score.max_ld == pytest.approx(30.0, abs=1e-6)
+        assert best_score.airfoil == "Fan Candidate"
+        assert best_score.max_ld == pytest.approx(99.14, abs=1e-2)
 
     def test_score_airfoil_returns_correct_airfoil_name(self) -> None:
         """Test that score_airfoil correctly extracts and returns airfoil name."""
         df = pd.DataFrame(
             {
-                "airfoil": ["NACA 65-410"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 1.0],
-                "cd": [0.02, 0.03, 0.05, 0.08, 0.12],
-                "ld": [15.0, 20.0, 18.0, 13.75, 8.33],
+                "airfoil": ["NACA 65-410"] * 6,
+                "alpha": [0.0, 4.0, 5.0, 6.0, 7.0, 9.0],
+                "cl": [0.2, 0.7, 0.85, 1.0, 1.1, 1.0],
+                "cd": [0.02, 0.0135, 0.012, 0.012, 0.0128, 0.017],
+                "ld": [10.0, 51.85, 70.83, 83.33, 85.94, 58.82],
             }
         )
 
@@ -250,38 +201,23 @@ class TestAirfoilSelection:
         assert score.airfoil == "NACA 65-410"
 
     def test_score_components_are_correct(self) -> None:
-        """Test that all score components (max_ld, stall_alpha, avg_cd) are correct.
-
-        Data:
-            alpha = [0, 5, 10, 15, 20]
-            CL    = [0.3, 0.6, 0.9, 1.1, 1.0]  → CL_max = 1.1 at α = 15°
-            CL/CD = [15, 20, 18, 13.75, 8.33]   → max(CL/CD) = 20 at α = 5°
-
-        Expected:
-            max_ld     = 20.0   (peak CL/CD)
-            stall_alpha = 15.0  (alpha at CL_max, i.e. the true stall angle)
-            avg_cd      = mean of CD values
-        """
+        """Test that the score components are computed from the operating region."""
         df = pd.DataFrame(
             {
-                "airfoil": ["Test"] * 5,
-                "alpha": [0.0, 5.0, 10.0, 15.0, 20.0],
-                "cl": [0.3, 0.6, 0.9, 1.1, 1.0],
-                "cd": [0.02, 0.03, 0.05, 0.08, 0.12],
-                "ld": [15.0, 20.0, 18.0, 13.75, 8.33],
+                "airfoil": ["Test"] * 6,
+                "alpha": [0.0, 4.0, 5.0, 6.0, 7.0, 9.0],
+                "cl": [0.2, 0.7, 0.85, 1.0, 1.1, 1.0],
+                "cd": [0.02, 0.0135, 0.012, 0.012, 0.0128, 0.017],
+                "ld": [10.0, 51.85, 70.83, 83.33, 85.94, 58.82],
             }
         )
 
         score = score_airfoil(df)
 
-        # Maximum aerodynamic efficiency
-        assert score.max_ld == pytest.approx(20.0, abs=1e-6)
+        assert score.max_ld == pytest.approx(85.94, abs=1e-2)
+        assert score.alpha_opt == pytest.approx(7.0, abs=1e-6)
+        assert score.stall_alpha == pytest.approx(7.0, abs=1e-6)
+        assert score.stability_margin == pytest.approx(0.0, abs=1e-6)
 
-        # Stall angle = alpha at CL_max (15°), NOT alpha at max(CL/CD) (5°)
-        assert score.stall_alpha == pytest.approx(15.0, abs=1e-6), (
-            "stall_alpha must equal the angle of attack at peak CL (true stall angle)"
-        )
-
-        # Mean drag coefficient
-        expected_avg_cd = (0.02 + 0.03 + 0.05 + 0.08 + 0.12) / 5.0
-        assert score.avg_cd == pytest.approx(expected_avg_cd, abs=1e-6)
+        window = [83.33, 85.94]
+        assert score.robustness_ld == pytest.approx(sum(window) / len(window), abs=1e-2)

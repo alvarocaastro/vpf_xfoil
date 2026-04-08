@@ -25,10 +25,12 @@ Comparar varios perfiles candidatos para la pala del fan y escoger uno único qu
 
 1. Se ejecuta XFOIL para cada perfil bajo la misma condición de referencia.
 2. Se calcula una puntuación multicriterio a partir de:
-   - eficiencia máxima `(CL/CD)_max`
-   - ángulo de pérdida aproximado `alpha_stall`
-   - resistencia media `avg_cd`
+   - eficiencia máxima en el segundo pico `(CL/CD)_2nd`
+   - margen de estabilidad `stall_alpha - alpha_opt`
+   - robustez local del punto operativo, medida como la media de `CL/CD` en una ventana alrededor de `alpha_opt`
 3. Se selecciona el perfil con mayor puntuación total.
+
+El criterio evita que el primer pico de eficiencia de XFOIL a bajo ángulo, asociado a la burbuja laminar, domine la selección. Así Stage 1 queda alineada con el resto del pipeline, que también trabaja con el segundo pico de eficiencia como punto operativo real.
 
 La lógica de scoring está en `src/vfp_analysis/stage1_airfoil_selection/scoring.py`.
 
