@@ -48,8 +48,8 @@ env/
 *.bcf
 *.run.xml
 
-# Results (opcional: descomentar si no quieres versionar resultados)
-# results/
+# Results
+results/
 
 # Temporary files
 *.tmp
