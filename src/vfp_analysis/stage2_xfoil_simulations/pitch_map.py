@@ -20,7 +20,7 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from vfp_analysis.stage2_xfoil_simulations.plot_style import (
+from vfp_analysis.shared.plot_style import (
     COLORS,
     FLIGHT_LABELS,
     SECTION_LABELS,

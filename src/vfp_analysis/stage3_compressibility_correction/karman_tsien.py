@@ -34,10 +34,10 @@ import math
 
 import pandas as pd
 
-from vfp_analysis.stage3_compressibility_correction.core.domain.compressibility_case import (
+from vfp_analysis.stage3_compressibility_correction.compressibility_case import (
     CompressibilityCase,
 )
-from vfp_analysis.stage3_compressibility_correction.utils.critical_mach import (
+from vfp_analysis.stage3_compressibility_correction.critical_mach import (
     wave_drag_increment,
     estimate_mdd,
 )

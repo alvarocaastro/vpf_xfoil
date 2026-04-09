@@ -13,7 +13,7 @@ from typing import Optional
 
 import pandas as pd
 
-from vfp_analysis.stage3_compressibility_correction.core.domain.compressibility_case import (
+from vfp_analysis.stage3_compressibility_correction.compressibility_case import (
     CompressibilityCase,
 )
 

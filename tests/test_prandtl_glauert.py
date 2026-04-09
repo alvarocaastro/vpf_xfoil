@@ -18,10 +18,10 @@ import pytest
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from vfp_analysis.stage3_compressibility_correction.adapters.correction_models.prandtl_glauert_model import (
+from vfp_analysis.stage3_compressibility_correction.prandtl_glauert import (
     PrandtlGlauertModel,
 )
-from vfp_analysis.stage3_compressibility_correction.core.domain.compressibility_case import (
+from vfp_analysis.stage3_compressibility_correction.compressibility_case import (
     CompressibilityCase,
 )
 
@@ -52,7 +52,7 @@ class TestPrandtlGlauertCorrection:
 
         corrected_df = model.correct_polar(df, case)
 
-        assert corrected_df["cl_corrected"].iloc[0] > original_cl
+        assert corrected_df["cl_pg"].iloc[0] > original_cl
 
     def test_correction_increases_as_mach_increases(self) -> None:
         """Verify correction increases as Mach number increases."""
@@ -71,7 +71,7 @@ class TestPrandtlGlauertCorrection:
             )
             df = pd.DataFrame({"cl": [original_cl], "cd": [0.02]})
             corrected_df = model.correct_polar(df, case)
-            corrections.append(corrected_df["cl_corrected"].iloc[0])
+            corrections.append(corrected_df["cl_pg"].iloc[0])
 
         # Each correction should be larger than the previous
         for i in range(len(corrections) - 1):
@@ -97,7 +97,7 @@ class TestPrandtlGlauertCorrection:
 
         # When both Mach numbers are 0, beta_ref = beta_target = 1.0
         # So correction_factor = 1.0 / 1.0 = 1.0
-        assert corrected_df["cl_corrected"].iloc[0] == pytest.approx(
+        assert corrected_df["cl_pg"].iloc[0] == pytest.approx(
             original_cl, abs=1e-10
         )
 
@@ -153,10 +153,10 @@ class TestPrandtlGlauertCorrection:
         assert "cd" in corrected_df.columns
 
         # New columns should be added
-        assert "cl_corrected" in corrected_df.columns
+        assert "cl_pg" in corrected_df.columns
         assert "cd_corrected" in corrected_df.columns
-        assert "ld_corrected" in corrected_df.columns
-        assert "mach_corrected" in corrected_df.columns
+        assert "ld_pg" in corrected_df.columns
+        assert "mach_target" in corrected_df.columns
 
         # Number of rows should be preserved
         assert len(corrected_df) == len(df)
@@ -208,5 +208,5 @@ class TestPrandtlGlauertCorrection:
         df = pd.DataFrame({"cl": [original_cl], "cd": [0.02]})
         corrected_df = model.correct_polar(df, case)
 
-        correction_factor = corrected_df["cl_corrected"].iloc[0] / original_cl
+        correction_factor = corrected_df["cl_pg"].iloc[0] / original_cl
         assert correction_factor == pytest.approx(expected_factor, abs=1e-6)

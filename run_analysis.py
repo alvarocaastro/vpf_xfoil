@@ -31,16 +31,16 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from vfp_analysis import config as base_config
 from vfp_analysis.adapters.xfoil.xfoil_runner_adapter import XfoilRunnerAdapter
-from vfp_analysis.stage3_compressibility_correction.adapters.correction_models.prandtl_glauert_model import (
+from vfp_analysis.stage3_compressibility_correction.prandtl_glauert import (
     PrandtlGlauertModel,
 )
-from vfp_analysis.stage3_compressibility_correction.adapters.correction_models.karman_tsien_model import (
+from vfp_analysis.stage3_compressibility_correction.karman_tsien import (
     KarmanTsienModel,
 )
-from vfp_analysis.stage3_compressibility_correction.core.domain.compressibility_case import (
+from vfp_analysis.stage3_compressibility_correction.compressibility_case import (
     CompressibilityCase,
 )
-from vfp_analysis.stage3_compressibility_correction.core.services.compressibility_correction_service import (
+from vfp_analysis.stage3_compressibility_correction.correction_service import (
     CompressibilityCorrectionService,
 )
 from vfp_analysis.config_loader import (

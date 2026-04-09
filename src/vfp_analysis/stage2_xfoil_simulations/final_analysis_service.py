@@ -11,7 +11,7 @@ from vfp_analysis.core.domain.airfoil import Airfoil
 from vfp_analysis.core.domain.blade_section import BladeSection
 from vfp_analysis.core.domain.simulation_condition import SimulationCondition
 from vfp_analysis.ports.xfoil_runner_port import XfoilRunnerPort
-from vfp_analysis.stage2_xfoil_simulations.plot_style import apply_style
+from vfp_analysis.shared.plot_style import apply_style
 
 
 @dataclass(frozen=True)
