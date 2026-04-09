@@ -78,7 +78,7 @@ class CompressibilityCorrectionService:
         polar_path = output_dir / "corrected_polar.csv"
         export_cols = ["alpha", "cl", "cl_pg", "cl_kt",
                        "cd", "cd_corrected", "ld_pg", "ld_kt",
-                       "mach_target", "re", "ncrit", "cm", "cm_pg"]
+                       "mach_target", "re", "ncrit", "cm", "cm_pg", "cm_kt"]
         export_cols = [c for c in export_cols if c in df_corrected.columns]
         df_corrected[export_cols].to_csv(polar_path, index=False, float_format="%.6f")
 
@@ -179,3 +179,60 @@ class CompressibilityCorrectionService:
 
             fig.savefig(output_path, bbox_inches="tight")
             plt.close(fig)
+
+    @staticmethod
+    def plot_section_summary(
+        base_output_dir: Path,
+        flight_conditions: list[str],
+        sections: list[str],
+    ) -> None:
+        """
+        For each blade section, plot CL(α) and CL/CD(α) for all flight conditions
+        using the K-T corrected data — one PNG per section saved at base_output_dir level.
+        """
+        for section in sections:
+            with apply_style():
+                fig, (ax_cl, ax_eff) = plt.subplots(2, 1, figsize=(7.0, 8.5),
+                                                      gridspec_kw={"hspace": 0.38})
+
+                section_label = SECTION_LABELS.get(section, section)
+                has_data = False
+
+                for flight in flight_conditions:
+                    polar_path = base_output_dir / flight.lower() / section / "corrected_polar.csv"
+                    if not polar_path.is_file():
+                        continue
+
+                    df = pd.read_csv(polar_path)
+                    if "cl_kt" not in df.columns or "ld_kt" not in df.columns:
+                        continue
+
+                    color = COLORS.get(flight.lower(), "#4477AA")
+                    flight_label = FLIGHT_LABELS.get(flight.lower(), flight.capitalize())
+                    mach = float(df["mach_target"].iloc[0]) if "mach_target" in df.columns else 0.0
+
+                    ax_cl.plot(df["alpha"], df["cl_kt"],
+                               color=color, linewidth=2.0,
+                               label=f"{flight_label}  M = {mach:.2f}")
+                    ax_eff.plot(df["alpha"], df["ld_kt"],
+                                color=color, linewidth=2.0,
+                                label=f"{flight_label}  M = {mach:.2f}")
+                    has_data = True
+
+                if not has_data:
+                    plt.close(fig)
+                    continue
+
+                ax_cl.set_xlabel(r"$\alpha$ [°]")
+                ax_cl.set_ylabel(r"$C_L$  (Kármán-Tsien)")
+                ax_cl.set_title(f"Comparación condiciones de vuelo — {section_label}")
+                ax_cl.legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
+
+                ax_eff.set_xlabel(r"$\alpha$ [°]")
+                ax_eff.set_ylabel(r"$C_L / C_D$  (Kármán-Tsien)")
+                ax_eff.set_title(r"Eficiencia aerodinámica comparada")
+                ax_eff.legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
+
+                out_path = base_output_dir / f"correction_comparison_{section}.png"
+                fig.savefig(out_path, bbox_inches="tight")
+                plt.close(fig)

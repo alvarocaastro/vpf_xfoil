@@ -324,6 +324,10 @@ def step_4_compressibility_correction(source_polars: Path) -> None:
                 continue
 
     LOGGER.info("Compressibility corrections completed (PG + Kármán-Tsien + wave drag).")
+
+    # Summary comparison plots: one per section, all flight conditions overlaid
+    service.plot_section_summary(stage3_dir, flight_conditions, blade_sections)
+    LOGGER.info("Section summary plots saved.")
     
     # Generate Stage 3 summary
     summary_text = generate_stage3_summary(stage3_dir)

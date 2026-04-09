@@ -97,6 +97,18 @@ class KarmanTsienModel:
 
         df_out["cl_kt"] = cl_kt
 
+        # Kármán-Tsien correction for pitching moment (same non-linear rule as CL)
+        if "cm" in df.columns:
+            cm_kt = []
+            for cm in df["cm"].values:
+                denom_tgt = self._kt_denominator(cm, m_tgt)
+                denom_ref = self._kt_denominator(cm, m_ref)
+                if abs(denom_tgt) < 1e-6 or abs(denom_ref) < 1e-6:
+                    cm_kt.append(float("nan"))
+                else:
+                    cm_kt.append(cm * denom_ref / denom_tgt)
+            df_out["cm_kt"] = cm_kt
+
         # Wave drag: Lock's 4th-power law applied per-alpha using CL at that alpha
         cd_corrected = []
         for cl, cd in zip(cl_0, df["cd"].values):
