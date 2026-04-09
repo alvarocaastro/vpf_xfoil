@@ -98,3 +98,16 @@ blade_sections:
   - root
   - mid_span
   - tip
+
+# Fan geometry (hypothetical reference fan for velocity triangle analysis)
+fan_geometry:
+  rpm: 4500               # Design rotational speed [RPM]
+  radius:
+    root: 0.20            # Blade radius at root section [m]
+    mid_span: 0.42        # Blade radius at mid-span section [m]
+    tip: 0.65             # Blade radius at tip section [m]
+  axial_velocity:         # Axial flow velocity Va [m/s] per flight condition
+    takeoff: 180.0
+    climb: 220.0
+    cruise: 250.0
+    descent: 200.0

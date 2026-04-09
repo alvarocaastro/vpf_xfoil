@@ -20,6 +20,8 @@ Usage:
 from __future__ import annotations
 
 import logging
+
+import pandas as pd
 import shutil
 import sys
 from pathlib import Path
@@ -40,7 +42,10 @@ from vfp_analysis.stage3_compressibility_correction.core.services.compressibilit
 )
 from vfp_analysis.config_loader import (
     get_alpha_range,
+    get_axial_velocities,
+    get_blade_radii,
     get_blade_sections,
+    get_fan_rpm,
     get_flight_conditions,
     get_ncrit_table,
     get_output_dirs,
@@ -63,6 +68,14 @@ from vfp_analysis.stage2_xfoil_simulations.final_analysis_service import (
 from vfp_analysis.stage5_publication_figures.figure_generator import generate_all_figures
 from vfp_analysis.stage4_performance_metrics.metrics import compute_all_metrics
 from vfp_analysis.stage2_xfoil_simulations.polar_organizer import organize_polars
+from vfp_analysis.stage2_xfoil_simulations.pitch_map import (
+    compute_pitch_map,
+    plot_alpha_opt_evolution,
+    plot_pitch_map,
+    plot_vpf_clcd_penalty,
+    plot_vpf_efficiency_by_section,
+    save_pitch_map_csv,
+)
 from vfp_analysis.postprocessing.stage_summary_generator import (
     generate_stage1_summary,
     generate_stage2_summary,
@@ -203,20 +216,57 @@ def step_3_xfoil_simulations(selected_airfoil: Airfoil) -> Path:
 
     runner = XfoilRunnerAdapter()
     service = FinalAnalysisService(runner, stage2_dir)
-    service.run(selected_airfoil, configs)
+    alpha_eff_map, stall_map = service.run(selected_airfoil, configs)
 
     LOGGER.info("XFOIL simulations completed.")
 
-    # Polars are in the Stage 2 final_analysis folder; flatten them into polars/.
-    source_polars = stage2_dir / "final_analysis"
+    # Polars are in the Stage 2 simulation_plots folder; flatten them into polars/.
+    source_polars = stage2_dir / "simulation_plots"
     target_polars = stage2_dir / "polars"
-    
+
     organize_polars(source_polars, target_polars, flight_conditions, blade_sections)
     LOGGER.info(f"Polar data organized in: {target_polars}")
 
+    # Post-processing: alpha_opt evolution sweep and velocity triangle pitch map
+    rpm = get_fan_rpm()
+    radii = get_blade_radii()
+    axial_velocities = get_axial_velocities()
+
+    # All VPF post-processing outputs go into vpf_analysis/
+    vpf_analysis_dir = stage2_dir / "vpf_analysis"
+    vpf_analysis_dir.mkdir(parents=True, exist_ok=True)
+
+    plot_alpha_opt_evolution(alpha_eff_map, configs, vpf_analysis_dir)
+    LOGGER.info("alpha_opt evolution plot saved.")
+
+    pitch_df, delta_beta = compute_pitch_map(alpha_eff_map, rpm, radii, axial_velocities)
+    save_pitch_map_csv(pitch_df, vpf_analysis_dir)
+    plot_pitch_map(pitch_df, delta_beta, vpf_analysis_dir)
+    LOGGER.info(
+        "Blade pitch map computed. Delta-beta per section: "
+        + ", ".join(f"{s}={v:.1f}°" for s, v in delta_beta.items())
+    )
+
+    # VPF argument plots: load polar CSVs and generate comparison figures
+    polar_dfs = {}
+    for flight in flight_conditions:
+        for section in blade_sections:
+            csv_path = stage2_dir / "simulation_plots" / flight / section / "polar.csv"
+            if csv_path.exists():
+                polar_dfs[(flight, section)] = pd.read_csv(csv_path)
+
+    plot_vpf_efficiency_by_section(polar_dfs, alpha_eff_map, vpf_analysis_dir)
+    plot_vpf_clcd_penalty(polar_dfs, alpha_eff_map, vpf_analysis_dir)
+    LOGGER.info("VPF comparison plots saved.")
+
     # Generate Stage 2 summary
     num_simulations = len(configs)
-    summary_text = generate_stage2_summary(stage2_dir, num_simulations)
+    summary_text = generate_stage2_summary(
+        stage2_dir, num_simulations,
+        delta_beta=delta_beta,
+        alpha_eff_map=alpha_eff_map,
+        stall_map=stall_map,
+    )
     write_stage_summary(2, summary_text, stage2_dir)
     LOGGER.info(f"Stage 2 summary written to: {stage2_dir / 'finalresults_stage2.txt'}")
 
@@ -278,7 +328,7 @@ def step_5_compute_metrics() -> list:
     LOGGER.info("=" * 60)
 
     stage2_dir = base_config.get_stage_dir(2)
-    polars_dir = stage2_dir / "final_analysis"
+    polars_dir = stage2_dir / "simulation_plots"
     flight_conditions = get_flight_conditions()
     blade_sections = get_blade_sections()
     reynolds_table = get_reynolds_table()

@@ -73,7 +73,13 @@ def generate_stage1_summary(stage_dir: Path, selected_airfoil_name: str) -> str:
 # Stage 2 — XFOIL Simulations
 # ---------------------------------------------------------------------------
 
-def generate_stage2_summary(stage_dir: Path, num_simulations: int) -> str:
+def generate_stage2_summary(
+    stage_dir: Path,
+    num_simulations: int,
+    delta_beta: dict | None = None,
+    alpha_eff_map: dict | None = None,
+    stall_map: dict | None = None,
+) -> str:
     alpha   = get_alpha_range()
     flights = get_flight_conditions()
     sects   = get_blade_sections()
@@ -90,9 +96,34 @@ def generate_stage2_summary(stage_dir: Path, num_simulations: int) -> str:
     for fc in flights:
         re_str = "  ".join(f"{s}: {re_tab[fc][s]:.2e}" for s in sects)
         lines.append(f"  {fc.title():<10} Ncrit={nc_tab[fc]:.1f}  |  {re_str}")
+
+    if alpha_eff_map and stall_map:
+        lines += ["", "Stall margin per condition (α_stall − α_opt):"]
+        header = f"  {'Condition':<18} {'α_opt':>7} {'α_stall':>8} {'CL_max':>8} {'Margin':>8}"
+        lines.append(header)
+        lines.append("  " + "-" * (len(header) - 2))
+        for fc in flights:
+            for s in sects:
+                key = (fc, s)
+                a_opt = alpha_eff_map.get(key, float("nan"))
+                stall_data = stall_map.get(key, (float("nan"), float("nan")))
+                a_stall, cl_max = stall_data
+                margin = a_stall - a_opt if a_opt == a_opt and a_stall == a_stall else float("nan")
+                lines.append(
+                    f"  {fc.title()+'/'+s:<18} {a_opt:>7.2f}° {a_stall:>7.2f}° {cl_max:>8.4f} {margin:>7.2f}°"
+                )
+
+    if delta_beta:
+        lines += [
+            "",
+            "Variable pitch range Δβ (velocity triangle analysis):",
+        ]
+        for section, db in delta_beta.items():
+            lines.append(f"  {section:<12}: Δβ = {db:.1f}°")
+
     lines += [
         "",
-        "Outputs: raw and organised polar files generated successfully.",
+        "Outputs: polar.csv per simulation, cl_alpha_stall/efficiency/polar plots, VPF analysis.",
     ]
     lines += _footer()
     return "\n".join(lines)

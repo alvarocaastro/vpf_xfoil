@@ -29,7 +29,7 @@ def _validate_stage_outputs(stage_num: int) -> list[str]:
         ]
     elif stage_num == 2:
         checks = [
-            (stage_dir / "final_analysis", "final analysis directory"),
+            (stage_dir / "simulation_plots", "simulation plots directory"),
             (stage_dir / "polars", "organized polar directory"),
         ]
     elif stage_num == 3:

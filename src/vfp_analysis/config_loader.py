@@ -139,6 +139,24 @@ def get_blade_sections() -> list[str]:
     return cfg["blade_sections"]
 
 
+def get_fan_rpm() -> float:
+    """Get fan design rotational speed [RPM]."""
+    cfg = load_config()
+    return float(cfg["fan_geometry"]["rpm"])
+
+
+def get_blade_radii() -> Dict[str, float]:
+    """Get blade section radii [m] (root, mid_span, tip)."""
+    cfg = load_config()
+    return {k: float(v) for k, v in cfg["fan_geometry"]["radius"].items()}
+
+
+def get_axial_velocities() -> Dict[str, float]:
+    """Get axial flow velocity [m/s] per flight condition."""
+    cfg = load_config()
+    return {k: float(v) for k, v in cfg["fan_geometry"]["axial_velocity"].items()}
+
+
 def clear_cache() -> None:
     """Clear the configuration cache (useful for testing)."""
     global _CONFIG_CACHE
