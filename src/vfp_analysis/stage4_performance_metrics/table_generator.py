@@ -45,6 +45,13 @@ def export_summary_table(
                 "cl_max": m.cl_max,
                 "cl_at_opt": m.cl_at_opt,
                 "cd_at_opt": m.cd_at_opt,
+                "stall_margin_deg": m.stall_margin,
+                "cm_at_opt": m.cm_at_opt,
+                "alpha_design_deg": m.alpha_design,
+                "delta_alpha_deg": m.delta_alpha,
+                "eff_at_design_alpha": m.eff_at_design_alpha,
+                "eff_gain": m.eff_gain,
+                "eff_gain_pct": m.eff_gain_pct,
             }
         )
 
@@ -83,6 +90,13 @@ def export_clcd_max_table(
                 "alpha_opt_deg": m.alpha_opt,
                 "cl_at_opt": m.cl_at_opt,
                 "cd_at_opt": m.cd_at_opt,
+                "stall_margin_deg": m.stall_margin,
+                "cm_at_opt": m.cm_at_opt,
+                "alpha_design_deg": m.alpha_design,
+                "delta_alpha_deg": m.delta_alpha,
+                "eff_at_design_alpha": m.eff_at_design_alpha,
+                "eff_gain": m.eff_gain,
+                "eff_gain_pct": m.eff_gain_pct,
             }
         )
 

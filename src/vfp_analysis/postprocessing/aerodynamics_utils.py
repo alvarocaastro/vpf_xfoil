@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 _EFFICIENCY_COLUMNS: tuple[str, ...] = (
     "ld_corrected",
     "CL_CD_corrected",
+    "ld_kt",
     "ld",
     "CL_CD",
 )
@@ -95,19 +96,112 @@ def find_second_peak_row(
     return df_peak.loc[df_peak[efficiency_col].idxmax()]
 
 
+def compute_stall_alpha(df: pd.DataFrame, cl_col: str) -> float:
+    """Estimate the stall angle from a polar DataFrame.
+
+    Stall is defined as the angle of attack where CL drops by more than
+    5 % of CL_max after the CL_max point. This threshold is consistent
+    with the soft-stall detection approach used for NACA 6-series profiles
+    (see NACA TN-1135 / Jacobs & Sherman 1937).
+
+    If no clear drop is detected (e.g. polar ends before stall), the last
+    available alpha is returned and a warning is logged.
+
+    Parameters
+    ----------
+    df:
+        Polar data. Must contain ``alpha`` and *cl_col* columns.
+    cl_col:
+        Name of the lift-coefficient column.
+
+    Returns
+    -------
+    float
+        Estimated stall angle in degrees.
+    """
+    df_clean = (
+        df[["alpha", cl_col]]
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna()
+        .sort_values("alpha")
+        .reset_index(drop=True)
+    )
+
+    if df_clean.empty:
+        raise ValueError(f"No valid data in polar for stall detection (column: '{cl_col}').")
+
+    idx_clmax = int(df_clean[cl_col].idxmax())
+    cl_max = float(df_clean[cl_col].iloc[idx_clmax])
+    threshold = 0.05 * cl_max
+
+    post_peak = df_clean.iloc[idx_clmax + 1 :]
+    stall_rows = post_peak[post_peak[cl_col] < (cl_max - threshold)]
+
+    if stall_rows.empty:
+        alpha_stall = float(df_clean["alpha"].iloc[-1])
+        LOGGER.warning(
+            "No clear stall detected (CL never drops %.0f%% below CL_max=%.3f). "
+            "Using last alpha=%.2f° as stall estimate.",
+            5,
+            cl_max,
+            alpha_stall,
+        )
+        return alpha_stall
+
+    return float(stall_rows["alpha"].iloc[0])
+
+
+def lookup_efficiency_at_alpha(
+    df: pd.DataFrame,
+    efficiency_col: str,
+    alpha_target: float,
+) -> float:
+    """Return the efficiency value at the polar point closest to *alpha_target*.
+
+    Used to evaluate (CL/CD) at the design reference angle (α_opt_cruise) in
+    non-cruise conditions, quantifying the fixed-pitch efficiency penalty.
+
+    Parameters
+    ----------
+    df:
+        Polar DataFrame. Must contain ``alpha`` and *efficiency_col*.
+    efficiency_col:
+        Name of the efficiency column.
+    alpha_target:
+        Target angle of attack in degrees.
+
+    Returns
+    -------
+    float
+        Efficiency at the nearest available alpha point.
+    """
+    df_clean = (
+        df[["alpha", efficiency_col]]
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna()
+    )
+    if df_clean.empty:
+        return float("nan")
+    idx = (df_clean["alpha"] - alpha_target).abs().idxmin()
+    return float(df_clean.loc[idx, efficiency_col])
+
+
 def resolve_polar_file(base_dir: Path, condition: str, section: str) -> Path | None:
-    """Locate a polar CSV file supporting two directory layouts.
+    """Locate a polar CSV file supporting two directory layouts and two file names.
 
     Checks in order:
 
-    1. ``base_dir / condition / section / polar.csv``  (hierarchical layout)
-    2. ``base_dir / condition_section.csv``            (flat layout)
+    1. ``base_dir / condition / section / corrected_polar.csv`` (Stage 3 output)
+    2. ``base_dir / condition / section / polar.csv``           (Stage 2 hierarchical)
+    3. ``base_dir / condition_section.csv``                     (flat layout)
 
-    Returns ``None`` if neither location contains the file.
+    Returns ``None`` if none of the locations exist.
     """
-    hierarchical = base_dir / condition.lower() / section / "polar.csv"
-    if hierarchical.exists():
-        return hierarchical
+    base = base_dir / condition.lower() / section
+    for name in ("corrected_polar.csv", "polar.csv"):
+        candidate = base / name
+        if candidate.exists():
+            return candidate
 
     flat = base_dir / f"{condition}_{section}.csv"
     if flat.exists():

@@ -188,19 +188,79 @@ def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
             df = pd.read_csv(summary_file)
             if not df.empty:
                 lines += [
-                    f"(CL/CD)_max: {df['max_efficiency'].min():.2f} – {df['max_efficiency'].max():.2f}  "
+                    f"(CL/CD)_max    : {df['max_efficiency'].min():.2f} – {df['max_efficiency'].max():.2f}  "
                     f"(mean {df['max_efficiency'].mean():.2f})",
-                    f"alpha_opt  : {df['alpha_opt_deg'].min():.1f}° – {df['alpha_opt_deg'].max():.1f}°  "
+                    f"alpha_opt      : {df['alpha_opt_deg'].min():.1f}° – {df['alpha_opt_deg'].max():.1f}°  "
                     f"(mean {df['alpha_opt_deg'].mean():.1f}°)",
                 ]
+                if "stall_margin_deg" in df.columns:
+                    lines += [
+                        f"stall_margin   : {df['stall_margin_deg'].min():.1f}° – {df['stall_margin_deg'].max():.1f}°  "
+                        f"(mean {df['stall_margin_deg'].mean():.1f}°)"
+                        f"  [min safe: 3°]",
+                    ]
+
+                # Warn about low-efficiency cases (wave drag penalty at high Mach)
+                EFF_THRESHOLD = 70.0
+                low_eff = df[df["max_efficiency"] < EFF_THRESHOLD]
+                if not low_eff.empty:
+                    lines += [""]
+                    lines += [f"AVISO — Casos con (CL/CD)_max < {EFF_THRESHOLD:.0f} (penalizacion por wave drag):"]
+                    for _, row in low_eff.iterrows():
+                        lines += [
+                            f"     {row['flight_condition']}/{row['blade_section']}: "
+                            f"(CL/CD)={row['max_efficiency']:.1f}  alpha_opt={row['alpha_opt_deg']:.1f}"
+                        ]
+
+                # Design reference summary
+                if "alpha_design_deg" in df.columns and "delta_alpha_deg" in df.columns:
+                    lines += ["", "Referencia de diseno: alpha_opt de crucero por seccion"]
+                    cruise = df[df["flight_condition"] == "cruise"]
+                    for _, row in cruise.sort_values("blade_section").iterrows():
+                        lines += [
+                            f"  {row['blade_section']:10s}: alpha_design = {row['alpha_design_deg']:.2f}"
+                        ]
+
+                    lines += ["", "Ajuste VPF requerido (delta_alpha) por condicion:"]
+                    non_cruise = df[df["flight_condition"] != "cruise"]
+                    for cond in ["takeoff", "climb", "descent"]:
+                        sub = non_cruise[non_cruise["flight_condition"] == cond]
+                        if sub.empty:
+                            continue
+                        lines += [
+                            f"  {cond:8s}: {sub['delta_alpha_deg'].min():.1f} – "
+                            f"{sub['delta_alpha_deg'].max():.1f}  "
+                            f"(media {sub['delta_alpha_deg'].mean():.1f})"
+                        ]
+
+                    if "eff_gain_pct" in df.columns:
+                        lines += ["", "Ganancia de eficiencia VPF (eff_gain_pct):"]
+                        for cond in ["takeoff", "climb", "descent"]:
+                            sub = non_cruise[non_cruise["flight_condition"] == cond]
+                            if sub.empty:
+                                continue
+                            lines += [
+                                f"  {cond:8s}: {sub['eff_gain_pct'].min():.1f}% – "
+                                f"{sub['eff_gain_pct'].max():.1f}%  "
+                                f"(media {sub['eff_gain_pct'].mean():.1f}%)"
+                            ]
         except Exception:
             pass
+
+    figures_dir = stage_dir / "figures"
+    n_figs = len(list(figures_dir.glob("*.png"))) if figures_dir.exists() else 0
 
     lines += [
         "",
         "Tables exported:",
-        f"  summary_table.csv      → {tables_dir / 'summary_table.csv'}",
-        f"  clcd_max_by_section.csv→ {tables_dir / 'clcd_max_by_section.csv'}",
+        f"  summary_table.csv       → {tables_dir / 'summary_table.csv'}",
+        f"  clcd_max_by_section.csv → {tables_dir / 'clcd_max_by_section.csv'}",
+        "",
+        f"Figures generated: {n_figs}",
+        "  design_reference_root.png         — curvas CL/CD vs alpha, seccion root",
+        "  design_reference_mid_span.png     — curvas CL/CD vs alpha, seccion mid_span",
+        "  design_reference_tip.png          — curvas CL/CD vs alpha, seccion tip",
+        "  efficiency_penalty_overview.png   — figura resumen con anotaciones delta",
     ]
     lines += _footer()
     return "\n".join(lines)

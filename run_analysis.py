@@ -71,7 +71,10 @@ from vfp_analysis.stage2_xfoil_simulations.final_analysis_service import (
     FinalSimulationConfig,
 )
 from vfp_analysis.stage5_publication_figures.figure_generator import generate_all_figures
-from vfp_analysis.stage4_performance_metrics.metrics import compute_all_metrics
+from vfp_analysis.stage4_performance_metrics.metrics import (
+    compute_all_metrics,
+    enrich_with_cruise_reference,
+)
 from vfp_analysis.stage2_xfoil_simulations.polar_organizer import organize_polars
 from vfp_analysis.stage2_xfoil_simulations.pitch_map import (
     compute_pitch_map,
@@ -95,6 +98,7 @@ from vfp_analysis.stage4_performance_metrics.table_generator import (
     export_clcd_max_table,
     export_summary_table,
 )
+from vfp_analysis.stage4_performance_metrics.plots import generate_stage4_figures
 from vfp_analysis.stage6_vpf_analysis.application.run_vpf_analysis import run_vpf_analysis
 from vfp_analysis.stage7_kinematics_analysis.application.run_kinematics_stage import run_kinematics_stage
 from vfp_analysis.stage8_sfc_analysis.application.run_sfc_analysis import run_sfc_analysis
@@ -342,7 +346,10 @@ def step_5_compute_metrics() -> list:
     LOGGER.info("=" * 60)
 
     stage2_dir = base_config.get_stage_dir(2)
-    polars_dir = stage2_dir / "simulation_plots"
+    stage3_dir = base_config.get_stage_dir(3)
+    # Prefer Stage 3 corrected polars (ld_kt); fall back to Stage 2 if not available.
+    polars_dir = stage3_dir if stage3_dir.exists() else stage2_dir / "simulation_plots"
+    LOGGER.info("Stage 4 reading polars from: %s", polars_dir)
     flight_conditions = get_flight_conditions()
     blade_sections = get_blade_sections()
     reynolds_table = get_reynolds_table()
@@ -351,33 +358,39 @@ def step_5_compute_metrics() -> list:
     metrics = compute_all_metrics(
         polars_dir, flight_conditions, blade_sections, reynolds_table, ncrit_table
     )
+    metrics = enrich_with_cruise_reference(metrics, polars_dir)
 
     LOGGER.info(f"Computed metrics for {len(metrics)} cases")
-    
-    # Generate Stage 4 summary
+
     stage4_dir = base_config.get_stage_dir(4)
+    output_dirs = get_output_dirs()
+    tables_dir = output_dirs["tables"]
+
+    # Export tables first so the summary generator can read them for stats.
+    export_summary_table(metrics, tables_dir / "summary_table.csv")
+    export_clcd_max_table(metrics, tables_dir / "clcd_max_by_section.csv")
+    LOGGER.info(f"Tables exported to: {tables_dir}")
+
+    # Generate Stage 4 figures (pass polars_dir so curves can be plotted)
+    figures_dir = stage4_dir / "figures"
+    generate_stage4_figures(metrics, figures_dir, polars_dir=polars_dir)
+    LOGGER.info(f"Stage 4 figures saved to: {figures_dir}")
+
+    # Generate Stage 4 summary (reads from tables just written above)
     summary_text = generate_stage4_summary(stage4_dir, metrics)
     write_stage_summary(4, summary_text, stage4_dir)
     LOGGER.info(f"Stage 4 summary written to: {stage4_dir / 'finalresults_stage4.txt'}")
-    
+
     return metrics
 
 
 def step_6_export_tables(metrics: list) -> None:
-    """Step 6: Export summary tables."""
+    """Step 6: Export summary tables (tables already written in step 5; logs only)."""
     LOGGER.info("=" * 60)
-    LOGGER.info("STEP 6: Exporting summary tables")
+    LOGGER.info("STEP 6: Summary tables already exported in Step 5")
     LOGGER.info("=" * 60)
-
     output_dirs = get_output_dirs()
-    tables_dir = output_dirs["tables"]
-
-    # summary_table.csv — comprehensive table with all metrics
-    export_summary_table(metrics, tables_dir / "summary_table.csv")
-    # clcd_max_by_section.csv — CL, CD at optimum (complementary detail)
-    export_clcd_max_table(metrics, tables_dir / "clcd_max_by_section.csv")
-
-    LOGGER.info(f"Tables exported to: {tables_dir}")
+    LOGGER.info(f"Tables location: {output_dirs['tables']}")
 
 
 def step_7_generate_figures(metrics: list) -> None:
