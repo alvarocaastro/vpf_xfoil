@@ -1,8 +1,8 @@
 """
-Shared matplotlib style for Stage 2 publication-quality plots.
+Shared matplotlib style and colour constants for all pipeline stages.
 
 Apply with:
-    from vfp_analysis.stage2_xfoil_simulations.plot_style import apply_style, COLORS
+    from vfp_analysis.shared.plot_style import apply_style, COLORS, SECTION_COLORS
 
     with apply_style():
         fig, ax = plt.subplots(...)
@@ -87,3 +87,12 @@ def apply_style() -> Generator[None, None, None]:
     """Context manager that temporarily applies the publication style."""
     with mpl.rc_context(_RC):
         yield
+
+
+# ── Per-section colour aliases ────────────────────────────────────────────────
+# Imported by stages that need to colour-code blade sections consistently.
+SECTION_COLORS: dict[str, str] = {
+    "root":     COLORS["root"],
+    "mid_span": COLORS["mid_span"],
+    "tip":      COLORS["tip"],
+}

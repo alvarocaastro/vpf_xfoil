@@ -7,6 +7,7 @@ from typing import List, Sequence
 
 import pandas as pd
 
+from vfp_analysis.adapters.xfoil.xfoil_parser import parse_polar_file
 from vfp_analysis.core.domain.airfoil import Airfoil
 from vfp_analysis.core.domain.simulation_condition import SimulationCondition
 from vfp_analysis.ports.xfoil_runner_port import XfoilRunnerPort
@@ -60,7 +61,7 @@ class AirfoilSelectionService:
                 LOGGER.warning("  XFOIL failed for %s: %s - skipping.", airfoil.name, exc)
                 continue
 
-            df = self._parse_polar_file(out_file, airfoil, condition)
+            df = self._build_polar_df(out_file, airfoil, condition)
             if df.empty:
                 LOGGER.warning("  Polar empty for %s - skipping.", airfoil.name)
                 continue
@@ -97,42 +98,17 @@ class AirfoilSelectionService:
         return AirfoilSelectionResult(best_airfoil=best_airfoil, scores=scores, polars=polars)
 
     @staticmethod
-    def _parse_polar_file(
+    def _build_polar_df(
         polar_path: Path,
         airfoil: Airfoil,
         condition: SimulationCondition,
     ) -> pd.DataFrame:
-        rows = []
-        with polar_path.open("r", encoding="utf8", errors="ignore") as fh:
-            for line in fh:
-                stripped = line.strip()
-                if not stripped:
-                    continue
-                parts = stripped.split()
-                try:
-                    alpha = float(parts[0])
-                except (ValueError, IndexError):
-                    continue
-                if len(parts) < 5:
-                    continue
-                try:
-                    cl = float(parts[1])
-                    cd = float(parts[2])
-                    cm = float(parts[4])
-                except ValueError:
-                    continue
-                ld = cl / cd if cd > 0.0 else float("nan")
-                rows.append(
-                    {
-                        "airfoil": airfoil.name,
-                        "condition": condition.name,
-                        "mach": condition.mach_rel,
-                        "re": condition.reynolds,
-                        "alpha": alpha,
-                        "cl": cl,
-                        "cd": cd,
-                        "cm": cm,
-                        "ld": ld,
-                    }
-                )
-        return pd.DataFrame(rows)
+        """Parse XFOIL output and attach airfoil/condition metadata columns."""
+        df = parse_polar_file(polar_path)
+        if df.empty:
+            return df
+        df.insert(0, "airfoil", airfoil.name)
+        df.insert(1, "condition", condition.name)
+        df.insert(2, "mach", condition.mach_rel)
+        df.insert(3, "re", condition.reynolds)
+        return df

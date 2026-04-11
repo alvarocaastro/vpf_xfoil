@@ -7,6 +7,7 @@ from typing import Dict, Iterable, List, Tuple
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from vfp_analysis.adapters.xfoil.xfoil_parser import parse_polar_file
 from vfp_analysis.core.domain.airfoil import Airfoil
 from vfp_analysis.core.domain.blade_section import BladeSection
 from vfp_analysis.core.domain.simulation_condition import SimulationCondition
@@ -66,7 +67,7 @@ class FinalAnalysisService:
             polar_path = out_dir / "polar.dat"
             self._xfoil.run_polar(airfoil.dat_path, cfg.condition, polar_path)
 
-            df = self._parse_polar_file(polar_path, airfoil, cfg)
+            df = self._build_polar_df(polar_path, airfoil, cfg)
             if df.empty:
                 continue
 
@@ -78,46 +79,22 @@ class FinalAnalysisService:
         return alpha_eff_map, stall_map
 
     @staticmethod
-    def _parse_polar_file(
+    def _build_polar_df(
         polar_path: Path,
         airfoil: Airfoil,
         cfg: FinalSimulationConfig,
     ) -> pd.DataFrame:
-        rows: List[Dict[str, float | str]] = []
-        with polar_path.open("r", encoding="utf8", errors="ignore") as fh:
-            for line in fh:
-                stripped = line.strip()
-                if not stripped:
-                    continue
-                parts = stripped.split()
-                try:
-                    alpha = float(parts[0])
-                except (ValueError, IndexError):
-                    continue
-                if len(parts) < 5:
-                    continue
-                try:
-                    cl = float(parts[1])
-                    cd = float(parts[2])
-                    cm = float(parts[4])
-                except ValueError:
-                    continue
-                rows.append(
-                    {
-                        "airfoil": airfoil.name,
-                        "flight": cfg.flight_name,
-                        "section": cfg.section.name,
-                        "mach": cfg.condition.mach_rel,
-                        "re": cfg.condition.reynolds,
-                        "ncrit": cfg.condition.ncrit,
-                        "alpha": alpha,
-                        "cl": cl,
-                        "cd": cd,
-                        "cm": cm,
-                        "ld": cl / cd if cd > 0.0 else float("nan"),
-                    }
-                )
-        return pd.DataFrame(rows)
+        """Parse XFOIL output and attach flight/section metadata columns."""
+        df = parse_polar_file(polar_path)
+        if df.empty:
+            return df
+        df.insert(0, "airfoil", airfoil.name)
+        df.insert(1, "flight", cfg.flight_name)
+        df.insert(2, "section", cfg.section.name)
+        df.insert(3, "mach", cfg.condition.mach_rel)
+        df.insert(4, "re", cfg.condition.reynolds)
+        df.insert(5, "ncrit", cfg.condition.ncrit)
+        return df
 
     @staticmethod
     def _export_csv(df: pd.DataFrame, out_dir: Path) -> None:

@@ -267,146 +267,91 @@ def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Stage 5 — Figures
+# Stage 5 — Pitch & Kinematics (fusión de los anteriores Stage 6 + Stage 7)
 # ---------------------------------------------------------------------------
 
 def generate_stage5_summary(stage_dir: Path) -> str:
-    figures_dir = stage_dir / "figures"
-    n_figs      = len(list(figures_dir.glob("*.png"))) if figures_dir.exists() else 0
-
-    lines = _header(5, "PUBLICATION-QUALITY FIGURES")
-    lines += [
-        f"Figures generated: {n_figs}  (300 DPI PNG, LaTeX-ready)",
-        "",
-        "Figure set:",
-        "  [Core — Stages 2 polars]",
-        "  efficiency_{condition}_{section}.png      — CL/CD vs α with α_opt (one per case)",
-        "  efficiency_by_section_{condition}.png     — section comparison per condition",
-        "  alpha_opt_vs_condition.png                — key thesis result (α_opt matrix)",
-        "",
-        "  [Figure A — Stage 3 corrected polars]",
-        "  section_polar_comparison_{condition}.png  — dual panel: efficiency + lift polars",
-        "    (root / mid_span / tip overlaid, ★ = 2nd efficiency peak)  [4 files]",
-        "",
-        "  [Figure B — VPF penalty proof, Stage 3 corrected polars]",
-        "  cruise_penalty_{condition}.png            — efficiency polars for non-cruise",
-        "    conditions with VPF optimal α (★) and fixed cruise pitch (dashed red line)",
-        "    + penalty annotation on mid_span curve  [3 files: takeoff, climb, descent]",
-        "",
-        "Outputs: publication figures generated successfully.",
-    ]
-    lines += _footer()
-    return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Stage 6 — VPF Analysis
-# ---------------------------------------------------------------------------
-
-def generate_stage6_summary(stage_dir: Path) -> str:
-    tables_dir = stage_dir / "tables"
+    tables_dir  = stage_dir / "tables"
     figures_dir = stage_dir / "figures"
 
-    lines = _header(6, "VARIABLE PITCH FAN (VPF) ANALYSIS")
+    lines = _header(5, "PITCH & KINEMATICS ANALYSIS")
     lines += [
-        "Computes α_opt per condition/section and pitch adjustments relative to cruise.",
+        "Calcula α_opt por condición/sección, ajuste de paso relativo a crucero",
+        "y comando mecánico real mediante triángulos de velocidad (Δβ_mech = Δα + Δφ).",
         "",
     ]
 
-    opt_file = tables_dir / "vpf_optimal_pitch.csv"
-    adj_file = tables_dir / "vpf_pitch_adjustment.csv"
+    opt_file = tables_dir / "optimal_incidence.csv"
+    kin_file = tables_dir / "kinematics_analysis.csv"
+
     if opt_file.exists():
         try:
             df = pd.read_csv(opt_file)
             if not df.empty:
                 lines += [
                     f"alpha_opt range  : {df['alpha_opt'].min():.1f}° – {df['alpha_opt'].max():.1f}°  "
-                    f"(mean {df['alpha_opt'].mean():.1f}°)",
-                    f"(CL/CD)_max mean : {df['CL_CD_max'].mean():.2f}",
+                    f"(media {df['alpha_opt'].mean():.1f}°)",
+                    f"(CL/CD)_max media: {df['CL_CD_max'].mean():.2f}",
                 ]
         except Exception:
             pass
-
-    lines += [
-        "",
-        "Outputs: VPF tables, figures, and summary generated successfully.",
-    ]
-    lines += _footer()
-    return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Stage 7 — Kinematics Analysis
-# ---------------------------------------------------------------------------
-
-def generate_stage7_summary(stage_dir: Path) -> str:
-    tables_dir  = stage_dir / "tables"
-    figures_dir = stage_dir / "figures"
-    kin_file    = tables_dir / "kinematics_analysis.csv"
-
-    lines = _header(7, "KINEMATIC VELOCITY-TRIANGLE ANALYSIS")
-    lines += [
-        "Translates aerodynamic pitch angles into mechanical pitch commands",
-        "via the velocity triangle: Δβ_mech = Δα_aero + Δφ.",
-        "",
-    ]
 
     if kin_file.exists():
         try:
             df = pd.read_csv(kin_file)
             if not df.empty and "delta_beta_mech_deg" in df.columns:
-                # Exclude cruise (reference, Δβ=0) from range display
                 non_cruise = df[df["condition"] != "cruise"]
                 if not non_cruise.empty:
                     lines += [
-                        f"Δφ range (non-cruise) : "
+                        f"Δβ_mech range (no crucero): "
                         f"{non_cruise['delta_beta_mech_deg'].min():.2f}° – "
                         f"{non_cruise['delta_beta_mech_deg'].max():.2f}°",
                     ]
         except Exception:
             pass
 
+    n_figs = len(list(figures_dir.glob("*.png"))) if figures_dir.exists() else 0
     lines += [
         "",
-        "Outputs: kinematic tables and figures generated successfully.",
+        f"Figuras generadas: {n_figs}",
+        "Outputs: tablas de incidencia, ajuste y cinemática; figuras de barras.",
     ]
     lines += _footer()
     return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
-# Stage 8 — SFC Analysis
+# Stage 6 — SFC Analysis (antes Stage 8)
 # ---------------------------------------------------------------------------
 
-def generate_stage8_summary(stage_dir: Path) -> str:
-    tables_dir  = stage_dir / "tables"
-    figures_dir = stage_dir / "figures"
-    sfc_file    = tables_dir / "sfc_analysis.csv"
+def generate_stage6_summary(stage_dir: Path) -> str:
+    tables_dir = stage_dir / "tables"
+    sfc_file   = tables_dir / "sfc_analysis.csv"
 
-    lines = _header(8, "SPECIFIC FUEL CONSUMPTION (SFC) IMPACT ANALYSIS")
+    lines = _header(6, "SPECIFIC FUEL CONSUMPTION (SFC) IMPACT ANALYSIS")
     lines += [
-        "Estimates SFC reduction enabled by VPF optimised-pitch operation.",
-        "Fan efficiency transfer: η_fan,new = η_base·[1 + τ·((CL/CD)_new/(CL/CD)_base − 1)]",
-        "Dampening factor τ = 0.65 (accounts for 3-D tip-clearance and secondary-flow losses).",
+        "Estima la reducción de SFC debida al VPF con paso óptimo.",
+        "η_fan,new = η_base·[1 + τ·((CL/CD)_new/(CL/CD)_base − 1)]",
+        "Factor de amortiguamiento τ = 0.65  (pérdidas 3D: huelgo, flujos secundarios).",
         "",
     ]
 
     if sfc_file.exists():
         try:
             df = pd.read_csv(sfc_file)
-            if not df.empty and "sfc_reduction_percent" in df.columns:
-                mean_red = df["sfc_reduction_percent"].mean()
-                max_red  = df["sfc_reduction_percent"].max()
+            if not df.empty and "SFC_reduction_percent" in df.columns:
+                mean_red = df["SFC_reduction_percent"].mean()
+                max_red  = df["SFC_reduction_percent"].max()
                 lines += [
-                    f"SFC reduction range  : {df['sfc_reduction_percent'].min():.2f}% – {max_red:.2f}%",
-                    f"Envelope mean        : {mean_red:.2f}%",
+                    f"Reducción SFC rango  : {df['SFC_reduction_percent'].min():.2f}% – {max_red:.2f}%",
+                    f"Media                : {mean_red:.2f}%",
                 ]
         except Exception:
             pass
 
     lines += [
         "",
-        "Outputs: SFC tables, figures, and summary generated successfully.",
+        "Outputs: tabla de SFC, figuras comparativas y resumen generados.",
     ]
     lines += _footer()
     return "\n".join(lines)

@@ -26,10 +26,8 @@ STAGE_DIR_NAMES: Final[dict[int, str]] = {
     2: "stage2_xfoil_simulations",
     3: "stage3_compressibility_correction",
     4: "stage4_performance_metrics",
-    5: "stage5_publication_figures",
-    6: "stage6_vpf_analysis",
-    7: "stage7_kinematics_analysis",
-    8: "stage8_sfc_analysis",
+    5: "stage5_pitch_kinematics",
+    6: "stage6_sfc_analysis",
 }
 
 
