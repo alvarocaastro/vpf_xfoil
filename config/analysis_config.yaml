@@ -116,3 +116,14 @@ fan_geometry:
     climb: 220.0
     cruise: 250.0
     descent: 200.0
+
+# Blade geometry for cascade and rotational correction analysis
+# Based on a representative high-bypass turbofan fan (hypothetical reference)
+blade_geometry:
+  num_blades: 18          # Number of fan blades Z
+  chord:                  # Blade chord c [m] per section
+    root: 0.12
+    mid_span: 0.10
+    tip: 0.08
+  theta_camber_deg: 8.0   # Camber angle θ [°] — NACA 65-410 representative value
+                          # (Carter's rule: m=0.23 for NACA 6-series, a/c=0.5)

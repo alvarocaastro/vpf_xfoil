@@ -42,18 +42,18 @@ sfc_multipliers:
 profile_efficiency_transfer: 0.65
 
 # Kinematics geometry and velocities
+# IMPORTANT: must match fan_geometry in analysis_config.yaml (single source of truth)
 kinematics:
-  fan_rpm: 3000.0
-  speed_of_sound_m_s: 340.0
-  # Blade section radial positions (in meters)
-  # Typical for a 3-meter diameter fan (e.g., modern turbofan)
+  fan_rpm: 4500.0           # Design rotational speed [RPM] — same as analysis_config
+  # Blade section radial positions [m] — same as analysis_config fan_geometry.radius
   radii_m:
-    root: 0.50
-    mid_span: 1.00
-    tip: 1.50
-  # Typical flight Mach numbers per phase:
-  target_mach:
-    takeoff: 0.25
-    climb:   0.65
-    cruise:  0.85
-    descent: 0.75
+    root: 0.20
+    mid_span: 0.42
+    tip: 0.65
+  # Axial flow velocity Va [m/s] per flight condition — explicit, not derived from Mach
+  # Same as analysis_config fan_geometry.axial_velocity
+  axial_velocity_m_s:
+    takeoff: 180.0
+    climb:   220.0
+    cruise:  250.0
+    descent: 200.0

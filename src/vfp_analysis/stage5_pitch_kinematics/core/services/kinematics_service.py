@@ -4,13 +4,17 @@ kinematics_service.py
 Resuelve los triángulos de velocidad y calcula el paso mecánico real.
 
 Para cada (condición, sección):
-    V_ax  = M × a                      # velocidad axial [m/s]
-    U     = ω × r                      # velocidad de pala [m/s]
-    φ     = arctan(V_ax / U)           # ángulo de entrada de flujo [°]
-    β     = α_opt + φ                  # ángulo de paso mecánico [°]
-    Δβ    = β(condición) − β(crucero)  # ajuste respecto a referencia [°]
+    Va    = velocidad axial explícita del config [m/s]   ← NO Mach × a
+    U     = ω × r                                        # velocidad de pala [m/s]
+    φ     = arctan(Va / U)                               # ángulo de entrada de flujo [°]
+    β     = α_opt_3D + φ                                 # ángulo de paso mecánico [°]
+    Δβ    = β(condición) − β(crucero)                    # ajuste respecto a referencia [°]
 
-El resultado conecta la aerodinámica 2D (α_opt) con el comando real
+NOTA: La velocidad axial Va se lee directamente de engine_parameters.yaml
+(sección kinematics.axial_velocity_m_s) para mantener coherencia con
+analysis_config.yaml (fan_geometry.axial_velocity). NO se deriva de Mach × a.
+
+El resultado conecta la aerodinámica 3D (α_opt_3D) con el comando real
 del actuador de paso de la pala variable.
 """
 
@@ -53,28 +57,26 @@ def compute_kinematics(
         config = yaml.safe_load(f)
 
     kin      = config.get("kinematics", {})
-    rpm      = kin.get("fan_rpm", 3000.0)
-    a        = kin.get("speed_of_sound_m_s", 340.0)
-    mach_dict = kin.get("target_mach", {})
+    rpm      = kin.get("fan_rpm", 4500.0)
     radii    = kin.get("radii_m", {})
-    omega    = rpm * (2.0 * math.pi / 60.0)    # [rad/s]
+    va_dict  = kin.get("axial_velocity_m_s", {})   # Va explícita por condición
+    omega    = rpm * (2.0 * math.pi / 60.0)         # [rad/s]
 
     results: List[KinematicsResult] = []
-    reference_beta: Dict[str, float] = {}      # section → β_mech_ref
+    reference_beta: Dict[str, float] = {}            # section → β_mech_ref
 
     # Pasada 1: β absoluto por caso
     for adj in pitch_adjustments:
-        mach  = mach_dict.get(adj.condition, 0.5)
-        v_ax  = mach * a
-        r     = radii.get(adj.section, 1.0)
-        u     = omega * r
-        phi   = math.degrees(math.atan(v_ax / u)) if u > 0 else 0.0
+        va    = va_dict.get(adj.condition, float("nan"))
+        r     = radii.get(adj.section, float("nan"))
+        u     = omega * r if not math.isnan(r) else float("nan")
+        phi   = math.degrees(math.atan2(va, u)) if (u > 0 and not math.isnan(va)) else 0.0
         beta  = adj.alpha_opt + phi
 
         results.append(KinematicsResult(
             condition=adj.condition,
             section=adj.section,
-            axial_velocity=v_ax,
+            axial_velocity=va,
             tangential_velocity=u,
             inflow_angle_deg=phi,
             alpha_aero_deg=adj.alpha_opt,

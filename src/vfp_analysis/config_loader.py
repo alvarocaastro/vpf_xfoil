@@ -169,6 +169,23 @@ def get_axial_velocities() -> Dict[str, float]:
     return {k: float(v) for k, v in cfg["fan_geometry"]["axial_velocity"].items()}
 
 
+def get_blade_geometry() -> Dict[str, Any]:
+    """Get blade geometry for cascade and rotational correction analysis.
+
+    Returns a dict with:
+        num_blades (int): number of fan blades Z
+        chord (dict[str, float]): blade chord c [m] per section
+        theta_camber_deg (float): camber angle θ [°] for Carter's rule
+    """
+    cfg = load_config()
+    bg = cfg["blade_geometry"]
+    return {
+        "num_blades": int(bg["num_blades"]),
+        "chord": {k: float(v) for k, v in bg["chord"].items()},
+        "theta_camber_deg": float(bg["theta_camber_deg"]),
+    }
+
+
 def clear_cache() -> None:
     """Clear the configuration cache (useful for testing)."""
     global _CONFIG_CACHE
