@@ -115,7 +115,7 @@ class AirfoilSpec(TypedDict):
 AIRFOILS: Final[list[AirfoilSpec]] = [
     {
         "name": "NACA 65-210",
-        "dat_file": "NACA 65-210.dat",
+        "dat_file": "naca_65-210.dat",
         "family": "NACA 65-series",
         "comment": (
             "Canonical controlled-diffusion compressor/fan profile with 2% "
@@ -125,7 +125,7 @@ AIRFOILS: Final[list[AirfoilSpec]] = [
     },
     {
         "name": "NACA 65-410",
-        "dat_file": "naca 65-410.dat",
+        "dat_file": "naca_65-410.dat",
         "family": "NACA 65-series",
         "comment": (
             "Controlled-diffusion compressor/fan airfoil with 4% camber and "
@@ -135,7 +135,7 @@ AIRFOILS: Final[list[AirfoilSpec]] = [
     },
     {
         "name": "NACA 63-215",
-        "dat_file": "naca63215.dat",
+        "dat_file": "naca_63-215.dat",
         "family": "NACA 63-series",
         "comment": (
             "Low-drag laminar-flow section adapted to turbomachinery; useful "
@@ -145,7 +145,7 @@ AIRFOILS: Final[list[AirfoilSpec]] = [
     },
     {
         "name": "NACA 0012",
-        "dat_file": "naca0012.dat",
+        "dat_file": "naca_0012.dat",
         "family": "NACA 00-series",
         "comment": (
             "Symmetric 12% thick section widely used as reference; serves as "

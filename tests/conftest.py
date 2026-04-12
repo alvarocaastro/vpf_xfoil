@@ -35,7 +35,7 @@ def data_dir(project_root: Path) -> Path:
 @pytest.fixture
 def sample_airfoil_dat(data_dir: Path) -> Path:
     """Return path to a sample airfoil .dat file."""
-    naca0012_path = data_dir / "naca0012.dat"
+    naca0012_path = data_dir / "naca_0012.dat"
     if not naca0012_path.exists():
         pytest.skip(f"Sample airfoil file not found: {naca0012_path}")
     return naca0012_path
