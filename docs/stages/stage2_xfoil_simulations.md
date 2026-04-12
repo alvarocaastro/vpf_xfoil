@@ -81,4 +81,4 @@ results/stage2_xfoil_simulations/
 ## Observaciones
 
 - Todas las simulaciones son incompresibles a `M = 0.2`. Los efectos de Mach real se aplican en Stage 3.
-- El triángulo de velocidades asume flujo axial puro (sin pre-swirl). Los efectos 3D rotacionales (Snel/Du-Selig) y de cascada (Weinig/Carter) se incorporarán en Stage 7.
+- El triángulo de velocidades asume flujo axial puro (sin pre-swirl). Los efectos 3D rotacionales (Snel) y de cascada (Weinig/Carter) se aplican en Stage 5.

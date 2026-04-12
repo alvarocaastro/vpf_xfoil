@@ -97,11 +97,11 @@ ESQUEMA DEL DOCUMENTO - TFG: Variable Pitch Fan (VPF) Aerodynamic Analysis
 3. METODOLOGÍA
    
    3.1. Descripción general del procedimiento
-        - Enfoque sistemático en 8 stages
+        - Enfoque sistemático en 6 stages
         - Pipeline automatizado en Python
         - Reproducibilidad y trazabilidad
         - Flujo de trabajo completo
-   
+
    3.2. Stage 1: Selección automática del perfil aerodinámico
         - Objetivo
         - Metodología
@@ -142,42 +142,30 @@ ESQUEMA DEL DOCUMENTO - TFG: Variable Pitch Fan (VPF) Aerodynamic Analysis
           * Artefacto de burbuja de separación laminar
           * Condición operativa relevante para turbomaquinaria
    
-   3.6. Stage 5: Generación de figuras
+   3.6. Stage 5: Cinemática de pitch y análisis 3D de fan
         - Objetivo
         - Metodología
-          * Figuras individuales y resumen
-          * Especificaciones técnicas (300 DPI, formato académico)
+          * Correcciones de cascada (Weinig, Carter)
+          * Correcciones rotacionales 3D (Snel)
+          * Twist de diseño y compromiso off-design span-wise
+          * Carga de etapa: coeficientes φ y ψ (Euler)
+          * Triángulos de velocidad: Va → φ → β_mech, Δβ por condición
         - Justificación
-   
-   3.7. Stage 6: Análisis de Variable Pitch Fan (VPF)
+          * El fan no opera como perfil aislado — efectos de cascada y rotación son determinantes
+          * Cuantifica la penalización por paso fijo en condiciones off-design
+
+   3.7. Stage 6: Análisis de impacto en SFC
         - Objetivo
         - Metodología
-          * Cálculo de incidencia óptima por condición
-          * Ajustes de pitch relativos a crucero
-          * Análisis de mejoras de eficiencia
+          * Comparación VPF (α_opt) vs paso fijo (α_design) al mismo Mach/Re
+          * Modelo de transferencia de eficiencia: ε, τ, k = BPR/(1+BPR)
+          * Barrido de sensibilidad a τ
+          * Parámetros del motor baseline (Trent/GE90 class)
         - Justificación
-          * Relevancia del concepto VPF
-          * Demostración cuantitativa de beneficios
-   
-   3.8. Stage 7: Análisis de teoría de cascadas
-        - Objetivo
-        - Metodología
-          * Parámetros de cascada (solidity, ángulos de flujo, incidencia)
-          * Conexión con resultados aerodinámicos
-        - Justificación
-          * Interpretación en contexto de turbomaquinaria
-   
-   3.9. Stage 8: Análisis de impacto en SFC
-        - Objetivo
-        - Metodología
-          * Modelo de propulsión simplificado
-          * Relación eficiencia aerodinámica - eficiencia fan - SFC
-          * Parámetros del motor baseline
-        - Justificación
-          * Conexión con rendimiento del motor
-          * Relevancia práctica del concepto
-   
-   3.10. Automatización y reproducibilidad
+          * Conexión cuantitativa entre mejora aerodinámica 2D/3D y consumo de combustible
+          * Resultado final del TFG: ΔSFC media ≈ 2.5% dentro del rango literario 2–5%
+
+   3.8. Automatización y reproducibilidad
          - Pipeline en Python
          - Ventajas de la automatización
          - Garantías de reproducibilidad
@@ -213,25 +201,20 @@ ESQUEMA DEL DOCUMENTO - TFG: Variable Pitch Fan (VPF) Aerodynamic Analysis
         - Análisis estadístico
         - Tendencias identificadas
    
-   4.5. Análisis Variable Pitch Fan (Stage 6)
-        - Variación del ángulo óptimo con condición de vuelo
-        - Ajustes de pitch requeridos
-        - Mejoras de eficiencia potenciales
-        - Comparación entre secciones
-        - Interpretación de resultados
-   
-   4.6. Análisis de cascadas (Stage 7)
-        - Solidity por sección
-        - Ángulos de flujo estimados
-        - Incidencia del álabe
-        - Interpretación en contexto de turbomaquinaria
-        - Dataset consolidado
-   
-   4.7. Impacto en consumo específico de combustible (Stage 8)
-        - Mejoras estimadas en eficiencia del fan
-        - Reducciones estimadas de SFC
-        - Análisis por condición de vuelo
-        - Relación eficiencia aerodinámica - SFC
+   4.5. Análisis 3D de fan y cinemática de pitch (Stage 5)
+        - Correcciones de cascada: solidez, K_weinig, δ_carter por sección
+        - Correcciones rotacionales Snel: ΔCL(r) ∝ (c/r)²
+        - Twist de diseño: β_metal(r), twist total root→tip
+        - Compromiso off-design: α_actual, pérdida de eficiencia por sección
+        - Diagrama φ-ψ: puntos de operación en mapa de carga de etapa
+        - Comparación α_opt_2D vs α_opt_3D
+
+   4.6. Impacto en consumo específico de combustible (Stage 6)
+        - Ratio ε por sección y condición (VPF vs paso fijo, mismo Mach/Re)
+        - Mejora de eficiencia de fan: Δη_fan por condición
+        - Reducción de SFC: ΔSFC ≈ 0% crucero, ~3.5% despegue/ascenso, ~3.0% descenso
+        - Media ΔSFC ≈ 2.5% — dentro del rango literario 2–5% (Cumpsty 2004)
+        - Sensibilidad a τ: rango [1%, 5%] para τ ∈ [0.30, 0.80]
         - Discusión de limitaciones del modelo
 
 

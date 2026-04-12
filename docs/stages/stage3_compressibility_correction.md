@@ -91,4 +91,4 @@ results/stage3_compressibility_correction/
 - Para takeoff (M=0.30), las diferencias entre PG y K-T son < 1% — ambos modelos convergen a bajos Mach.
 - Para crucero (M=0.85), K-T da CL ~10-15% menor que PG. PG sobreestima el efecto de compresibilidad en régimen transónico bajo.
 - Ambos modelos son correcciones 2D subcríticas. Por encima de Mcr (zona transónica), la precisión disminuye; para análisis más riguroso en crucero sería necesario CFD RANS.
-- Los efectos 3D rotacionales (Snel/Du-Selig) y de cascada (Weinig/Carter) no se aplican en esta etapa — están pendientes para Stage 7.
+- Los efectos 3D rotacionales (Snel) y de cascada (Weinig/Carter) no se aplican en esta etapa — se incorporan en Stage 5 (cinemática de pitch).

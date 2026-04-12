@@ -23,6 +23,10 @@ Para cada caso (12 = 4 condiciones × 3 secciones) se calculan:
 | `cd_at_opt` | $C_D$ en el punto óptimo |
 | `stall_margin` | $\alpha_{stall} - \alpha_{opt}$ (deg) — margen de seguridad frente a pérdida |
 | `cm_at_opt` | Coeficiente de momento de cabeceo en el punto óptimo |
+| `alpha_design` | α_opt en crucero para la misma sección (ángulo de diseño de paso fijo) |
+| `delta_alpha` | α_opt − α_design: ajuste de pitch requerido por el VPF [°] |
+| `eff_at_design_alpha` | (CL/CD) evaluado en α_design (rendimiento con paso fijo en esta condición) |
+| `eff_gain_pct` | (max_efficiency − eff_at_design_alpha) / eff_at_design_alpha × 100 [%] |
 
 El punto operativo se define como el segundo pico de eficiencia, descartando el primer máximo a bajo ángulo asociado al artefacto de burbuja laminar de XFOIL.
 
