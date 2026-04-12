@@ -28,8 +28,11 @@ LOGGER = logging.getLogger(__name__)
 
 # Minimum CL for viable fan blade operation.
 # Below this value the blade generates insufficient thrust regardless of CL/CD.
-# Based on typical turbofan fan-blade loading: CL_kt ~ 0.7–1.2 at design conditions.
-CL_MIN_VIABLE = 0.70
+# Set conservatively at 0.50 to allow detection of the true CL/CD optimum across all
+# flight conditions, including climb where CL_opt ≈ 0.5–0.65.  The previous value of
+# 0.70 risked discarding the actual aerodynamic optimum in low-loading conditions.
+# Ref: Cumpsty (2004) ch. 8 — fan blade CL design range 0.4–1.0.
+CL_MIN_VIABLE = 0.50
 
 
 @dataclass(frozen=True)
@@ -239,42 +242,88 @@ def enrich_with_cruise_reference(
     metrics: List[AerodynamicMetrics],
     polars_dir: Path,
     design_condition: str = "cruise",
+    axial_velocities: Dict[str, float] | None = None,
+    blade_radii: Dict[str, float] | None = None,
+    fan_rpm: float | None = None,
 ) -> List[AerodynamicMetrics]:
     """Enrich metrics with design-reference fields relative to the cruise condition.
 
-    The blade design angle is defined as the α_opt at *design_condition* for each
-    section. For non-design conditions this function computes:
+    Computes the **physically correct** fixed-pitch incidence for each off-design
+    condition using velocity triangles:
 
-    - ``alpha_design``       : α_opt_cruise for the same section
-    - ``delta_alpha``        : α_opt − α_design (VPF pitch adjustment required)
-    - ``eff_at_design_alpha``: (CL/CD) evaluated at α_design (fixed-pitch performance)
+        φ(cond, sec)   = arctan(Va_cond / U_sec)        [inflow angle]
+        β_cruise(sec)  = α_opt_cruise(sec) + φ_cruise(sec)   [fixed blade angle]
+        α_fixed(cond)  = β_cruise(sec) − φ(cond, sec)   [actual incidence w/o VPF]
+
+    Without VPF, the blade stays at β_cruise regardless of flight condition.  At
+    takeoff Va increases → φ increases → α_fixed becomes negative (blade under-
+    loaded).  At descent Va decreases → φ decreases → α_fixed increases (risk of
+    stall).  VPF adjusts β to keep α at its optimum for every condition.
+
+    Fields written to each AerodynamicMetrics:
+
+    - ``alpha_design``       : actual fixed-pitch incidence α_fixed for this case
+                               (equals α_opt_cruise only at the design condition)
+    - ``delta_alpha``        : α_opt − α_fixed (total VPF pitch benefit)
+    - ``eff_at_design_alpha``: (CL/CD) at α_fixed in the condition's polar
     - ``eff_gain``           : max_efficiency − eff_at_design_alpha
     - ``eff_gain_pct``       : eff_gain / eff_at_design_alpha × 100
 
-    For the design condition itself all gains are zero by definition.
+    If velocity-triangle data is not provided the function falls back to the
+    simplified model (α_fixed = α_opt_cruise), which underestimates VPF gains.
 
     Parameters
     ----------
     metrics:
         List produced by ``compute_all_metrics``.
     polars_dir:
-        Directory used to locate polar files (same as passed to ``compute_all_metrics``).
+        Directory used to locate polar files.
     design_condition:
         Flight condition that defines the reference blade angle (default: ``"cruise"``).
+    axial_velocities:
+        Va [m/s] per flight condition, e.g. ``{"cruise": 150.0, "takeoff": 180.0}``.
+    blade_radii:
+        Blade radius [m] per section, e.g. ``{"root": 0.53, "mid_span": 1.00}``.
+    fan_rpm:
+        Fan rotational speed [RPM].
 
     Returns
     -------
     List[AerodynamicMetrics]
         New list with design-reference fields filled in.
     """
-    # Step 1: extract alpha_design per section from the design condition
-    alpha_design_map: Dict[str, float] = {
+    # ------------------------------------------------------------------
+    # Step 0: pre-compute inflow angles φ if kinematics data is available
+    # ------------------------------------------------------------------
+    use_triangles = (
+        axial_velocities is not None
+        and blade_radii is not None
+        and fan_rpm is not None
+    )
+    phi: Dict[tuple[str, str], float] = {}   # (condition, section) → φ [deg]
+    if use_triangles:
+        omega = fan_rpm * (2.0 * math.pi / 60.0)
+        for cond, va in axial_velocities.items():
+            for sec, r in blade_radii.items():
+                u = omega * r
+                phi[(cond, sec)] = math.degrees(math.atan2(va, u))
+        LOGGER.info("Velocity-triangle enrichment active (RPM=%.0f)", fan_rpm)
+    else:
+        LOGGER.warning(
+            "Velocity-triangle data not provided — falling back to simplified "
+            "model (α_fixed = α_opt_cruise). VPF gains will be underestimated."
+        )
+
+    # ------------------------------------------------------------------
+    # Step 1: extract α_opt at the design condition per section
+    # ------------------------------------------------------------------
+    alpha_opt_design_map: Dict[str, float] = {
         m.blade_section: m.alpha_opt
         for m in metrics
         if m.flight_condition == design_condition
     }
 
-    if not alpha_design_map:
+    if not alpha_opt_design_map:
         LOGGER.warning(
             "No metrics found for design condition '%s'. "
             "Design-reference fields will remain NaN.",
@@ -282,16 +331,34 @@ def enrich_with_cruise_reference(
         )
         return metrics
 
-    # Step 2: enrich each case
+    # ------------------------------------------------------------------
+    # Step 2: compute β_cruise per section (fixed blade angle)
+    # β_cruise = α_opt_cruise + φ_cruise
+    # ------------------------------------------------------------------
+    beta_cruise: Dict[str, float] = {}
+    for section, alpha_opt_cruise in alpha_opt_design_map.items():
+        if use_triangles:
+            phi_cruise = phi.get((design_condition, section), float("nan"))
+            if not math.isnan(phi_cruise):
+                beta_cruise[section] = alpha_opt_cruise + phi_cruise
+            else:
+                beta_cruise[section] = float("nan")
+                LOGGER.warning("φ_cruise missing for section %s — β_cruise set to NaN", section)
+        else:
+            beta_cruise[section] = float("nan")
+
+    # ------------------------------------------------------------------
+    # Step 3: enrich each case
+    # ------------------------------------------------------------------
     enriched: List[AerodynamicMetrics] = []
     for m in metrics:
-        alpha_design = alpha_design_map.get(m.blade_section, float("nan"))
+        alpha_opt_cruise = alpha_opt_design_map.get(m.blade_section, float("nan"))
 
         if m.flight_condition == design_condition:
             # At the design condition the blade is perfectly aligned → no gain
             enriched.append(dataclasses.replace(
                 m,
-                alpha_design=alpha_design,
+                alpha_design=alpha_opt_cruise,
                 delta_alpha=0.0,
                 eff_at_design_alpha=m.max_efficiency,
                 eff_gain=0.0,
@@ -299,37 +366,61 @@ def enrich_with_cruise_reference(
             ))
             continue
 
-        # For non-design conditions: evaluate efficiency at alpha_design
+        # Compute α_fixed: actual incidence without VPF
+        if use_triangles:
+            bc = beta_cruise.get(m.blade_section, float("nan"))
+            phi_cond = phi.get((m.flight_condition, m.blade_section), float("nan"))
+            if not math.isnan(bc) and not math.isnan(phi_cond):
+                alpha_fixed = bc - phi_cond
+            else:
+                # Fallback per section
+                alpha_fixed = alpha_opt_cruise
+        else:
+            alpha_fixed = alpha_opt_cruise
+
+        delta_alpha = m.alpha_opt - alpha_fixed
+
+        # Evaluate (CL/CD) at α_fixed in the condition's corrected polar
         polar_file = resolve_polar_file(polars_dir, m.flight_condition, m.blade_section)
-        eff_at_design = float("nan")
+        eff_at_fixed = float("nan")
         if polar_file is not None:
             try:
                 df = pd.read_csv(polar_file)
                 eff_col = resolve_efficiency_column(df)
-                eff_at_design = lookup_efficiency_at_alpha(df, eff_col, alpha_design)
+                eff_at_fixed = lookup_efficiency_at_alpha(df, eff_col, alpha_fixed)
             except Exception as exc:
                 LOGGER.warning(
-                    "Could not evaluate efficiency at alpha_design for %s/%s: %s",
-                    m.flight_condition, m.blade_section, exc,
+                    "Could not evaluate efficiency at α_fixed=%.2f° for %s/%s: %s",
+                    alpha_fixed, m.flight_condition, m.blade_section, exc,
                 )
 
-        delta_alpha = m.alpha_opt - alpha_design
         eff_gain = (
-            m.max_efficiency - eff_at_design
-            if not math.isnan(eff_at_design)
+            m.max_efficiency - eff_at_fixed
+            if not math.isnan(eff_at_fixed)
             else float("nan")
         )
         eff_gain_pct = (
-            eff_gain / eff_at_design * 100
-            if eff_at_design > 0 and not math.isnan(eff_gain)
+            eff_gain / abs(eff_at_fixed) * 100
+            if not math.isnan(eff_gain) and eff_at_fixed != 0
             else float("nan")
+        )
+
+        LOGGER.debug(
+            "%s/%s: β_cruise=%.2f° φ=%.2f° α_fixed=%.2f° α_opt=%.2f° "
+            "Δα=%.2f° CL/CD_fixed=%.1f CL/CD_vpf=%.1f gain=%.1f%%",
+            m.flight_condition, m.blade_section,
+            beta_cruise.get(m.blade_section, float("nan")),
+            phi.get((m.flight_condition, m.blade_section), float("nan")),
+            alpha_fixed, m.alpha_opt, delta_alpha,
+            eff_at_fixed if not math.isnan(eff_at_fixed) else 0.0,
+            m.max_efficiency, eff_gain_pct if not math.isnan(eff_gain_pct) else 0.0,
         )
 
         enriched.append(dataclasses.replace(
             m,
-            alpha_design=alpha_design,
+            alpha_design=alpha_fixed,
             delta_alpha=delta_alpha,
-            eff_at_design_alpha=eff_at_design,
+            eff_at_design_alpha=eff_at_fixed,
             eff_gain=eff_gain,
             eff_gain_pct=eff_gain_pct,
         ))

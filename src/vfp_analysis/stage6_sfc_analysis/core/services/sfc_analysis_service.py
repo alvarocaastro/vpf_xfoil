@@ -38,7 +38,8 @@ from vfp_analysis.stage6_sfc_analysis.core.domain.sfc_parameters import (
 )
 from vfp_analysis.stage6_sfc_analysis.core.services.propulsion_model_service import (
     compute_bypass_sensitivity_factor,
-    compute_fan_efficiency_improvement,
+    compute_combined_fan_efficiency_improvement,
+    compute_fan_map_efficiency_gain,
     compute_sfc_improvement,
     compute_sfc_reduction_percent,
 )
@@ -59,12 +60,25 @@ def compute_sfc_analysis(
 ) -> Tuple[List[SfcAnalysisResult], List[SfcSectionResult]]:
     """Calcula el análisis de SFC para todas las condiciones de vuelo.
 
+    Integra dos mecanismos físicos independientes de mejora de eficiencia:
+
+    **Mecanismo 1 — Perfil (2D → 3D vía τ)**:
+        ε = CL/CD_vpf / CL/CD_fijo_real  (incidencia correcta por triángulos, Stage 4)
+        Δη_profile = mean_r[(min(ε, ε_cap) − 1) × τ],  cap ≤ ETA_FAN_DELTA_CAP
+
+    **Mecanismo 2 — Mapa del fan (coeficiente de flujo φ)**:
+        φ(cond, sec) = Va_cond / U_sec   (cambia con condición de vuelo)
+        Δη_map = k_map × ((φ − φ_opt) / φ_opt)²,  cap ≤ ETA_FAN_MAP_CAP
+
+    **Combinado**:
+        Δη_fan = min(Δη_profile + Δη_map, ETA_FAN_COMBINED_CAP)
+
     Parameters
     ----------
     metrics_df : pd.DataFrame
         Tabla de métricas de Stage 4 (``summary_table.csv``).
-        Debe contener las columnas ``flight_condition``, ``blade_section``,
-        ``max_efficiency``, ``eff_at_design_alpha`` y ``delta_alpha_deg``.
+        Debe contener: ``flight_condition``, ``blade_section``,
+        ``max_efficiency``, ``eff_at_design_alpha``, ``delta_alpha_deg``.
     engine_baseline : EngineBaseline
         Parámetros base del motor.
     config_path : Path, optional
@@ -77,9 +91,31 @@ def compute_sfc_analysis(
     section_results : list[SfcSectionResult]
         Resultados desagregados por condición × sección.
     """
+    import math as _math
+
     tau, sfc_multipliers = _load_config(config_path)
     k = compute_bypass_sensitivity_factor(engine_baseline.bypass_ratio)
     flight_conditions = get_flight_conditions()
+
+    # ── Cargar datos cinemáticos (Va, radii, RPM) para el mecanismo de mapa ─
+    try:
+        from vfp_analysis.config_loader import get_axial_velocities, get_blade_radii, get_fan_rpm
+        _va = get_axial_velocities()
+        _radii = get_blade_radii()
+        _rpm = get_fan_rpm()
+        _omega = _rpm * (2.0 * 3.141592653589793 / 60.0)
+        _use_map = True
+        # φ_design (crucero) por sección
+        _va_cruise = _va.get("cruise", 150.0)
+        _phi_design: dict = {sec: _va_cruise / (_omega * r) for sec, r in _radii.items()}
+        LOGGER.info("Mecanismo de mapa activo: RPM=%.0f, Va_cruise=%.1f m/s", _rpm, _va_cruise)
+    except Exception as exc:
+        LOGGER.warning("No se pudo cargar datos cinemáticos para mapa: %s — solo mecanismo perfil.", exc)
+        _use_map = False
+        _va = {}
+        _radii = {}
+        _omega = 0.0
+        _phi_design = {}
 
     section_results: List[SfcSectionResult] = []
     sfc_results: List[SfcAnalysisResult] = []
@@ -90,21 +126,61 @@ def compute_sfc_analysis(
             LOGGER.warning("No hay datos de Stage 4 para condición '%s' — omitida.", condition)
             continue
 
+        _va_cond = _va.get(condition, 0.0) if _use_map else 0.0
+
         # ── Nivel de sección ─────────────────────────────────────────────
         cond_sections: List[SfcSectionResult] = []
         for _, row in cond_df.iterrows():
-            sr = _compute_section_result(condition, row, tau)
+            section = str(row.get("blade_section", "unknown"))
+
+            # Mecanismo de perfil
+            sr_base = _compute_section_result(condition, row, tau)
+
+            # Mecanismo de mapa
+            if _use_map and section in _radii and _omega > 0:
+                u_sec = _omega * _radii[section]
+                phi_cond = _va_cond / u_sec if u_sec > 0 else float("nan")
+                phi_des  = _phi_design.get(section, float("nan"))
+                delta_eta_map = (
+                    compute_fan_map_efficiency_gain(phi_cond, phi_des)
+                    if not _math.isnan(phi_cond) and not _math.isnan(phi_des)
+                    else 0.0
+                )
+            else:
+                phi_cond = float("nan")
+                phi_des  = _phi_design.get(section, float("nan"))
+                delta_eta_map = 0.0
+
+            delta_eta_total = sr_base.delta_eta_profile + delta_eta_map
+
+            import dataclasses as _dc
+            sr = _dc.replace(
+                sr_base,
+                phi_condition=phi_cond,
+                phi_design=phi_des,
+                delta_eta_map=delta_eta_map,
+                delta_eta_total=delta_eta_total,
+            )
             cond_sections.append(sr)
         section_results.extend(cond_sections)
 
         # ── Agregación por condición ──────────────────────────────────────
-        epsilon_values = [s.epsilon for s in cond_sections]
-        delta_alpha_values = [s.delta_alpha_deg for s in cond_sections]
-        cl_cd_fixed_values = [s.cl_cd_fixed for s in cond_sections]
-        cl_cd_vpf_values = [s.cl_cd_vpf for s in cond_sections]
+        epsilon_values   = [s.epsilon for s in cond_sections]
+        phi_values       = [s.phi_condition for s in cond_sections
+                            if not _math.isnan(s.phi_condition)]
+        phi_design_val   = _mean([s.phi_design for s in cond_sections
+                                  if not _math.isnan(s.phi_design)])
+        delta_alpha_vals = [s.delta_alpha_deg for s in cond_sections]
+        cl_cd_fixed_vals = [s.cl_cd_fixed for s in cond_sections]
+        cl_cd_vpf_vals   = [s.cl_cd_vpf for s in cond_sections]
 
-        eta_fan_new, delta_eta_raw, delta_eta_applied = compute_fan_efficiency_improvement(
+        (eta_fan_new,
+         delta_eta_profile,
+         delta_eta_map_mean,
+         delta_eta_applied) = compute_combined_fan_efficiency_improvement(
             epsilon_values=epsilon_values,
+            phi_values=phi_values,
+            phi_design=phi_design_val if not _math.isnan(phi_design_val) else 0.0,
             fan_efficiency_baseline=engine_baseline.fan_efficiency,
             tau=tau,
         )
@@ -121,10 +197,10 @@ def compute_sfc_analysis(
 
         sfc_results.append(SfcAnalysisResult(
             condition=condition,
-            cl_cd_fixed=_mean(cl_cd_fixed_values),
-            cl_cd_vpf=_mean(cl_cd_vpf_values),
+            cl_cd_fixed=_mean(cl_cd_fixed_vals),
+            cl_cd_vpf=_mean(cl_cd_vpf_vals),
             epsilon_mean=_mean(epsilon_values),
-            delta_alpha_mean_deg=_mean(delta_alpha_values),
+            delta_alpha_mean_deg=_mean(delta_alpha_vals),
             fan_efficiency_baseline=engine_baseline.fan_efficiency,
             fan_efficiency_new=eta_fan_new,
             delta_eta_fan=delta_eta_applied,
@@ -132,11 +208,18 @@ def compute_sfc_analysis(
             sfc_baseline=sfc_baseline,
             sfc_new=sfc_new,
             sfc_reduction_percent=sfc_reduction,
+            delta_eta_profile=delta_eta_profile,
+            delta_eta_map=delta_eta_map_mean,
+            phi_design=phi_design_val if not _math.isnan(phi_design_val) else float("nan"),
+            phi_condition=_mean(phi_values) if phi_values else float("nan"),
         ))
 
         LOGGER.info(
-            "%s: ε_mean=%.3f  Δη_fan=%.4f  η_new=%.4f  ΔSFC=%.2f%%",
-            condition, _mean(epsilon_values), delta_eta_applied, eta_fan_new, sfc_reduction,
+            "%s: ε_mean=%.3f  Δη_perfil=%.4f  Δη_mapa=%.4f  Δη_total=%.4f  "
+            "η_new=%.4f  ΔSFC=%.2f%%",
+            condition, _mean(epsilon_values),
+            delta_eta_profile, delta_eta_map_mean, delta_eta_applied,
+            eta_fan_new, sfc_reduction,
         )
 
     return sfc_results, section_results
@@ -234,7 +317,12 @@ def _compute_section_result(
     row: pd.Series,
     tau: float,
 ) -> SfcSectionResult:
-    """Calcula el resultado por sección para una fila de Stage 4."""
+    """Calcula el resultado por sección para una fila de Stage 4.
+
+    ``eff_at_design_alpha`` contiene CL/CD evaluado en la incidencia real
+    sin VPF (α_fixed = β_cruise − φ_condition), calculada con triángulos de
+    velocidad en Stage 4. ``delta_alpha_deg`` es el ajuste total de VPF.
+    """
     cl_cd_fixed = float(row.get("eff_at_design_alpha", 0.0))
     cl_cd_vpf = float(row.get("max_efficiency", 0.0))
     delta_alpha = float(row.get("delta_alpha_deg", 0.0))

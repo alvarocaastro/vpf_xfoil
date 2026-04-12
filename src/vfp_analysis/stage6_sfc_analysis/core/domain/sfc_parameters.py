@@ -14,7 +14,7 @@ Modelo físico:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 # ---------------------------------------------------------------------------
@@ -33,8 +33,39 @@ EPSILON_CAP: float = 1.10
 ETA_FAN_ABS_CAP: float = 0.96
 
 #: Mejora absoluta máxima de η_fan atribuible al VPF en condiciones reales.
+#: Captura únicamente el mecanismo de perfil (2D CL/CD → fan 3D vía τ).
 #: Ref: Cumpsty (2004) p. 280, datos empíricos de fans de paso variable.
 ETA_FAN_DELTA_CAP: float = 0.04
+
+# ---------------------------------------------------------------------------
+# Mecanismo de mapa del fan (flow coefficient, φ = Va/U)
+# ---------------------------------------------------------------------------
+
+#: Coeficiente de pérdida cuadrática de eficiencia de mapa.
+#: Δη_map = FAN_MAP_LOSS_COEFFICIENT × ((φ − φ_opt) / φ_opt)²
+#:
+#: Derivación: la eficiencia de un fan de paso variable en su mapa (fig. φ-ψ)
+#: sigue una curva parabólica alrededor del punto de diseño. Un fan de paso fijo
+#: se ve forzado a operar en puntos donde φ ≠ φ_opt (diferentes Va entre fases),
+#: incurriendo en pérdidas proporcionales al cuadrado de la desviación relativa de φ.
+#: VPF ajusta la incidencia de cada pala para recuperar parcialmente esta pérdida.
+#:
+#: Valor calibrado con recovery fraction ≈ 20% de la pérdida total de mapa
+#: (conservador: el resto son pérdidas de endwall y tip clearance irrecuperables).
+#: Ref: Cumpsty (2004) ch. 8 (fig. 8.10);
+#:      Dickens & Day (2011). "The Design of Highly Loaded Axial Compressors".
+#:      J. Turbomach. 133(3):031007.
+FAN_MAP_LOSS_COEFFICIENT: float = 0.22
+
+#: Cap del mecanismo de mapa (independiente del mecanismo de perfil).
+#: Limita la ganancia atribuible a este mecanismo a un valor físicamente creíble.
+#: Ref: Dickens & Day (2011); Cumpsty (2004) ch. 8.
+ETA_FAN_MAP_CAP: float = 0.015
+
+#: Cap combinado de ambos mecanismos (perfil + mapa).
+#: Corresponde al límite superior del rango literario (ΔSFC ≈ 5%).
+#: Ref: Cumpsty (2004) p. 280; Saravanamuttoo et al. (2017) §5.3.
+ETA_FAN_COMBINED_CAP: float = 0.048
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +104,11 @@ class SfcAnalysisResult:
     sfc_baseline: float             # SFC base para esta condición [lb/(lbf·hr)]
     sfc_new: float                  # SFC mejorado con VPF [lb/(lbf·hr)]
     sfc_reduction_percent: float    # Reducción porcentual de SFC [%]
+    # Desglose de mecanismos (opcional, NaN si no se calcula)
+    delta_eta_profile: float = field(default=float("nan"))   # Δη del mecanismo de perfil [–]
+    delta_eta_map: float = field(default=float("nan"))       # Δη del mecanismo de mapa φ [–]
+    phi_design: float = field(default=float("nan"))          # φ_diseño = Va_cruise/U_mid [–]
+    phi_condition: float = field(default=float("nan"))       # φ en esta condición [–]
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +121,7 @@ class SfcSectionResult:
 
     Compara CL/CD al ángulo de diseño (paso fijo) vs CL/CD óptimo (VPF),
     ambos evaluados a idéntico Mach y Reynolds por XFOIL en Stage 4.
+    Incluye también la contribución del mecanismo de mapa del fan (φ-dependiente).
     """
 
     condition: str
@@ -95,7 +132,12 @@ class SfcSectionResult:
     epsilon_eff: float          # min(epsilon, EPSILON_CAP) [–]
     delta_eta_profile: float    # (epsilon_eff − 1) × τ [–]
     efficiency_gain_pct: float  # (epsilon − 1) × 100 [%]
-    delta_alpha_deg: float      # alpha_opt − alpha_design [°]
+    delta_alpha_deg: float      # alpha_opt − alpha_fixed (triángulo de velocidades) [°]
+    # Mecanismo de mapa del fan (campos opcionales, NaN si no se calculan)
+    phi_condition: float = field(default=float("nan"))   # Va_cond / U_section [–]
+    phi_design: float = field(default=float("nan"))      # Va_cruise / U_section [–]
+    delta_eta_map: float = field(default=float("nan"))   # k_map × (Δφ/φ)² [–]
+    delta_eta_total: float = field(default=float("nan")) # profile + map (antes del cap global) [–]
 
 
 # ---------------------------------------------------------------------------

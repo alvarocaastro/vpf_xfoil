@@ -600,17 +600,16 @@ def generate_all_figures(
     Genera todas las figuras de publicación para la tesis.
 
     Figuras básicas (polares de Stage 2):
-      1. generate_efficiency_plots
-      2. generate_efficiency_by_section
-      3. generate_alpha_opt_vs_condition
+      1. generate_efficiency_by_section  — curvas CL/CD por sección, agrupadas por condición
+      2. generate_alpha_opt_vs_condition — figura central: matriz α_opt
 
     Figuras extendidas (polares corregidas de Stage 3, requiere *stage3_dir*):
       A. generate_section_polar_comparison
       B. generate_cruise_penalty_figure
-    """
-    LOGGER.info("Generando curvas de eficiencia individuales...")
-    generate_efficiency_plots(polars_dir, figures_dir, flight_conditions, blade_sections)
 
+    Nota: las curvas CL/CD vs α individuales (una por condición × sección) se generan
+    en Stage 2 (efficiency_plot.png) y no se duplican aquí.
+    """
     LOGGER.info("Generando comparación por sección...")
     generate_efficiency_by_section(polars_dir, figures_dir, flight_conditions)
 

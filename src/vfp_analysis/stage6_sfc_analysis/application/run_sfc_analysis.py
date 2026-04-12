@@ -14,12 +14,12 @@ Outputs (en results/stage6_sfc_analysis/):
     tables/sfc_section_breakdown.csv     — ε, Δη por condición × sección
     tables/sfc_analysis.csv              — resultados agregados por condición
     tables/sfc_sensitivity.csv           — barrido de τ × condición
-    figures/fixed_vs_vpf_efficiency.png  — CL/CD_fixed vs CL/CD_vpf por sección
-    figures/epsilon_spanwise.png         — ε(r) por sección y condición
-    figures/sfc_sensitivity_tau.png      — sensibilidad de ΔSFC a τ
-    figures/sfc_reduction_percent.png    — % reducción SFC por condición
-    figures/sfc_vs_condition.png         — SFC base vs VPF por condición
+    figures/fixed_vs_vpf_efficiency.png    — CL/CD_fixed vs CL/CD_vpf por sección
+    figures/epsilon_spanwise.png           — ε_eff(r) capeado por sección y condición
+    figures/sfc_sensitivity_tau.png        — sensibilidad de ΔSFC a τ
+    figures/sfc_combined.png               — SFC base/VPF (izq.) + % reducción (der.)
     figures/fan_efficiency_improvement.png — η_fan base vs VPF por condición
+    figures/efficiency_mechanism_breakdown.png — desglose Δη perfil vs mapa por condición
     sfc_analysis_summary.txt
     finalresults_stage6.txt
 """
@@ -82,9 +82,9 @@ def generate_sfc_figures(
         _plot_fixed_vs_vpf_efficiency(section_results, figures_dir)
         _plot_epsilon_spanwise(section_results, figures_dir)
         _plot_sfc_sensitivity_tau(sensitivity_results, figures_dir)
-        _plot_sfc_reduction(sfc_results, figures_dir)
-        _plot_sfc_vs_condition(sfc_results, figures_dir)
+        _plot_sfc_combined(sfc_results, figures_dir)
         _plot_fan_efficiency_improvement(sfc_results, figures_dir)
+        _plot_efficiency_mechanism_breakdown(sfc_results, figures_dir)
 
 
 def _plot_fixed_vs_vpf_efficiency(
@@ -129,31 +129,58 @@ def _plot_epsilon_spanwise(
     section_results: List[SfcSectionResult],
     figures_dir: Path,
 ) -> None:
-    """Barras agrupadas: ε(r) por sección y condición."""
+    """Barras agrupadas: ε_eff capeado por sección y condición.
+
+    Las barras muestran epsilon_eff = min(ε, 1.10), que es el valor que realmente
+    se transfiere a la eficiencia del fan.  Cuando ε_bruto > 1.10 se anota el valor
+    real sobre la barra correspondiente para evidenciar la magnitud de la ganancia.
+    """
+    from vfp_analysis.stage6_sfc_analysis.core.domain.sfc_parameters import EPSILON_CAP
+
     conditions = _CONDITIONS_ORDER
-    n_cond = len(conditions)
-    x = np.arange(n_cond)
+    x = np.arange(len(conditions))
     width = 0.22
 
     fig, ax = plt.subplots(figsize=(9, 5.5))
     for i, sec in enumerate(_SECTIONS_ORDER):
-        epsilons = [
+        eps_eff = [
+            next((r.epsilon_eff for r in section_results
+                  if r.condition == c and r.blade_section == sec), 1.0)
+            for c in conditions
+        ]
+        eps_raw = [
             next((r.epsilon for r in section_results
                   if r.condition == c and r.blade_section == sec), 1.0)
             for c in conditions
         ]
         offset = (i - 1) * width
-        ax.bar(x + offset, epsilons, width,
-               label=SECTION_LABELS[sec], color=SECTION_COLORS[sec],
-               edgecolor="white", linewidth=0.5, zorder=3)
+        bars = ax.bar(x + offset, eps_eff, width,
+                      label=SECTION_LABELS[sec], color=SECTION_COLORS[sec],
+                      edgecolor="white", linewidth=0.5, zorder=3)
 
-    ax.axhline(1.0,  ls="-",  color="black",    lw=1.0, label="ε = 1  (sin beneficio)",   zorder=4)
-    ax.axhline(1.10, ls="--", color="#EE6677",   lw=1.2, label="ε cap = 1.10  (Cumpsty 2004)", zorder=4)
+        # Anotar valor bruto cuando supera el cap
+        for bar, raw in zip(bars, eps_raw):
+            if raw > EPSILON_CAP + 0.01:
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.003,
+                    f"ε={raw:.1f}",
+                    ha="center", va="bottom", fontsize=6.5, color="0.3",
+                    rotation=90,
+                )
+
+    ax.axhline(1.0,  ls="-",  color="black",   lw=1.0, label="ε = 1  (sin beneficio)", zorder=4)
+    ax.axhline(EPSILON_CAP, ls="--", color="#EE6677", lw=1.2,
+               label=f"ε cap = {EPSILON_CAP:.2f}  (Cumpsty 2004)", zorder=4)
     ax.set_xticks(x)
     ax.set_xticklabels([FLIGHT_LABELS.get(c, c) for c in conditions])
-    ax.set_ylabel(r"Ratio de eficiencia ε = $C_L/C_D$ VPF / $C_L/C_D$ fijo [–]")
-    ax.set_title("Beneficio span-wise del VPF por condición de vuelo", fontweight="bold")
-    ax.set_ylim(0.93, 1.40)
+    ax.set_ylabel(r"Ratio de eficiencia ε$_{eff}$ = min(ε, cap) [–]")
+    ax.set_title(
+        "Beneficio span-wise del VPF por condición de vuelo\n"
+        "(barras = ε capeado; anotaciones = ε bruto cuando excede el cap)",
+        fontweight="bold",
+    )
+    ax.set_ylim(0, 1.22)
     ax.legend(fontsize=8)
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
@@ -196,63 +223,60 @@ def _plot_sfc_sensitivity_tau(
     plt.close(fig)
 
 
-def _plot_sfc_reduction(
+def _plot_sfc_combined(
     sfc_results: List[SfcAnalysisResult],
     figures_dir: Path,
 ) -> None:
-    """Porcentaje de reducción de SFC por condición."""
-    ordered = [r for c in _CONDITIONS_ORDER for r in sfc_results if r.condition == c]
+    """Figura combinada de dos paneles:
+      - Izquierdo: SFC absoluto baseline vs VPF por condición.
+      - Derecho:   % reducción de SFC por condición con banda literaria 2–5%.
+    """
+    ordered    = [r for c in _CONDITIONS_ORDER for r in sfc_results if r.condition == c]
     conditions = [r.condition for r in ordered]
+    labels     = [FLIGHT_LABELS.get(c, c) for c in conditions]
+    sfc_base   = [r.sfc_baseline for r in ordered]
+    sfc_new    = [r.sfc_new for r in ordered]
     reductions = [r.sfc_reduction_percent for r in ordered]
-    x = np.arange(len(conditions))
-
-    fig, ax = plt.subplots(figsize=(7.5, 5.0))
-    bars = ax.bar(x, reductions, width=0.55, color=_COLOR_VPF,
-                  edgecolor="white", linewidth=0.6, zorder=3)
-    ax.bar_label(bars, fmt="%.2f%%", padding=3, fontsize=8, fontweight="bold")
-    ax.axhline(5.0, ls="--", color="gray", lw=1.0, alpha=0.7,
-               label="Límite superior (Cumpsty 2004, p. 280)")
-    ax.set_xlabel("Condición de vuelo")
-    ax.set_ylabel("Reducción de SFC [%]")
-    ax.set_title("Reducción de SFC — Fan de Paso Variable vs Paso Fijo", fontweight="bold")
-    ax.set_xticks(x)
-    ax.set_xticklabels([FLIGHT_LABELS.get(c, c) for c in conditions])
-    ax.set_ylim(bottom=0)
-    ax.legend(fontsize=8)
-    ax.grid(axis="y", alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(figures_dir / "sfc_reduction_percent.png")
-    plt.close(fig)
-
-
-def _plot_sfc_vs_condition(
-    sfc_results: List[SfcAnalysisResult],
-    figures_dir: Path,
-) -> None:
-    """SFC base vs VPF por condición de vuelo."""
-    ordered = [r for c in _CONDITIONS_ORDER for r in sfc_results if r.condition == c]
-    conditions = [r.condition for r in ordered]
-    sfc_baseline = [r.sfc_baseline for r in ordered]
-    sfc_new      = [r.sfc_new for r in ordered]
     x = np.arange(len(conditions))
     width = 0.35
 
-    fig, ax = plt.subplots(figsize=(7.5, 5.0))
-    bars_b = ax.bar(x - width / 2, sfc_baseline, width, label="Baseline (paso fijo)",
-                    color=_COLOR_BASELINE, edgecolor="white", linewidth=0.6, zorder=3)
-    bars_v = ax.bar(x + width / 2, sfc_new, width, label="VPF (paso variable)",
-                    color=_COLOR_VPF, edgecolor="white", linewidth=0.6, zorder=3)
-    ax.bar_label(bars_b, fmt="%.4f", padding=3, fontsize=7)
-    ax.bar_label(bars_v, fmt="%.4f", padding=3, fontsize=7)
-    ax.set_xlabel("Condición de vuelo")
-    ax.set_ylabel("SFC [lb/(lbf·hr)]")
-    ax.set_title("SFC: Baseline paso fijo vs Fan de Paso Variable", fontweight="bold")
-    ax.set_xticks(x)
-    ax.set_xticklabels([FLIGHT_LABELS.get(c, c) for c in conditions])
-    ax.legend(loc="lower right")
-    ax.grid(axis="y", alpha=0.3)
+    fig, (ax_sfc, ax_pct) = plt.subplots(1, 2, figsize=(13, 5.5))
+
+    # ── Panel izquierdo: SFC absoluto ───────────────────────────────────────
+    bars_b = ax_sfc.bar(x - width / 2, sfc_base, width, label="Paso fijo (baseline)",
+                        color=_COLOR_BASELINE, edgecolor="white", linewidth=0.6, zorder=3)
+    bars_v = ax_sfc.bar(x + width / 2, sfc_new,  width, label="VPF (paso variable)",
+                        color=_COLOR_VPF,      edgecolor="white", linewidth=0.6, zorder=3)
+    ax_sfc.bar_label(bars_b, fmt="%.4f", padding=3, fontsize=7)
+    ax_sfc.bar_label(bars_v, fmt="%.4f", padding=3, fontsize=7)
+    ax_sfc.set_xlabel("Condición de vuelo")
+    ax_sfc.set_ylabel("SFC [lb/(lbf·hr)]")
+    ax_sfc.set_title("SFC: Baseline vs VPF", fontweight="bold")
+    ax_sfc.set_xticks(x)
+    ax_sfc.set_xticklabels(labels)
+    ax_sfc.legend(loc="lower right", fontsize=8)
+    ax_sfc.grid(axis="y", alpha=0.3)
+
+    # ── Panel derecho: % reducción ──────────────────────────────────────────
+    bar_colors = [COLORS.get(c, _COLOR_VPF) for c in conditions]
+    bars_r = ax_pct.bar(x, reductions, width=0.55, color=bar_colors,
+                        edgecolor="white", linewidth=0.6, zorder=3)
+    ax_pct.bar_label(bars_r, fmt="%.2f%%", padding=3, fontsize=8, fontweight="bold")
+    ax_pct.axhspan(2.0, 5.0, alpha=0.10, color="#228833",
+                   label="Rango literario 2–5%\n(Cumpsty 2004, p. 280)")
+    ax_pct.axhline(0, color="0.4", lw=0.8)
+    ax_pct.set_xlabel("Condición de vuelo")
+    ax_pct.set_ylabel("Reducción de SFC [%]")
+    ax_pct.set_title("Reducción de SFC — VPF vs Paso Fijo", fontweight="bold")
+    ax_pct.set_xticks(x)
+    ax_pct.set_xticklabels(labels)
+    ax_pct.legend(fontsize=8)
+    ax_pct.grid(axis="y", alpha=0.3)
+
+    fig.suptitle("Impacto del Fan de Paso Variable en el SFC", fontsize=12,
+                 fontweight="bold", y=1.01)
     fig.tight_layout()
-    fig.savefig(figures_dir / "sfc_vs_condition.png")
+    fig.savefig(figures_dir / "sfc_combined.png")
     plt.close(fig)
 
 
@@ -287,6 +311,90 @@ def _plot_fan_efficiency_improvement(
     ax.set_ylim(y_min, min(100, max(fan_new) + 3))
     fig.tight_layout()
     fig.savefig(figures_dir / "fan_efficiency_improvement.png")
+    plt.close(fig)
+
+
+def _plot_efficiency_mechanism_breakdown(
+    sfc_results: List[SfcAnalysisResult],
+    figures_dir: Path,
+) -> None:
+    """Barras apiladas: desglose de Δη_fan en contribución de perfil y de mapa φ.
+
+    Muestra visualmente que el mecanismo de perfil (optimización 2D CL/CD via τ)
+    y el mecanismo de mapa del fan (recuperación de pérdidas por φ ≠ φ_opt) son
+    independientes y aditivos, reforzando la justificación del VPF.
+    """
+    import math as _math
+
+    ordered = [r for c in _CONDITIONS_ORDER for r in sfc_results if r.condition == c]
+    if not ordered:
+        return
+
+    # Filtrar condiciones con datos válidos
+    conditions   = [r.condition for r in ordered]
+    labels       = [FLIGHT_LABELS.get(c, c) for c in conditions]
+    d_eta_prof   = [r.delta_eta_profile * 100 if not _math.isnan(r.delta_eta_profile) else 0.0
+                    for r in ordered]
+    d_eta_map    = [r.delta_eta_map * 100 if not _math.isnan(r.delta_eta_map) else 0.0
+                    for r in ordered]
+    d_eta_total  = [r.delta_eta_fan * 100 for r in ordered]
+    x = np.arange(len(conditions))
+
+    _COLOR_PROFILE = "#4393C3"   # azul — mecanismo de perfil
+    _COLOR_MAP     = "#74C476"   # verde — mecanismo de mapa
+
+    fig, (ax_eta, ax_sfc) = plt.subplots(1, 2, figsize=(13, 5.5))
+
+    # ── Panel izquierdo: Δη desglosado (barras apiladas) ────────────────
+    bars_p = ax_eta.bar(x, d_eta_prof, 0.55, label="Mecanismo de perfil\n(CL/CD → fan vía τ)",
+                        color=_COLOR_PROFILE, edgecolor="white", linewidth=0.6, zorder=3)
+    bars_m = ax_eta.bar(x, d_eta_map, 0.55, bottom=d_eta_prof,
+                        label="Mecanismo de mapa\n(recuperación pérdida φ)",
+                        color=_COLOR_MAP, edgecolor="white", linewidth=0.6, zorder=3)
+
+    # Etiqueta del total
+    for xi, tot in zip(x, d_eta_total):
+        ax_eta.text(xi, tot + 0.03, f"{tot:.2f}%", ha="center", va="bottom",
+                    fontsize=8, fontweight="bold", color="0.2")
+
+    ax_eta.axhline(0, color="0.4", lw=0.8)
+    ax_eta.set_xticks(x)
+    ax_eta.set_xticklabels(labels)
+    ax_eta.set_ylabel("Mejora de eficiencia de fan Δη [pp]")
+    ax_eta.set_title("Desglose por mecanismo físico VPF", fontweight="bold")
+    ax_eta.legend(fontsize=8, loc="upper right")
+    ax_eta.grid(axis="y", alpha=0.3)
+
+    # ── Panel derecho: fracción de cada mecanismo (%) ───────────────────
+    frac_prof = []
+    frac_map  = []
+    for p, m in zip(d_eta_prof, d_eta_map):
+        tot = p + m
+        if tot > 0:
+            frac_prof.append(p / tot * 100)
+            frac_map.append(m / tot * 100)
+        else:
+            frac_prof.append(0.0)
+            frac_map.append(0.0)
+
+    ax_sfc.bar(x, frac_prof, 0.55, label="Perfil", color=_COLOR_PROFILE,
+               edgecolor="white", linewidth=0.6, zorder=3)
+    ax_sfc.bar(x, frac_map, 0.55, bottom=frac_prof, label="Mapa φ",
+               color=_COLOR_MAP, edgecolor="white", linewidth=0.6, zorder=3)
+    ax_sfc.set_xticks(x)
+    ax_sfc.set_xticklabels(labels)
+    ax_sfc.set_ylim(0, 115)
+    ax_sfc.set_ylabel("Fracción de la ganancia total [%]")
+    ax_sfc.set_title("Contribución relativa de cada mecanismo", fontweight="bold")
+    ax_sfc.legend(fontsize=8, loc="upper right")
+    ax_sfc.grid(axis="y", alpha=0.3)
+
+    fig.suptitle(
+        "Dos mecanismos independientes de beneficio del Fan de Paso Variable (VPF)",
+        fontsize=11, fontweight="bold", y=1.01,
+    )
+    fig.tight_layout()
+    fig.savefig(figures_dir / "efficiency_mechanism_breakdown.png")
     plt.close(fig)
 
 

@@ -425,7 +425,13 @@ def step_5_metrics_and_figures(s3: Stage3Result) -> Stage4Result:
         cfg.reynolds_table,
         cfg.ncrit_table,
     )
-    metrics = enrich_with_cruise_reference(metrics, polars_dir)
+    metrics = enrich_with_cruise_reference(
+        metrics,
+        polars_dir,
+        axial_velocities=cfg.fan.axial_velocity_m_s,
+        blade_radii=cfg.fan.radii_m,
+        fan_rpm=cfg.fan.rpm,
+    )
     LOGGER.info("Métricas calculadas: %d casos", len(metrics))
 
     stage4_dir = base_config.get_stage_dir(4)
