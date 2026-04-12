@@ -274,47 +274,161 @@ def generate_stage5_summary(stage_dir: Path) -> str:
     tables_dir  = stage_dir / "tables"
     figures_dir = stage_dir / "figures"
 
-    lines = _header(5, "PITCH & KINEMATICS ANALYSIS")
+    lines = _header(5, "PITCH & KINEMATICS ANALYSIS (FULL 3D AERODYNAMICS)")
     lines += [
-        "Calcula α_opt por condición/sección, ajuste de paso relativo a crucero",
-        "y comando mecánico real mediante triángulos de velocidad (Δβ_mech = Δα + Δφ).",
+        "Cascada (Weinig/Carter) + correcciones rotacionales 3D (Snel) + twist de diseño",
+        "+ carga de etapa (Euler, φ-ψ) + triángulos de velocidad (Δβ_mech).",
         "",
     ]
 
-    opt_file = tables_dir / "optimal_incidence.csv"
-    kin_file = tables_dir / "kinematics_analysis.csv"
+    # --- Cascade corrections ---
+    cascade_file = tables_dir / "cascade_corrections.csv"
+    if cascade_file.exists():
+        try:
+            df = pd.read_csv(cascade_file)
+            if not df.empty:
+                lines += ["── Correcciones de cascada (Weinig + Carter) ──────────────"]
+                for _, row in df.iterrows():
+                    lines += [
+                        f"  {row['section']:10s}: σ={row['solidity']:.3f}  "
+                        f"K_weinig={row['K_weinig']:.3f}  "
+                        f"δ_carter={row['delta_carter_deg']:.2f}°"
+                    ]
+                lines += [""]
+        except Exception:
+            pass
 
+    # --- Rotational corrections (Snel) ---
+    rot_file = tables_dir / "rotational_corrections.csv"
+    if rot_file.exists():
+        try:
+            df = pd.read_csv(rot_file)
+            if not df.empty:
+                lines += ["── Correcciones rotacionales 3D (Snel 1994) ───────────────"]
+                for cond in df["condition"].unique():
+                    sub = df[df["condition"] == cond]
+                    gains = sub["CL_gain_pct"].dropna()
+                    if gains.empty:
+                        continue
+                    lines += [
+                        f"  {cond:8s}: ganancia CL  {gains.min():.1f}% – {gains.max():.1f}%  "
+                        f"(media {gains.mean():.1f}%)"
+                    ]
+                # α_opt shift 2D → 3D
+                if "alpha_opt_2D_deg" in df.columns and "alpha_opt_3D_deg" in df.columns:
+                    shift = (df["alpha_opt_3D_deg"] - df["alpha_opt_2D_deg"]).dropna()
+                    lines += [
+                        f"  Δα_opt (3D−2D): {shift.min():.2f}° – {shift.max():.2f}°"
+                    ]
+                lines += [""]
+        except Exception:
+            pass
+
+    # --- Optimal incidence 3D ---
+    opt_file = tables_dir / "optimal_incidence.csv"
     if opt_file.exists():
         try:
             df = pd.read_csv(opt_file)
             if not df.empty:
+                col_alpha = "alpha_opt" if "alpha_opt" in df.columns else df.columns[2]
+                col_clcd  = "CL_CD_max" if "CL_CD_max" in df.columns else None
+                lines += ["── Incidencia óptima 3D ───────────────────────────────────"]
                 lines += [
-                    f"alpha_opt range  : {df['alpha_opt'].min():.1f}° – {df['alpha_opt'].max():.1f}°  "
-                    f"(media {df['alpha_opt'].mean():.1f}°)",
-                    f"(CL/CD)_max media: {df['CL_CD_max'].mean():.2f}",
+                    f"  α_opt_3D : {df[col_alpha].min():.1f}° – {df[col_alpha].max():.1f}°  "
+                    f"(media {df[col_alpha].mean():.1f}°)",
                 ]
+                if col_clcd:
+                    lines += [f"  (CL/CD)_max_3D media: {df[col_clcd].mean():.2f}"]
+                lines += [""]
         except Exception:
             pass
 
+    # --- Blade twist design ---
+    twist_file = tables_dir / "blade_twist_design.csv"
+    if twist_file.exists():
+        try:
+            df = pd.read_csv(twist_file)
+            if not df.empty and "beta_metal_deg" in df.columns:
+                lines += ["── Twist de diseño (crucero) ──────────────────────────────"]
+                for _, row in df.iterrows():
+                    lines += [
+                        f"  {row['section']:10s}: β_metal={row['beta_metal_deg']:.2f}°  "
+                        f"φ_flow={row['phi_cruise_deg']:.2f}°  "
+                        f"twist_from_tip={row['twist_from_tip_deg']:.2f}°"
+                    ]
+                # Total twist
+                bm = df["beta_metal_deg"].dropna()
+                if len(bm) >= 2:
+                    lines += [f"  Twist total (root−tip): {bm.max() - bm.min():.2f}°"]
+                lines += [""]
+        except Exception:
+            pass
+
+    # --- Off-design compromise ---
+    offdesign_file = tables_dir / "off_design_incidence.csv"
+    if offdesign_file.exists():
+        try:
+            df = pd.read_csv(offdesign_file)
+            if not df.empty and "efficiency_loss_pct" in df.columns:
+                lines += ["── Compromiso span-wise off-design ────────────────────────"]
+                for cond in [c for c in ["takeoff", "climb", "descent"] if c in df["condition"].unique()]:
+                    sub = df[df["condition"] == cond]["efficiency_loss_pct"].dropna()
+                    if sub.empty:
+                        continue
+                    lines += [
+                        f"  {cond:8s}: pérdida eficiencia {sub.min():.1f}% – {sub.max():.1f}%  "
+                        f"(media {sub.mean():.1f}%)"
+                    ]
+                lines += [""]
+        except Exception:
+            pass
+
+    # --- Kinematics ---
+    kin_file = tables_dir / "kinematics_analysis.csv"
     if kin_file.exists():
         try:
             df = pd.read_csv(kin_file)
             if not df.empty and "delta_beta_mech_deg" in df.columns:
                 non_cruise = df[df["condition"] != "cruise"]
                 if not non_cruise.empty:
+                    lines += ["── Cinemática — comando de actuador ───────────────────────"]
                     lines += [
-                        f"Δβ_mech range (no crucero): "
+                        f"  Δβ_mech (no crucero): "
                         f"{non_cruise['delta_beta_mech_deg'].min():.2f}° – "
                         f"{non_cruise['delta_beta_mech_deg'].max():.2f}°",
                     ]
+                    lines += [""]
+        except Exception:
+            pass
+
+    # --- Stage loading ---
+    loading_file = tables_dir / "stage_loading.csv"
+    if loading_file.exists():
+        try:
+            df = pd.read_csv(loading_file)
+            if not df.empty:
+                lines += ["── Carga de etapa (Euler — Dixon & Hall) ──────────────────"]
+                phi = df["phi_coeff"].dropna()
+                psi = df["psi_loading"].dropna()
+                w   = df["W_specific_kJ_kg"].dropna()
+                in_zone = df["in_design_zone"].sum() if "in_design_zone" in df.columns else "?"
+                total   = len(df)
+                lines += [
+                    f"  φ (caudal)  : {phi.min():.3f} – {phi.max():.3f}  (media {phi.mean():.3f})",
+                    f"  ψ (trabajo) : {psi.min():.3f} – {psi.max():.3f}  (media {psi.mean():.3f})",
+                    f"  W_spec      : {w.min():.2f} – {w.max():.2f} kJ/kg",
+                    f"  Puntos en zona de diseño: {in_zone}/{total}",
+                ]
+                lines += [""]
         except Exception:
             pass
 
     n_figs = len(list(figures_dir.glob("*.png"))) if figures_dir.exists() else 0
     lines += [
-        "",
-        f"Figuras generadas: {n_figs}",
-        "Outputs: tablas de incidencia, ajuste y cinemática; figuras de barras.",
+        f"Figuras generadas : {n_figs}",
+        "Tablas exportadas : cascade_corrections, rotational_corrections,",
+        "                    optimal_incidence, pitch_adjustment, blade_twist_design,",
+        "                    off_design_incidence, stage_loading, kinematics_analysis",
     ]
     lines += _footer()
     return "\n".join(lines)
