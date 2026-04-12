@@ -35,8 +35,9 @@ import pandas as pd
 
 
 # Coeficiente m de la regla de Carter para NACA 6-series (a/c = 0.5)
-# Referencia: Carter (1950), NACA TN-2273, Table 1
-_CARTER_M_NACA6 = 0.23
+# Se lee de PhysicsConstants para mantener consistencia con settings.py
+from vfp_analysis.settings import get_settings as _get_settings
+_CARTER_M_NACA6: float = _get_settings().physics.CARTER_M_NACA6
 
 
 @dataclass

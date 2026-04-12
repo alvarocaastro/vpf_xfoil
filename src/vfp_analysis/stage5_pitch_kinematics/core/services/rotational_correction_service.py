@@ -37,14 +37,12 @@ import numpy as np
 import pandas as pd
 
 
-# Coeficiente empírico de Snel para flujo adherido
-_SNEL_A = 3.0
-
-# α mínimo para buscar α_opt (evita la burbuja laminar)
-_ALPHA_MIN_OPT = 3.0
-
-# CL mínimo para considerar un punto de operación viable (carga mínima de fan)
-_CL_MIN_VIABLE = 0.30
+# Constantes físicas leídas de PhysicsConstants (settings.py) — no hardcoded aquí
+from vfp_analysis.settings import get_settings as _get_settings
+_physics = _get_settings().physics
+_SNEL_A         = _physics.SNEL_A            # coeficiente empírico Snel (flujo adherido)
+_ALPHA_MIN_OPT  = _physics.ALPHA_MIN_OPT_DEG # α mínimo para buscar α_opt
+_CL_MIN_VIABLE  = _physics.CL_MIN_3D         # CL mínimo viable en 3D
 
 
 @dataclass

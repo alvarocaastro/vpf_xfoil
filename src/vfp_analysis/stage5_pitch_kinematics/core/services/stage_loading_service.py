@@ -37,12 +37,14 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 
-# Zona de diseño eficiente para fans de alto bypass
+# Zona de diseño eficiente — leída de PhysicsConstants (settings.py)
 # Referencias: Dixon & Hall (2013), Cumpsty (2004)
-_PHI_MIN_DESIGN = 0.35
-_PHI_MAX_DESIGN = 0.55
-_PSI_MIN_DESIGN = 0.25
-_PSI_MAX_DESIGN = 0.50
+from vfp_analysis.settings import get_settings as _get_settings
+_p = _get_settings().physics
+_PHI_MIN_DESIGN = _p.PHI_DESIGN_MIN
+_PHI_MAX_DESIGN = _p.PHI_DESIGN_MAX
+_PSI_MIN_DESIGN = _p.PSI_DESIGN_MIN
+_PSI_MAX_DESIGN = _p.PSI_DESIGN_MAX
 
 
 @dataclass

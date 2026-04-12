@@ -50,7 +50,7 @@ def resolve_efficiency_column(df: pd.DataFrame) -> str:
 def find_second_peak_row(
     df: pd.DataFrame,
     efficiency_col: str,
-    alpha_min: float = 3.0,
+    alpha_min: float | None = None,
 ) -> pd.Series:
     """Return the row at maximum efficiency in the second aerodynamic peak.
 
@@ -70,13 +70,18 @@ def find_second_peak_row(
     efficiency_col:
         Name of the efficiency column to maximise.
     alpha_min:
-        Lower bound for the second-peak search (degrees).
+        Lower bound for the second-peak search (degrees). Defaults to
+        ``PhysicsConstants.ALPHA_MIN_OPT_DEG`` from settings.
 
     Raises
     ------
     ValueError
         If *df* contains no valid (non-inf, non-nan) rows.
     """
+    if alpha_min is None:
+        from vfp_analysis.settings import get_settings
+        alpha_min = get_settings().physics.ALPHA_MIN_OPT_DEG
+
     df_clean = df.replace([np.inf, -np.inf], np.nan).dropna(
         subset=[efficiency_col, "alpha"]
     )
