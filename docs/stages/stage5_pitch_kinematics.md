@@ -30,9 +30,9 @@ CL_cascade  = CL_2D × K_weinig
 
 Ref: Dixon & Hall (2013) ec. 3.54; Carter (1950) NACA TN-2273.
 
-Valores con nuestra geometría (wide-chord, consistente con Re de XFOIL):
-σ_root ≈ 3.76 (c=0.26 m), σ_mid ≈ 2.67 (c=0.39 m), σ_tip ≈ 2.17 (c=0.49 m).
-Alta solidez característica de diseño wide-chord (GE90, LEAP); M_rel_tip ≈ 1.34.
+Valores con geometría GE9X (r: 0.53/1.00/1.70 m, c: 0.36/0.46/0.46 m, Z=16):
+σ_root ≈ 1.73 (c=0.36 m), σ_mid ≈ 1.17 (c=0.46 m), σ_tip ≈ 0.69 (c=0.46 m).
+Todos dentro del rango de validez Weinig [0.10, 2.50]. M_rel_tip ≈ 1.43 (crucero).
 
 ### B — Corrección rotacional 3D (Snel)
 

@@ -9,12 +9,16 @@ Corregir las polares incompresibles de Stage 2 (generadas a `M = 0.2`) para apro
 - Polares de `results/stage2_xfoil_simulations/simulation_plots/{condition}/{section}/polar.csv`
 - `config/analysis_config.yaml`:
 
-| Condición | M_ref | M_target | Zona          |
-|-----------|------:|---------:|---------------|
-| Takeoff   |   0.2 |     0.30 | Subsónico     |
-| Climb     |   0.2 |     0.70 | Subsónico alto|
-| Cruise    |   0.2 |     0.85 | Transónico    |
-| Descent   |   0.2 |     0.75 | Subsónico alto|
+`M_target` representa el **Mach relativo en mid-span** (W_rel/a), que es el valor físicamente
+correcto para aplicar la corrección de compresibilidad 2D a la sección de álabe.
+Con la geometría GE9X (r_mid=1.00 m, RPM=2200, U_mid=230.4 m/s):
+
+| Condición | M_ref | M_target | W_mid [m/s] | a [m/s] | Zona       |
+|-----------|------:|---------:|-------------|---------|------------|
+| Takeoff   |   0.2 |     0.85 | 294         | 340     | Transónico |
+| Climb     |   0.2 |     0.85 | 277         | 320     | Transónico |
+| Cruise    |   0.2 |     0.93 | 274         | 295     | Transónico alto |
+| Descent   |   0.2 |     0.80 | 262         | 328     | Transónico |
 
 - Geometría del perfil: `thickness_ratio = 0.10`, `korn_kappa = 0.87` (NACA 65-series)
 
