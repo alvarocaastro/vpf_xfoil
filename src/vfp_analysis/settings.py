@@ -310,9 +310,23 @@ def _load_settings(config_path: Path | None) -> PipelineSettings:
         korn_kappa=float(ag.get("korn_kappa", 0.87)),
     )
 
+    # --- xfoil settings (optional section, falls back to hardcoded defaults) ---
+    xf_raw = raw.get("xfoil", {})
+    import dataclasses as _dc
+    xfoil_settings = _dc.replace(
+        XfoilSettings(),
+        **{k: v for k, v in {
+            "ITER":                 xf_raw.get("iter"),
+            "TIMEOUT_SELECTION_S":  xf_raw.get("timeout_selection_s"),
+            "TIMEOUT_FINAL_S":      xf_raw.get("timeout_final_s"),
+            "MAX_RETRIES":          xf_raw.get("max_retries"),
+            "RETRY_WAIT_S":         xf_raw.get("retry_wait_s"),
+        }.items() if v is not None}
+    )
+
     return PipelineSettings(
         physics=PhysicsConstants(),
-        xfoil=XfoilSettings(),
+        xfoil=xfoil_settings,
         flight_conditions=flight_conditions,
         blade_sections=blade_sections,
         reynolds_table=reynolds_table,

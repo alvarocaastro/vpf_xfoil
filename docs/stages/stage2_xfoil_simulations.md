@@ -43,7 +43,7 @@ results/stage2_xfoil_simulations/
 │       └── cl_alpha_stall.png     ← CL(α) con marcador de stall
 ├── polars/
 │   └── {condition}_{section}.csv  ← copia plana para acceso rápido
-├── vpf_analysis/
+├── pitch_map/
 │   ├── alpha_opt_evolution.png    ← α_opt vs fase de vuelo por sección
 │   ├── pitch_map.png              ← ángulo β por condición y sección
 │   ├── pitch_map.csv

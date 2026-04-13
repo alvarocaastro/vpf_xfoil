@@ -60,22 +60,14 @@ selection:
   reynolds: 3.0e6
   ncrit: 6.0
 
-# Output directories (relative to project root)
-output:
-  # Stage 4 — métricas y figuras de publicación
-  figures: results/stage4_performance_metrics/figures/publication
-  polars: results/stage2_xfoil_simulations/polars
-  tables: results/stage4_performance_metrics/tables
-  compressibility: results/stage3_compressibility_correction
-  airfoil_selection: results/stage1_airfoil_selection/airfoil_selection
-  # Stage 5 — paso óptimo y cinemática
-  figures_pitch_kinematics: results/stage5_pitch_kinematics/figures
-  tables_pitch_kinematics: results/stage5_pitch_kinematics/tables
-  pitch_kinematics_summary: results/stage5_pitch_kinematics/pitch_kinematics_summary.txt
-  # Stage 6 — análisis SFC
-  figures_sfc: results/stage6_sfc_analysis/figures
-  tables_sfc: results/stage6_sfc_analysis/tables
-  sfc_analysis_summary: results/stage6_sfc_analysis/sfc_analysis_summary.txt
+# XFOIL solver settings
+# Tuning these avoids editing Python source. All values match XfoilSettings defaults.
+xfoil:
+  iter: 200             # Max viscous iterations per alpha point (XFOIL ITER command)
+  timeout_selection_s: 60.0   # Subprocess timeout for Stage 1 (single Re, short alpha range)
+  timeout_final_s: 180.0      # Subprocess timeout for Stage 2 (full alpha range, 12 cases)
+  max_retries: 3        # Max retries on timeout or non-zero exit code
+  retry_wait_s: 1.0     # Wait between retries [s]
 
 # Plot settings
 plotting:
