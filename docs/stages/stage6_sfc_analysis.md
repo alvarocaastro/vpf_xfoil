@@ -98,8 +98,7 @@ results/stage6_sfc_analysis/
 │   ├── fixed_vs_vpf_efficiency.png  — CL/CD_fijo vs CL/CD_vpf por sección (2×2 subplots)
 │   ├── epsilon_spanwise.png         — ε(r) por sección, con cap en 1.10
 │   ├── sfc_sensitivity_tau.png      — ΔSFC vs τ para cada condición
-│   ├── sfc_reduction_percent.png    — % reducción SFC por condición
-│   ├── sfc_vs_condition.png         — SFC base vs VPF (barras agrupadas)
+│   ├── sfc_combined.png             — ΔSFC por condición (barras) + resumen
 │   └── mission_fuel_burn.png        — combustible y CO₂ ahorrado por fase de misión
 ├── sfc_analysis_summary.txt         — resumen con tabla ε y referencias
 └── finalresults_stage6.txt

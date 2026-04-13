@@ -435,13 +435,8 @@ def step_5_metrics_and_figures(s3: Stage3Result) -> Stage4Result:
     LOGGER.info("Métricas calculadas: %d casos", len(metrics))
 
     stage4_dir = base_config.get_stage_dir(4)
-    output_dirs = {
-        "tables":  stage4_dir / "tables",
-        "figures": stage4_dir / "figures" / "publication",
-        "polars":  s3.corrected_dir,
-    }
-    tables_dir  = output_dirs["tables"]
-    figures_dir = output_dirs["figures"]
+    tables_dir  = stage4_dir / "tables"
+    figures_dir = stage4_dir / "figures"
 
     export_summary_table(metrics, tables_dir / "summary_table.csv")
     export_clcd_max_table(metrics, tables_dir / "clcd_max_by_section.csv")
@@ -468,7 +463,7 @@ def step_5_metrics_and_figures(s3: Stage3Result) -> Stage4Result:
     s4 = Stage4Result(
         metrics=metrics,
         tables_dir=tables_dir,
-        figures_dir=figures_dir,
+        figures_dir=figures_dir,  # stage4_dir / "figures"
         stage_dir=stage4_dir,
     )
     s4.validate()

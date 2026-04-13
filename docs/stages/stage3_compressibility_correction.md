@@ -75,9 +75,10 @@ results/stage3_compressibility_correction/
 │   │                                 ld_pg, ld_kt, mach_target, re, ncrit,
 │   │                                 cm, cm_pg, cm_kt
 │   └── corrected_plots.png        ← CL(α) y CL/CD(α): original vs PG vs K-T
-├── correction_comparison_root.png     ┐
-├── correction_comparison_mid_span.png ├── 4 condiciones superpuestas por sección
-├── correction_comparison_tip.png      ┘
+├── figures/
+│   ├── correction_comparison_root.png     ┐
+│   ├── correction_comparison_mid_span.png ├── 4 condiciones superpuestas por sección
+│   └── correction_comparison_tip.png      ┘
 └── finalresults_stage3.txt
 ```
 

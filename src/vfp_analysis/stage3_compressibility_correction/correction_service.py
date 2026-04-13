@@ -233,6 +233,8 @@ class CompressibilityCorrectionService:
                 ax_eff.set_title(r"$C_L/C_D$ vs $\alpha$ por condición")
                 ax_eff.legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
 
-                out_path = base_output_dir / f"correction_comparison_{section}.png"
+                figures_dir = base_output_dir / "figures"
+                figures_dir.mkdir(parents=True, exist_ok=True)
+                out_path = figures_dir / f"correction_comparison_{section}.png"
                 fig.savefig(out_path, bbox_inches="tight")
                 plt.close(fig)
