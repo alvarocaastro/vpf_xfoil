@@ -491,71 +491,64 @@ def _plot_mission_fuel_burn(
     """Figura de dos paneles: ahorro de combustible y CO₂ por fase + totales."""
     phases = [p.phase for p in phase_results]
     x = np.arange(len(phases))
-    phase_labels = [p.title() for p in phases]
+    phase_labels = [FLIGHT_LABELS.get(p, p) for p in phases]
+    bar_colors = [COLORS.get(p, "#888888") for p in phases]
 
-    cond_colors = {
-        "takeoff": "#E31A1C",
-        "climb":   "#FF7F00",
-        "cruise":  "#1F78B4",
-        "descent": "#6A3D9A",
-    }
-    bar_colors = [cond_colors.get(p.phase, "#888888") for p in phase_results]
+    with apply_style():
+        fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+        fig.suptitle("Ahorro de combustible y reducción de CO₂ con VPF — Análisis de misión", fontsize=11)
 
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-    fig.suptitle("Ahorro de combustible y reducción de CO₂ con VPF — Análisis de misión", fontsize=11)
+        # Panel izquierdo: combustible VPF + ahorro apilado
+        ax = axes[0]
+        fuel_vpf = [p.fuel_vpf_kg for p in phase_results]
+        fuel_save = [p.fuel_saving_kg for p in phase_results]
+        ax.bar(x, fuel_vpf, color=bar_colors, alpha=0.85, edgecolor="white",
+               linewidth=0.6, zorder=3, label="Combustible con VPF")
+        ax.bar(x, fuel_save, bottom=fuel_vpf, color=bar_colors, alpha=0.35,
+               edgecolor=bar_colors, linewidth=0.8, hatch="///", zorder=3, label="Ahorro VPF")
+        for xi, p in zip(x, phase_results):
+            if p.fuel_saving_kg > 0.1:
+                ax.text(xi, p.fuel_vpf_kg + p.fuel_saving_kg + 0.5,
+                        f"−{p.fuel_saving_kg:.1f} kg", ha="center", va="bottom",
+                        fontsize=7.5, color="#333333")
+        ax.set_xticks(x)
+        ax.set_xticklabels(phase_labels)
+        ax.set_ylabel("Combustible quemado [kg]")
+        ax.set_title("Ahorro de combustible por fase [kg]", fontsize=9)
+        ax.grid(axis="y", linewidth=0.4, zorder=0)
+        ax.set_axisbelow(True)
+        ax.legend(fontsize=8, loc="upper right")
 
-    # Panel izquierdo: combustible baseline vs ahorro (apilado)
-    ax = axes[0]
-    fuel_vpf = [p.fuel_vpf_kg for p in phase_results]
-    fuel_save = [p.fuel_saving_kg for p in phase_results]
-    ax.bar(x, fuel_vpf, color=bar_colors, alpha=0.85, edgecolor="white",
-           linewidth=0.6, zorder=3, label="Combustible con VPF")
-    ax.bar(x, fuel_save, bottom=fuel_vpf, color=bar_colors, alpha=0.35,
-           edgecolor=[cond_colors.get(p.phase, "#888888") for p in phase_results],
-           linewidth=0.8, hatch="///", zorder=3, label="Ahorro VPF")
-    for xi, p in zip(x, phase_results):
-        if p.fuel_saving_kg > 0.1:
-            ax.text(xi, p.fuel_vpf_kg + p.fuel_saving_kg + 0.5,
-                    f"−{p.fuel_saving_kg:.1f} kg", ha="center", va="bottom",
-                    fontsize=7.5, color="#333333")
-    ax.set_xticks(x)
-    ax.set_xticklabels(phase_labels)
-    ax.set_ylabel("Combustible quemado [kg]")
-    ax.set_title("Ahorro de combustible por fase [kg]", fontsize=9)
-    ax.grid(axis="y", linewidth=0.4, zorder=0)
-    ax.set_axisbelow(True)
-    ax.legend(fontsize=8, loc="upper right")
+        # Panel derecho: CO₂ ahorrado por fase
+        ax2 = axes[1]
+        co2 = [p.co2_saving_kg for p in phase_results]
+        ax2.bar(x, co2, color=bar_colors, alpha=0.85, edgecolor="white",
+                linewidth=0.6, zorder=3)
+        for xi, val in zip(x, co2):
+            if val > 0.1:
+                ax2.text(xi, val + 0.3, f"{val:.1f}", ha="center", va="bottom",
+                         fontsize=7.5, color="#333333")
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(phase_labels)
+        ax2.set_ylabel("CO₂ ahorrado [kg]")
+        ax2.set_title("CO₂ ahorrado por fase [kg]", fontsize=9)
+        ax2.grid(axis="y", linewidth=0.4, zorder=0)
+        ax2.set_axisbelow(True)
 
-    # Panel derecho: CO₂ ahorrado por fase + tabla de totales
-    ax2 = axes[1]
-    co2 = [p.co2_saving_kg for p in phase_results]
-    ax2.bar(x, co2, color=bar_colors, alpha=0.85, edgecolor="white",
-            linewidth=0.6, zorder=3)
-    for xi, val in zip(x, co2):
-        if val > 0.1:
-            ax2.text(xi, val + 0.3, f"{val:.1f}", ha="center", va="bottom",
-                     fontsize=7.5, color="#333333")
-    ax2.set_xticks(x)
-    ax2.set_xticklabels(phase_labels)
-    ax2.set_ylabel("CO₂ ahorrado [kg]")
-    ax2.set_title("Reducción de emisiones CO₂ por fase", fontsize=9)
-    ax2.grid(axis="y", linewidth=0.4, zorder=0)
-    ax2.set_axisbelow(True)
+        # Anotación de totales
+        totals_text = (
+            f"MISIÓN COMPLETA\n"
+            f"Ahorro combustible: {summary.total_fuel_saving_kg:.1f} kg  "
+            f"({summary.total_fuel_saving_pct:.2f}%)\n"
+            f"Ahorro CO₂: {summary.total_co2_saving_kg:.1f} kg\n"
+            f"Ahorro económico: ${summary.total_cost_saving_usd:.0f} por vuelo"
+        )
+        fig.text(0.5, -0.01, totals_text, ha="center", va="top", fontsize=9,
+                 bbox=dict(boxstyle="round,pad=0.4", facecolor="#f0f4f8", edgecolor="#cccccc"))
 
-    # Anotación de totales
-    totals_text = (
-        f"MISIÓN COMPLETA\n"
-        f"Ahorro combustible: {summary.total_fuel_saving_kg:.1f} kg  "
-        f"({summary.total_fuel_saving_pct:.2f}%)\n"
-        f"Ahorro CO₂: {summary.total_co2_saving_kg:.1f} kg\n"
-        f"Ahorro económico: ${summary.total_cost_saving_usd:.0f} por vuelo"
-    )
-    fig.text(0.5, -0.01, totals_text, ha="center", va="top", fontsize=9,
-             bbox=dict(boxstyle="round,pad=0.4", facecolor="#f0f4f8", edgecolor="#cccccc"))
-
-    fig.tight_layout(rect=[0, 0.12, 1, 1])
-    fig.savefig(figures_dir / "mission_fuel_burn.png", dpi=150, bbox_inches="tight")
-    plt.close(fig)
+        fig.tight_layout(rect=[0, 0.12, 1, 1])
+        fig.savefig(figures_dir / "mission_fuel_burn.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
 
 
 def _write_mission_table(
