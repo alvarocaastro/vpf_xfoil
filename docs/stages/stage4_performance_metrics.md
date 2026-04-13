@@ -49,12 +49,11 @@ results/stage4_performance_metrics/
 │   ├── design_reference_root.png      — CL/CD(α) por condición + α_design, sección root
 │   ├── design_reference_mid_span.png  — ídem, sección mid-span
 │   ├── design_reference_tip.png       — ídem, sección tip
-│   ├── efficiency_penalty_overview.png — resumen de penalización paso fijo (mid-span)
-│   ├── efficiency_{condition}_{section}.png  — polar por caso (×12, publication_figures)
-│   ├── efficiency_by_section_{condition}.png — 3 secciones superpuestas (×4)
-│   ├── alpha_opt_vs_condition.png     — α_opt agrupado por condición y sección
-│   ├── section_polar_comparison_{condition}.png — comparativa secciones (×4)
-│   └── cruise_penalty_{condition}.png — penalización crucero por condición (×4)
+│   └── publication/
+│       ├── alpha_opt_vs_condition.png           — α_opt agrupado por condición y sección
+│       ├── efficiency_by_section_{condition}.png — 3 secciones superpuestas (×4)
+│       ├── section_polar_comparison_{condition}.png — comparativa secciones (×4)
+│       └── cruise_penalty_{condition}.png        — penalización crucero por condición (×4)
 └── finalresults_stage4.txt
 ```
 

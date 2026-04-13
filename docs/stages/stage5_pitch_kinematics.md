@@ -77,26 +77,32 @@ Ref: Dixon & Hall (2013) cap. 5.
 ```text
 results/stage5_pitch_kinematics/
 ├── tables/
-│   ├── cascade_corrections.csv        — σ, s, K_weinig, δ_carter, CL_2D vs CL_cascade
-│   ├── rotational_corrections.csv     — c/r, ΔCL_snel, α_opt_2D vs α_opt_3D
-│   ├── optimal_incidence.csv          — α_opt_3D por condición × sección  ← usado por Stage 6
-│   ├── pitch_adjustment.csv           — Δα_3D, Δβ_mech_3D por condición
-│   ├── blade_twist_design.csv         — β_metal(r), φ_flow(r), twist_from_tip
-│   ├── off_design_incidence.csv       — α_actual, Δα_compromise, efficiency_loss_pct
-│   └── stage_loading.csv              — φ, ψ, W_spec, in_design_zone
+│   ├── cascade_corrections.csv           — σ, s, K_weinig, δ_carter, CL_2D vs CL_cascade
+│   ├── rotational_corrections.csv        — c/r, ΔCL_snel, α_opt_2D vs α_opt_3D
+│   ├── rotational_corrections_du_selig.csv — ídem con modelo Du-Selig (no lineal)
+│   ├── kinematics_analysis.csv           — tabla resumen cinemática completa por caso
+│   ├── optimal_incidence.csv             — α_opt_3D por condición × sección  ← usado por Stage 6
+│   ├── pitch_adjustment.csv              — Δα_3D, Δβ_mech_3D por condición
+│   ├── blade_twist_design.csv            — β_metal(r), φ_flow(r), twist_from_tip
+│   ├── off_design_incidence.csv          — α_actual, Δα_compromise, efficiency_loss_pct
+│   └── stage_loading.csv                 — φ, ψ, W_spec, in_design_zone
 ├── figures/
 │   ├── cascade_solidity_profile.png
 │   ├── cascade_cl_correction.png
 │   ├── deviation_angle_carter.png
-│   ├── polars_2d_vs_3d_root.png       — efecto combinado cascada + Snel en root
+│   ├── polars_2d_vs_3d_root.png          — efecto combinado cascada + Snel en root
 │   ├── snel_correction_spanwise.png
+│   ├── rotational_model_comparison.png   — Snel vs Du-Selig por sección
 │   ├── blade_twist_profile.png
 │   ├── off_design_incidence_heatmap.png
+│   ├── pitch_adjustment.png              — Δβ requerido por condición y sección
 │   ├── pitch_compromise_loss.png
-│   ├── phi_psi_operating_map.png      — diagrama φ-ψ con banda de diseño
+│   ├── phi_psi_operating_map.png         — diagrama φ-ψ con banda de diseño
 │   ├── work_distribution.png
 │   ├── loading_profile_spanwise.png
 │   ├── alpha_opt_2d_vs_3d.png
+│   ├── alpha_opt_by_condition.png        — α_opt_3D agrupado por condición
+│   ├── efficiency_curves_{condition}.png — CL/CD 3D por sección (×4)
 │   └── kinematics_comparison.png
 └── finalresults_stage5.txt
 ```
