@@ -18,13 +18,14 @@ Outputs (en results/stage5_pitch_kinematics/):
     tables/
         cascade_corrections.csv
         rotational_corrections.csv
+        rotational_corrections_du_selig.csv
         optimal_incidence.csv
         pitch_adjustment.csv
         blade_twist_design.csv
         off_design_incidence.csv
         stage_loading.csv
         kinematics_analysis.csv
-    figures/  (14 PNG)
+    figures/  (≥16 PNG: 16 fijas + 1 por condición de vuelo)
     pitch_kinematics_summary.txt
     finalresults_stage5.txt
 """

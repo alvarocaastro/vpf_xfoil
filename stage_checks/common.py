@@ -71,9 +71,13 @@ def _validate_stage_outputs(stage_num: int) -> list[str]:
         ]
     elif stage_num == 5:
         checks = [
-            (stage_dir / "tables" / "optimal_incidence.csv",  "tabla de incidencia óptima"),
-            (stage_dir / "tables" / "stage_loading.csv",      "tabla de carga de etapa"),
-            (stage_dir / "figures",                            "directorio de figuras"),
+            (stage_dir / "tables" / "optimal_incidence.csv",        "tabla de incidencia óptima"),
+            (stage_dir / "tables" / "stage_loading.csv",            "tabla de carga de etapa"),
+            (stage_dir / "tables" / "blade_twist_design.csv",       "tabla de twist de diseño"),
+            (stage_dir / "tables" / "off_design_incidence.csv",     "tabla de incidencia off-design"),
+            (stage_dir / "tables" / "cascade_corrections.csv",      "tabla de correcciones de cascada"),
+            (stage_dir / "tables" / "rotational_corrections.csv",   "tabla de correcciones rotacionales"),
+            (stage_dir / "figures",                                  "directorio de figuras"),
         ]
     elif stage_num == 6:
         checks = [

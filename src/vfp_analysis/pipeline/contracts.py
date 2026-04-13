@@ -188,8 +188,10 @@ class Stage5Result:
 
     Outputs
     -------
-    - ``tables_dir``: 8 CSVs (cascade, rotational, optimal_incidence, ...)
-    - ``figures_dir``: ≥14 figuras
+    - ``tables_dir``: 9 CSVs (cascade_corrections, rotational_corrections,
+      rotational_corrections_du_selig, optimal_incidence, pitch_adjustment,
+      blade_twist_design, off_design_incidence, stage_loading, kinematics_analysis)
+    - ``figures_dir``: ≥16 figuras (16 fijas + 1 por condición de vuelo)
     - ``n_tables``: número de tablas generadas
     - ``n_figures``: número de figuras generadas
     - ``twist_total_deg``: twist de diseño root→tip [°]
