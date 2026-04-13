@@ -11,7 +11,11 @@ respecto al ajuste de crucero; negativo, hacia menor ángulo.
 
 from __future__ import annotations
 
+import logging
+import warnings
 from typing import List
+
+_LOG = logging.getLogger(__name__)
 
 from vfp_analysis.stage5_pitch_kinematics.core.domain.pitch_kinematics_result import (
     OptimalIncidence,
@@ -41,6 +45,19 @@ def compute_pitch_adjustments(
         for inc in optimal_incidences
         if inc.condition == reference_condition
     }
+
+    if not reference_alpha:
+        warnings.warn(
+            f"compute_pitch_adjustments: no data found for reference_condition="
+            f"'{reference_condition}'. All delta_pitch values will be 0.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        _LOG.warning(
+            "No optimal incidences found for reference condition '%s'; "
+            "pitch adjustments will all be zero.",
+            reference_condition,
+        )
 
     adjustments: List[PitchAdjustment] = []
     for inc in optimal_incidences:

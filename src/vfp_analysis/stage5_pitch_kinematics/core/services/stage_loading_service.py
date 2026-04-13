@@ -100,9 +100,11 @@ def compute_stage_loading(
             continue
 
         u = omega * r
+        if u <= 0:
+            continue
         phi_flow = math.degrees(math.atan2(va, u))
         beta_mech = alpha_3d + phi_flow
-        phi_coeff = va / u if u > 0 else float("nan")
+        phi_coeff = va / u
 
         # V_θ = U − Va / tan(β_mech)
         beta_rad = math.radians(beta_mech)

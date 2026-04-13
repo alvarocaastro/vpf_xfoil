@@ -1021,9 +1021,6 @@ def run_pitch_kinematics() -> None:
     LOGGER.info("[A] Calculando correcciones de cascada (Weinig + Carter)...")
 
     # α_opt_2D en crucero para referencia de cascada (se obtiene de la búsqueda simple)
-    from vfp_analysis.stage5_pitch_kinematics.core.services.optimal_incidence_service import (
-        compute_all_optimal_incidences,
-    )
     opt_2d_all = compute_all_optimal_incidences(df_polars, df_corrected)
     alpha_opt_cruise_2d = {
         r.section: r.alpha_opt
@@ -1206,18 +1203,19 @@ def run_pitch_kinematics() -> None:
         / max(1, sum(1 for r in off_design_results
                      if r.condition != "cruise" and not math.isnan(r.efficiency_loss_pct)))
     )
+    _cr_by_sec = {r.section: r for r in cascade_results}
     summary_lines = [
         "Stage 5: Rigorous aerodynamic analysis of the Variable Pitch Fan.",
         "",
         f"[A] Cascade (Weinig + Carter):",
         f"    Solidity range: {min(r.solidity for r in cascade_results):.2f} (tip) "
         f"– {max(r.solidity for r in cascade_results):.2f} (root)",
-        f"    Carter deviation: {cascade_results[-1].delta_carter_deg:.2f}° (tip) "
-        f"– {cascade_results[0].delta_carter_deg:.2f}° (root)",
+        f"    Carter deviation: {_cr_by_sec['tip'].delta_carter_deg:.2f}° (tip) "
+        f"– {_cr_by_sec['root'].delta_carter_deg:.2f}° (root)",
         "",
         f"[B] Rotational corrections (Snel):",
-        f"    Root (c/r)² = {cascade_results[0].chord_m / cascade_results[0].radius_m:.3f}² → "
-        f"CL gain ≈ +{3.0 * (cascade_results[0].chord_m / cascade_results[0].radius_m)**2 * 100:.1f}%",
+        f"    Root (c/r)² = {_cr_by_sec['root'].chord_m / _cr_by_sec['root'].radius_m:.3f}² → "
+        f"CL gain ≈ +{3.0 * (_cr_by_sec['root'].chord_m / _cr_by_sec['root'].radius_m)**2 * 100:.1f}%",
         "",
         f"[C] Blade twist design:",
         f"    Total twist: {twist_total:.1f}°  (root − tip)",

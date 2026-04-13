@@ -90,6 +90,8 @@ def compute_blade_twist(
     results: List[TwistDesignResult] = []
     for section, r in radii.items():
         u = omega * r
+        if u <= 0:
+            continue
         phi = math.degrees(math.atan2(va_cruise, u))
         alpha = alpha_opt_3d_cruise.get(section, float("nan"))
         beta_metal = alpha + phi if not math.isnan(alpha) else float("nan")

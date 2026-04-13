@@ -278,7 +278,7 @@ def compute_rotational_corrections_du_selig(
     radii = get_blade_radii()
     va_map = get_axial_velocities()
     rpm = get_fan_rpm()
-    omega = rpm * (2.0 * 3.141592653589793 / 60.0)
+    omega = rpm * (2.0 * math.pi / 60.0)
 
     cl_col = "cl_corrected" if "cl_corrected" in df_polars.columns else "cl"
 
