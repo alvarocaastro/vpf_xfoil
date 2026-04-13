@@ -278,8 +278,10 @@ def compute_sfc_sensitivity(
             if not epsilon_values:
                 continue
 
-            eta_fan_new, _, delta_eta_applied = compute_fan_efficiency_improvement(
+            eta_fan_new, _, _, delta_eta_applied = compute_combined_fan_efficiency_improvement(
                 epsilon_values=epsilon_values,
+                phi_values=[],
+                phi_design=0.0,
                 fan_efficiency_baseline=engine_baseline.fan_efficiency,
                 tau=tau,
             )
