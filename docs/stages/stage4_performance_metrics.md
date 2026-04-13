@@ -43,20 +43,34 @@ El margen de pérdida `stall_margin` se estima detectando el primer $\alpha$ don
 ```text
 results/stage4_performance_metrics/
 ├── tables/
-│   ├── summary_table.csv          — tabla completa con las 9 métricas
-│   └── clcd_max_by_section.csv    — tabla centrada en el punto operativo CL/CD
+│   ├── summary_table.csv              — tabla completa con las 11 métricas por caso
+│   └── clcd_max_by_section.csv        — tabla centrada en el punto operativo CL/CD
 ├── figures/
-│   ├── efficiency_heatmap.png     — mapa de calor (CL/CD)_max por condición × sección
-│   ├── alpha_opt_comparison.png   — barras agrupadas de alpha_opt por condición/sección
-│   └── stall_margin_overview.png  — margen de pérdida por caso con umbral de 3°
+│   ├── design_reference_root.png      — CL/CD(α) por condición + α_design, sección root
+│   ├── design_reference_mid_span.png  — ídem, sección mid-span
+│   ├── design_reference_tip.png       — ídem, sección tip
+│   ├── efficiency_penalty_overview.png — resumen de penalización paso fijo (mid-span)
+│   ├── efficiency_{condition}_{section}.png  — polar por caso (×12, publication_figures)
+│   ├── efficiency_by_section_{condition}.png — 3 secciones superpuestas (×4)
+│   ├── alpha_opt_vs_condition.png     — α_opt agrupado por condición y sección
+│   ├── section_polar_comparison_{condition}.png — comparativa secciones (×4)
+│   └── cruise_penalty_{condition}.png — penalización crucero por condición (×4)
 └── finalresults_stage4.txt
 ```
 
 ## Código relevante
 
+- `src/vfp_analysis/stage4_performance_metrics/application/run_performance_metrics.py` — orquestador
 - `src/vfp_analysis/stage4_performance_metrics/metrics.py`
 - `src/vfp_analysis/stage4_performance_metrics/table_generator.py`
 - `src/vfp_analysis/stage4_performance_metrics/plots.py`
+  - `plot_design_reference_section()` — CL/CD(α) con α_design y marcadores VPF/paso fijo
+  - `plot_efficiency_penalty_overview()` — resumen compacto con anotaciones Δα, Δ(CL/CD)
+- `src/vfp_analysis/stage4_performance_metrics/publication_figures.py`
+  - `generate_efficiency_by_section()` — polares por condición, todas las secciones
+  - `generate_alpha_opt_vs_condition()` — comparativa α_opt (barras agrupadas)
+  - `generate_section_polar_comparison()` — polar cruzada secciones/condiciones
+  - `generate_cruise_penalty_plots()` — penalización vs paso fijo de crucero
 - `src/vfp_analysis/postprocessing/aerodynamics_utils.py`
   - `resolve_efficiency_column` — prioridad: `ld_corrected` > `ld_kt` > `ld` > `CL_CD`
   - `find_second_peak_row` — segundo pico ($\alpha \geq 3°$)
@@ -67,3 +81,12 @@ results/stage4_performance_metrics/
 - Las métricas se calculan ahora sobre las polares de Stage 3 (columna `ld_kt` para eficiencia, `cl_kt` para sustentación y `cd_corrected` para resistencia con wave drag incluido).
 - Si Stage 3 no ha sido ejecutado, el fallback lee automáticamente las polares de Stage 2.
 - `cm_at_opt` es `NaN` cuando la polar de Stage 3 no incluye columna `cm` (columna presente en Stage 2 pero no exportada por Stage 3 por defecto).
+
+## Referencias
+
+| Fuente | Descripción |
+|--------|-------------|
+| NACA TN-1135 (1953) | Ames Research Staff. "Equations, Tables, and Charts for Compressible Flow." NACA TN-1135, 1953. — metodología de detección de stall por caída del 5% en CL |
+| Drela (1989) | Drela, M. "XFOIL: An Analysis and Design System for Low Reynolds Number Airfoils." Springer, 1989. — fuente de las polares 2D |
+| Cumpsty (2004) | Cumpsty, N.A. *Compressor Aerodynamics*. Krieger Publishing, 2004. — contexto de métricas de rendimiento para fans axiales |
+| Dixon & Hall (2013) | Dixon, S.L. & Hall, C.A. *Fluid Mechanics and Thermodynamics of Turbomachinery*, 7th ed. Butterworth-Heinemann, 2013. — definición del punto de diseño aerodinámico |

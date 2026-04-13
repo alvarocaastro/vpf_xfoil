@@ -83,11 +83,13 @@ results/stage3_compressibility_correction/
 
 ## Código relevante
 
+- `src/vfp_analysis/stage3_compressibility_correction/application/run_compressibility_correction.py` — orquestador
 - `src/vfp_analysis/stage3_compressibility_correction/correction_service.py`
 - `src/vfp_analysis/stage3_compressibility_correction/prandtl_glauert.py`
 - `src/vfp_analysis/stage3_compressibility_correction/karman_tsien.py`
 - `src/vfp_analysis/stage3_compressibility_correction/critical_mach.py`
 - `src/vfp_analysis/stage3_compressibility_correction/compressibility_case.py`
+- `src/vfp_analysis/stage3_compressibility_correction/correction_result.py`
 - `src/vfp_analysis/shared/plot_style.py`
 
 ## Observaciones
@@ -96,3 +98,12 @@ results/stage3_compressibility_correction/
 - Para crucero (M=0.85), K-T da CL ~10-15% menor que PG. PG sobreestima el efecto de compresibilidad en régimen transónico bajo.
 - Ambos modelos son correcciones 2D subcríticas. Por encima de Mcr (zona transónica), la precisión disminuye; para análisis más riguroso en crucero sería necesario CFD RANS.
 - Los efectos 3D rotacionales (Snel) y de cascada (Weinig/Carter) no se aplican en esta etapa — se incorporan en Stage 5 (cinemática de pitch).
+
+## Referencias
+
+| Fuente | Descripción |
+|--------|-------------|
+| NACA TN-1135 (1953) | Ames Research Staff. "Equations, Tables, and Charts for Compressible Flow." NACA TN-1135, 1953. — fundamento teórico de las correcciones Prandtl-Glauert y Kármán-Tsien |
+| Cumpsty (2004) | Cumpsty, N.A. *Compressor Aerodynamics*. Krieger Publishing, 2004. — Mach crítico, wave drag y ecuación de Korn en perfiles de compresor |
+| Dixon & Hall (2013) | Dixon, S.L. & Hall, C.A. *Fluid Mechanics and Thermodynamics of Turbomachinery*, 7th ed. Butterworth-Heinemann, 2013. — velocidades relativas y triángulos de velocidad de fan |
+| Drela (1989) | Drela, M. "XFOIL: An Analysis and Design System for Low Reynolds Number Airfoils." Springer, 1989. — polares incompresibles de referencia |

@@ -72,6 +72,7 @@ results/stage2_xfoil_simulations/
 
 ## Código relevante
 
+- `src/vfp_analysis/stage2_xfoil_simulations/application/run_xfoil_simulations.py` — orquestador
 - `src/vfp_analysis/stage2_xfoil_simulations/final_analysis_service.py`
 - `src/vfp_analysis/stage2_xfoil_simulations/pitch_map.py`
 - `src/vfp_analysis/stage2_xfoil_simulations/polar_organizer.py`
@@ -82,3 +83,13 @@ results/stage2_xfoil_simulations/
 
 - Todas las simulaciones son incompresibles a `M = 0.2`. Los efectos de Mach real se aplican en Stage 3.
 - El triángulo de velocidades asume flujo axial puro (sin pre-swirl). Los efectos 3D rotacionales (Snel) y de cascada (Weinig/Carter) se aplican en Stage 5.
+
+## Referencias
+
+| Fuente | Descripción |
+|--------|-------------|
+| Drela (1989) | Drela, M. "XFOIL: An Analysis and Design System for Low Reynolds Number Airfoils." *Low Reynolds Number Aerodynamics*, Springer, 1989. — herramienta de simulación viscosa |
+| Dixon & Hall (2013) | Dixon, S.L. & Hall, C.A. *Fluid Mechanics and Thermodynamics of Turbomachinery*, 7th ed. Butterworth-Heinemann, 2013. — triángulos de velocidad, ec. 5.2 |
+| Cumpsty (2004) | Cumpsty, N.A. *Compressor Aerodynamics*. Krieger Publishing, 2004. — fundamentos de fans axiales |
+| GT2010-22148 | ASME GT2010-22148 — paper sobre aerodinámica de fans de paso variable. [`docs/references/GT2010-22148_final_correctformat.pdf`] |
+| Rolls-Royce UltraFan | Rolls-Royce. *UltraFan Fact Sheet*. [`docs/references/ultrafan-fact-sheet.pdf`] — geometría y parámetros de referencia de fan de alto bypass |

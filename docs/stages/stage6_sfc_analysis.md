@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Cuantificar la reducción de consumo específico de combustible (SFC) que permite el VPF frente al paso fijo, usando un modelo de transferencia de eficiencia de perfil a fan derivado de primeros principios.
+Cuantificar la reducción de consumo específico de combustible (SFC) que permite el VPF frente al paso fijo, usando un modelo de transferencia de eficiencia de perfil a fan derivado de primeros principios. Incluye análisis de misión con estimación de combustible y emisiones CO₂ por fase de vuelo.
 
 ## Entradas
 
@@ -51,6 +51,15 @@ SFC_new = SFC_base / (1 + k × Δη_applied / η_fan,base)
 ΔSFC[%] = (SFC_base − SFC_new) / SFC_base × 100
 ```
 
+### Paso 5 — Análisis de misión
+
+Estimación de combustible quemado y emisiones CO₂ por fase:
+
+```
+fuel_kg(fase) = SFC [lb/(lbf·h)] × thrust_lbf × duration_h × LB_TO_KG
+CO₂_kg(fase)  = fuel_kg × 3.16        (factor CORSIA, kerosene)
+```
+
 ### Análisis de sensibilidad
 
 Se barre τ ∈ [0.30, 0.80] (7 valores) para acotar el rango de incertidumbre del modelo.
@@ -75,7 +84,7 @@ Se barre τ ∈ [0.30, 0.80] (7 valores) para acotar el rango de incertidumbre d
 | Despegue  | 1.273   | 0.0352 | 0.9152    | 3.51%   |
 | **Media** |         |        |           | **2.51%** |
 
-Rango literario para VPF: 2–5% (Cumpsty 2004, p. 280). ✓
+Rango de referencia para VPF: 2–5% (Cumpsty 2004, p. 280). ✓
 
 ## Salidas
 
@@ -91,7 +100,7 @@ results/stage6_sfc_analysis/
 │   ├── sfc_sensitivity_tau.png      — ΔSFC vs τ para cada condición
 │   ├── sfc_reduction_percent.png    — % reducción SFC por condición
 │   ├── sfc_vs_condition.png         — SFC base vs VPF (barras agrupadas)
-│   └── fan_efficiency_improvement.png — η_fan base vs VPF
+│   └── mission_fuel_burn.png        — combustible y CO₂ ahorrado por fase de misión
 ├── sfc_analysis_summary.txt         — resumen con tabla ε y referencias
 └── finalresults_stage6.txt
 ```
@@ -104,8 +113,10 @@ results/stage6_sfc_analysis/
   - `compute_sfc_sensitivity()` — barrido paramétrico de τ
 - `src/vfp_analysis/stage6_sfc_analysis/core/services/propulsion_model_service.py`
   - `compute_bypass_sensitivity_factor()` — k = BPR/(1+BPR)
-  - `compute_fan_efficiency_improvement()` — caps ε, Δη
   - `compute_sfc_improvement()` — perturbación de 1er orden
+- `src/vfp_analysis/stage6_sfc_analysis/core/services/mission_analysis_service.py`
+  - Cálculo de combustible y CO₂ por fase usando SFC y thrust por condición
+- `src/vfp_analysis/stage6_sfc_analysis/core/services/summary_generator_service.py`
 - `src/vfp_analysis/stage6_sfc_analysis/core/domain/sfc_parameters.py`
   - Constantes: `EPSILON_CAP = 1.10`, `ETA_FAN_DELTA_CAP = 0.04`, `ETA_FAN_ABS_CAP = 0.96`
 
@@ -120,6 +131,24 @@ results/stage6_sfc_analysis/
 | SFC_new = SFC_base/(1+k·Δη/η_base) | Saravanamuttoo (2017) §5.3 |
 | Δη_fan,max = 0.04 | Cumpsty (2004) p. 280 |
 | η_fan,new ≤ 0.96 | Cumpsty (2004) ch. 8 |
+| CO₂/kerosene = 3.16 kg/kg | ICAO CORSIA (2022) |
+
+### Bibliografía completa
+
+| Clave | Cita completa |
+|-------|--------------|
+| Cumpsty (2004) | Cumpsty, N.A. *Compressor Aerodynamics*. Krieger Publishing, 2004. [`docs/references/`] |
+| Dixon & Hall (2013) | Dixon, S.L. & Hall, C.A. *Fluid Mechanics and Thermodynamics of Turbomachinery*, 7th ed. Butterworth-Heinemann, 2013. |
+| Saravanamuttoo (2017) | Saravanamuttoo, H.I.H., Rogers, G.F.C., Cohen, H. & Straznicky, P. *Gas Turbine Theory*, 7th ed. Pearson, 2017. |
+| Snel et al. (1994) | Snel, H., Houwink, R. & Bosschers, J. "Sectional prediction of lift coefficients on rotating wind turbine blades in stall." ECN-C--93-052, 1994. |
+| Carter (1950) | Carter, A.D.S. "The low speed performance of related aerofoils in cascade." NACA TN-2273, 1950. |
+| Drela (1989) | Drela, M. "XFOIL: An Analysis and Design System for Low Reynolds Number Airfoils." *Low Reynolds Number Aerodynamics*, Springer, 1989. |
+| NACA TN-1135 (1953) | Ames Research Staff. "Equations, Tables, and Charts for Compressible Flow." NACA TN-1135, 1953. |
+| CORSIA (2022) | ICAO. *CORSIA Eligible Fuels — Life Cycle Assessment Methodology*, 4th ed. 2022. |
+| GT2010-22148 | ASME GT2010-22148 — aerodinámica de fans de paso variable. [`docs/references/GT2010-22148_final_correctformat.pdf`] |
+| Rolls-Royce UltraFan | Rolls-Royce. *UltraFan Fact Sheet*. [`docs/references/ultrafan-fact-sheet.pdf`] |
+| NASA Power for Flight | Gorn, M. *The Power for Flight: NASA's Contributions to Aircraft Propulsion*. NASA SP-2015-4548, 2015. [`docs/references/The_Power_for_Flight_-_NASA's_Contributions_to_Aircraft_Propulsion.pdf`] |
+| Bentley (2018) | Bentley, D. *Principles of Measurement Systems*, 4th ed. Pearson, 2018. [`docs/references/Bentley_D_2018.pdf`] |
 
 ## Limitaciones del modelo
 
