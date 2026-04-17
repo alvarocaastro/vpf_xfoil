@@ -171,7 +171,12 @@ def compute_sfc_analysis(
                 sr_base = _compute_section_result(condition, row, tau)
 
             # Mecanismo de mapa
-            if _use_map and section in _radii and _omega > 0:
+            # Crucero es el punto de diseño del mapa: φ_cond = φ_design → Δη_map = 0
+            if condition.lower() == "cruise":
+                phi_des  = _phi_design.get(section, float("nan"))
+                phi_cond = phi_des   # por definición en el punto de diseño
+                delta_eta_map = 0.0
+            elif _use_map and section in _radii and _omega > 0:
                 u_sec = _omega * _radii[section]
                 phi_cond = _va_cond / u_sec if u_sec > 0 else float("nan")
                 phi_des  = _phi_design.get(section, float("nan"))
@@ -215,12 +220,15 @@ def compute_sfc_analysis(
         # Usar media ponderada de epsilon para el mecanismo de perfil
         epsilon_weighted = _weighted_mean(epsilon_w_values) if epsilon_w_values else _mean(epsilon_values)
 
+        # Cruise is the design point: no map gain (phi_cond = phi_design by definition)
+        phi_values_agg = [] if condition.lower() == "cruise" else phi_values
+
         (eta_fan_new,
          delta_eta_profile,
          delta_eta_map_mean,
          delta_eta_applied) = compute_combined_fan_efficiency_improvement(
             epsilon_values=[epsilon_weighted] * len(epsilon_values),  # ponderado spanwise
-            phi_values=phi_values,
+            phi_values=phi_values_agg,
             phi_design=phi_design_val if not _math.isnan(phi_design_val) else 0.0,
             fan_efficiency_baseline=engine_baseline.fan_efficiency,
             tau=tau,
@@ -416,21 +424,34 @@ def _compute_section_result_stage5(
     section = str(row.get("blade_section", "unknown"))
     delta_alpha = float(row.get("delta_alpha_deg", 0.0))
 
-    # ── Obtener alpha_opt y alpha_fixed ──────────────────────────────────
+    # ── Obtener alpha_fixed (paso fijo) ──────────────────────────────────
     btd = s5["blade_twist_design"]
     kin = s5["kinematics"]
 
-    row_btd = btd[btd["section"] == section]
-    row_kin_cond  = kin[(kin["condition"] == condition)  & (kin["section"] == section)]
+    row_btd      = btd[btd["section"] == section]
+    row_kin_cond = kin[(kin["condition"] == condition) & (kin["section"] == section)]
 
     if row_btd.empty or row_kin_cond.empty:
         LOGGER.warning("Datos cinemáticos Stage 5 incompletos para %s/%s — fallback.", condition, section)
         return _compute_section_result(condition, row, tau)
 
-    beta_metal = float(row_btd["beta_metal_deg"].iloc[0])
-    phi_cond   = float(row_kin_cond["inflow_angle_phi_deg"].iloc[0])
-    alpha_opt  = float(row_kin_cond["alpha_aero_deg"].iloc[0])   # VPF siempre opera aquí
+    beta_metal  = float(row_btd["beta_metal_deg"].iloc[0])
+    phi_cond    = float(row_kin_cond["inflow_angle_phi_deg"].iloc[0])
     alpha_fixed = beta_metal - phi_cond
+
+    # ── Crucero: blade designed for this point → epsilon = 1.0 by definition ─
+    if condition.lower() == "cruise":
+        return SfcSectionResult(
+            condition=condition,
+            blade_section=section,
+            cl_cd_fixed=float(row.get("eff_at_design_alpha", 0.0)) or float(row.get("max_efficiency", 1.0)),
+            cl_cd_vpf=float(row.get("max_efficiency", 1.0)),
+            epsilon=1.0,
+            epsilon_eff=1.0,
+            delta_eta_profile=0.0,
+            efficiency_gain_pct=0.0,
+            delta_alpha_deg=delta_alpha,
+        )
 
     # ── Cargar polar Stage 3 de la condición/sección ─────────────────────
     polar_path = stage3_dir / condition.lower() / section / "corrected_polar.csv"
@@ -438,23 +459,34 @@ def _compute_section_result_stage5(
         LOGGER.warning("Polar Stage 3 no encontrado: %s — fallback Stage 4.", polar_path)
         return _compute_section_result(condition, row, tau)
 
-    polar_df = pd.read_csv(polar_path)
-    alphas = polar_df["alpha"].values
-    cl_kt_arr  = polar_df["cl_kt"].values
-    cd_arr     = polar_df["cd_corrected"].values
+    polar_df  = pd.read_csv(polar_path)
+    alphas    = polar_df["alpha"].values
+    cl_kt_arr = polar_df["cl_kt"].values
+    cd_arr    = polar_df["cd_corrected"].values
+
+    # Compute CL/CD array (only where cd > 0)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        cl_cd_arr = np.where(cd_arr > 0.0, cl_kt_arr / cd_arr, np.nan)
 
     def _interp_cl_cd(alpha: float) -> float:
-        a = float(np.clip(alpha, alphas.min(), alphas.max()))
+        a  = float(np.clip(alpha, alphas.min(), alphas.max()))
         cl = float(np.interp(a, alphas, cl_kt_arr))
         cd = float(np.interp(a, alphas, cd_arr))
         return cl / cd if cd > 0.0 else float("nan")
 
-    cl_cd_vpf   = _interp_cl_cd(alpha_opt)
+    # VPF picks the best operating point on the polar (global max CL/CD)
+    valid = np.isfinite(cl_cd_arr)
+    if not valid.any():
+        LOGGER.warning("No valid CL/CD in polar for %s/%s — fallback.", condition, section)
+        return _compute_section_result(condition, row, tau)
+    cl_cd_vpf = float(np.nanmax(cl_cd_arr))
+    alpha_opt = float(alphas[np.nanargmax(cl_cd_arr)])
+
     cl_cd_fixed = _interp_cl_cd(alpha_fixed)
 
     if alpha_fixed < alphas.min() - 0.5 or alpha_fixed > alphas.max() + 0.5:
         LOGGER.warning(
-            "alpha_fixed=%.2f° fuera del rango polar [%.1f, %.1f] para %s/%s — clamped.",
+            "alpha_fixed=%.2f° outside polar range [%.1f, %.1f] for %s/%s — clamped.",
             alpha_fixed, alphas.min(), alphas.max(), condition, section,
         )
 
@@ -471,7 +503,7 @@ def _compute_section_result_stage5(
     efficiency_gain_pct = (epsilon - 1.0) * 100.0
 
     LOGGER.debug(
-        "%s/%s: β_metal=%.2f° φ=%.2f° α_opt=%.2f° α_fixed=%.2f° "
+        "%s/%s: β_metal=%.2f° φ=%.2f° α_opt(VPF)=%.2f° α_fixed=%.2f° "
         "CL/CD_vpf=%.1f CL/CD_fixed=%.1f ε=%.3f",
         condition, section, beta_metal, phi_cond, alpha_opt, alpha_fixed,
         cl_cd_vpf, cl_cd_fixed, epsilon,
