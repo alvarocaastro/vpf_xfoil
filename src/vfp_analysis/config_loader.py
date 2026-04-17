@@ -105,16 +105,6 @@ def get_selection_ncrit() -> float:
     return float(cfg["selection"]["ncrit"])
 
 
-def get_output_dirs() -> Dict[str, Path]:
-    """Get output directory paths from configuration."""
-    cfg = load_config()
-    base = base_config.ROOT_DIR
-    return {
-        key: base / Path(value)
-        for key, value in cfg["output"].items()
-    }
-
-
 def get_plot_settings() -> Dict[str, Any]:
     """Get plotting settings from configuration."""
     cfg = load_config()

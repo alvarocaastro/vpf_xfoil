@@ -28,7 +28,6 @@ from vfp_analysis.stage3_compressibility_correction.correction_result import (
 )
 from vfp_analysis.stage3_compressibility_correction.critical_mach import (
     estimate_mcr,
-    estimate_mdd,
 )
 from vfp_analysis.shared.plot_style import (
     COLORS,

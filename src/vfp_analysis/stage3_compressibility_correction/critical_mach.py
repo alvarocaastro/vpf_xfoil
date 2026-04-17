@@ -19,8 +19,6 @@ Reference: Küchemann, D. "The Aerodynamic Design of Aircraft", 1978.
 
 from __future__ import annotations
 
-import math
-
 
 def estimate_mcr(cl_operating: float) -> float:
     """

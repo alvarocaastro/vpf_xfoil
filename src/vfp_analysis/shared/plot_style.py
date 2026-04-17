@@ -15,7 +15,6 @@ import contextlib
 from typing import Generator
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 
 # ── Colour palette (Paul Tol's colorblind-safe "bright") ─────────────────────
 COLORS = {

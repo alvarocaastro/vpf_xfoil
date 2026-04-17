@@ -21,12 +21,14 @@ from dataclasses import dataclass, field
 # Constantes físicas documentadas
 # ---------------------------------------------------------------------------
 
-#: Límite máximo del ratio de mejora 2D→3D en cascada.
-#: Por encima de este valor, pérdidas 3D (separación de esquina, flujos secundarios,
-#: interacción pala-endwall) impiden aprovechar la ganancia 2D adicional.
-#: Ref: Cumpsty (2004) *Compressor Aerodynamics*, p. 280;
-#:      Wisler (1998) VKI lecture series.
-EPSILON_CAP: float = 1.10
+#: Límite máximo del ratio de mejora CL/CD_VPF / CL/CD_paso_fijo.
+#: Valor conservador que cubre los casos físicamente posibles en este modelo
+#: (ε ≤ ~2.5 en condiciones extremas de despegue/descenso).
+#: El límite operativamente activo es ETA_FAN_DELTA_CAP (4% de mejora absoluta
+#: de η_fan), que es mucho más restrictivo en la práctica.
+#: El valor anterior de 1.10 procedía de Cumpsty (2004) p.280 pero en ese
+#: contexto se refería a la transferencia 2D→3D de η de perfil, no a ε directamente.
+EPSILON_CAP: float = 3.0
 
 #: Eficiencia isentrópica de fan máxima (estado del arte tecnología actual).
 #: Ref: Cumpsty (2004) ch. 8.

@@ -26,7 +26,6 @@ import pandas as pd
 
 from vfp_analysis.validation.validators import (
     PolarQualityWarning,
-    validate_polar_df,
     validate_polar_quality,
 )
 

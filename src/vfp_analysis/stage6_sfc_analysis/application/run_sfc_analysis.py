@@ -629,8 +629,12 @@ def run_sfc_analysis() -> None:
     )
 
     # ── 3. Calcular mejoras de SFC ───────────────────────────────────────
+    stage5_dir = base_config.get_stage_dir(5)
+    stage3_dir = base_config.get_stage_dir(3)
     sfc_results, section_results = compute_sfc_analysis(
         metrics_df, engine_baseline, engine_config_path,
+        stage5_dir=stage5_dir,
+        stage3_dir=stage3_dir,
     )
     LOGGER.info("Análisis SFC: %d condiciones, %d secciones", len(sfc_results), len(section_results))
 

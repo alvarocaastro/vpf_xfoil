@@ -47,7 +47,6 @@ from vfp_analysis.config_loader import (
     get_blade_geometry,
     get_blade_radii,
     get_fan_rpm,
-    get_output_dirs,
 )
 from vfp_analysis.shared.plot_style import FLIGHT_LABELS, SECTION_COLORS, SECTION_LABELS, apply_style
 from vfp_analysis.stage5_pitch_kinematics.adapters.filesystem.data_loader import (
@@ -986,9 +985,8 @@ def run_pitch_kinematics() -> None:
     LOGGER.info("STAGE 5: Pitch & Kinematics Analysis (Cascade + Snel + Twist + Loading)")
     LOGGER.info("=" * 70)
 
-    output_dirs     = get_output_dirs()
-    polars_dir      = output_dirs["polars"]
-    comp_dir        = output_dirs["compressibility"]
+    polars_dir      = base_config.get_stage_dir(2) / "polars"
+    comp_dir        = base_config.get_stage_dir(3)
     stage5_dir      = base_config.get_stage_dir(5)
     tables_dir      = stage5_dir / "tables"
     figures_dir     = stage5_dir / "figures"
