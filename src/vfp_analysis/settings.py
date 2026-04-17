@@ -44,10 +44,14 @@ class PhysicsConstants:
     # ------------------------------------------------------------------
     # Detección de incidencia óptima (segundo pico de CL/CD)
     # ------------------------------------------------------------------
-    ALPHA_MIN_OPT_DEG: float = 3.0
+    ALPHA_MIN_OPT_DEG: float = 1.0
     """Ángulo mínimo para buscar el pico óptimo [°].
-    Evita el artefacto de burbuja laminar a α bajos.
-    Ref: Drela (1989) XFOIL docs, Selig & McGranahan (2004)."""
+    Avoids the very-low-alpha (< 1°) laminar separation bubble artefact
+    predicted by XFOIL while still allowing the true Mach-dependent peak
+    (typically 2.2–3.5° across fan operating conditions) to be found.
+    Using 3° was too conservative: it forced alpha_opt ≥ 3° even when the
+    real 2D/KT peak at cruise M=0.93 lies near 2.35°.
+    Ref: Drela (1989) XFOIL docs; Selig & McGranahan (2004)."""
 
     CL_MIN_3D: float = 0.30
     """CL mínimo para considerar un punto como operativo en polares 3D.

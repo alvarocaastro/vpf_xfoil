@@ -22,7 +22,7 @@ sfc_multipliers:
   takeoff: 1.15  # Higher SFC during takeoff
   climb: 1.05    # Slightly higher during climb
   cruise: 1.00   # Reference (baseline)
-  descent: 0.95  # Lower SFC during descent (idle thrust)
+  descent: 1.10  # Higher SFC during descent (idle thrust is thermally inefficient)
 
 # ---------------------------------------------------------
 # NEW PARAMETERS FOR ADVANCED PHYSICS MODEL
