@@ -1,18 +1,18 @@
 """
 kinematics_service.py
 ---------------------
-Resuelve los triángulos de velocidad y calcula el paso mecánico real.
+Solves velocity triangles and computes the actual mechanical pitch angle.
 
-Para cada (condición, sección):
-    Va    = velocidad axial explícita del config [m/s]   ← NO Mach × a
-    U     = ω × r                                        # velocidad de pala [m/s]
-    φ     = arctan(Va / U)                               # ángulo de entrada de flujo [°]
-    β     = α_opt_3D + φ                                 # ángulo de paso mecánico [°]
-    Δβ    = β(condición) − β(crucero)                    # ajuste respecto a referencia [°]
+For each (condition, section):
+    Va    = axial velocity from config [m/s]             ← NOT Mach × a
+    U     = ω × r                                        # blade tangential velocity [m/s]
+    φ     = arctan(Va / U)                               # inflow angle [°]
+    β     = α_opt_3D + φ                                 # mechanical pitch angle [°]
+    Δβ    = β(condition) − β(cruise)                     # adjustment relative to reference [°]
 
-Fuente única de verdad: analysis_config.yaml (sección fan_geometry).
-Va, radios y RPM se leen de ahí mediante config_loader para evitar duplicación
-con engine_parameters.yaml.
+Single source of truth: analysis_config.yaml (fan_geometry section).
+Va, radii and RPM are read from there via config_loader to avoid duplication
+with engine_parameters.yaml.
 """
 
 from __future__ import annotations
@@ -34,17 +34,17 @@ def compute_kinematics(
     reference_condition: str = "cruise",
 ) -> List[KinematicsResult]:
     """
-    Calcula triángulos de velocidad y paso mecánico para cada caso.
+    Compute velocity triangles and mechanical pitch angle for each case.
 
     Parameters
     ----------
     pitch_adjustments : List[PitchAdjustment]
-        Ajustes de paso aerodinámico de pitch_adjustment_service.
+        Aerodynamic pitch adjustments from pitch_adjustment_service.
     engine_config_path : Path
-        Ignorado — mantenido por compatibilidad de firma. Los parámetros
-        geométricos se leen de analysis_config.yaml (fuente única).
+        Ignored — kept for signature compatibility. Geometric parameters
+        are read from analysis_config.yaml (single source of truth).
     reference_condition : str
-        Condición de referencia para calcular Δβ.
+        Reference condition for computing Δβ.
 
     Returns
     -------
@@ -58,7 +58,7 @@ def compute_kinematics(
     results: List[KinematicsResult] = []
     reference_beta: Dict[str, float] = {}            # section → β_mech_ref
 
-    # Pasada 1: β absoluto por caso
+    # Pass 1: absolute β per case
     for adj in pitch_adjustments:
         va    = va_dict.get(adj.condition, float("nan"))
         r     = radii.get(adj.section, float("nan"))
@@ -79,7 +79,7 @@ def compute_kinematics(
         if adj.condition == reference_condition:
             reference_beta[adj.section] = beta
 
-    # Pasada 2: Δβ respecto a la referencia
+    # Pass 2: Δβ relative to reference
     for res in results:
         ref_b = reference_beta.get(res.section, res.beta_mech_deg)
         res.delta_beta_mech_deg = res.beta_mech_deg - ref_b

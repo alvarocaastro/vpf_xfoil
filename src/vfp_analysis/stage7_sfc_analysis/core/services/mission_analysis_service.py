@@ -1,8 +1,8 @@
 """
 mission_analysis_service.py
 ---------------------------
-Integración de misión completa: convierte las reducciones de SFC por condición
-en ahorro real de combustible, CO₂ y coste económico sobre una misión típica.
+Full mission integration: converts per-condition SFC reductions into actual
+fuel savings, CO₂ reduction and economic cost saving over a typical mission.
 
 Modelo físico:
     thrust(phase) = design_thrust_kN × thrust_fraction(phase)
@@ -31,10 +31,10 @@ from vfp_analysis.stage7_sfc_analysis.core.domain.sfc_parameters import (
 
 LOGGER = logging.getLogger(__name__)
 
-# Factores de conversión
+# Conversion factors
 _LB_TO_KG: float = 0.453592          # 1 lb = 0.453592 kg
 _LB_PER_KN: float = 224.809          # 1 kN = 224.809 lbf
-_CO2_FACTOR: float = 3.16            # kg CO₂ por kg de Jet-A1 quemado (CORSIA)
+_CO2_FACTOR: float = 3.16            # kg CO₂ per kg of Jet-A1 burned (CORSIA)
 _MIN_TO_HR: float = 1.0 / 60.0
 
 
@@ -42,7 +42,7 @@ def compute_mission_fuel_burn(
     sfc_results: List[SfcAnalysisResult],
     mission_profile: dict,
 ) -> Tuple[MissionSummary, List[MissionFuelBurnResult]]:
-    """Calcula el ahorro de combustible total en misión con VPF.
+    """Compute the total mission fuel saving with VPF.
 
     Parameters
     ----------
@@ -79,7 +79,7 @@ def compute_mission_fuel_burn(
         sfc_res = sfc_map.get(phase)
         if sfc_res is None:
             LOGGER.warning(
-                "No hay resultado SFC para fase '%s' — omitida del análisis de misión.", phase
+                "No SFC result for phase '%s' — omitted from mission analysis.", phase
             )
             continue
 
@@ -111,7 +111,7 @@ def compute_mission_fuel_burn(
         ))
 
     if not phase_results:
-        LOGGER.error("Ninguna fase de misión pudo calcularse.")
+        LOGGER.error("No mission phase could be computed.")
         empty = MissionSummary(0, 0, 0, 0, 0, 0, [])
         return empty, []
 
@@ -123,8 +123,8 @@ def compute_mission_fuel_burn(
     saving_pct = 100.0 * total_saving / total_baseline if total_baseline > 0 else 0.0
 
     LOGGER.info(
-        "MISIÓN TOTAL: base=%.1f kg, VPF=%.1f kg, ahorro=%.1f kg (%.2f%%), "
-        "CO₂=%.1f kg, coste=$%.2f",
+        "MISSION TOTAL: base=%.1f kg, VPF=%.1f kg, saving=%.1f kg (%.2f%%), "
+        "CO₂=%.1f kg, cost=$%.2f",
         total_baseline, total_vpf, total_saving, saving_pct, total_co2, total_cost,
     )
 

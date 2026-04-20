@@ -1,4 +1,4 @@
-"""Pipeline stage contracts — I/O explícito entre stages."""
+"""Pipeline stage contracts — explicit I/O between stages."""
 
 from vfp_analysis.pipeline.contracts import (
     Stage1Result,

@@ -240,9 +240,9 @@ def plot_efficiency_penalty_overview(
         section_label = SECTION_LABELS.get(summary_section, summary_section)
         ax.set_xlabel(r"$\alpha$ (°)")
         ax.set_ylabel(r"$C_L/C_D$")
-        ax.set_title(f"Penalización del paso fijo — Sección {section_label}")
+        ax.set_title(f"Fixed-pitch penalty — Section {section_label}")
         ax.legend(
-            title="Condición",
+            title="Condition",
             bbox_to_anchor=(1.02, 1),
             loc="upper left",
             borderaxespad=0,

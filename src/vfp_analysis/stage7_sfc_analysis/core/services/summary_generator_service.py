@@ -1,7 +1,7 @@
 """
 summary_generator_service.py
 -----------------------------
-Genera el resumen de texto del análisis de SFC.
+Generates the text summary of the SFC analysis.
 """
 
 from __future__ import annotations
@@ -22,24 +22,24 @@ def generate_sfc_summary(
     section_results: List[SfcSectionResult] | None = None,
     mission_summary: MissionSummary | None = None,
 ) -> str:
-    """Genera un resumen legible de los resultados del análisis de SFC."""
+    """Generate a human-readable summary of the SFC analysis results."""
     lines = []
     lines.append("=" * 70)
     lines.append("SPECIFIC FUEL CONSUMPTION (SFC) IMPACT ANALYSIS — SUMMARY")
     lines.append("=" * 70)
     lines.append("")
-    lines.append("Modelo físico (dos mecanismos independientes):")
+    lines.append("Physical model (two independent mechanisms):")
     lines.append("")
-    lines.append("  Mecanismo 1 — Perfil (2D → 3D vía τ):")
-    lines.append("    α_fijo(cond,sec) = β_crucero(sec) − φ(cond,sec)   [triángulos de velocidad]")
-    lines.append("    β_crucero(sec)   = α_opt_crucero + φ_crucero       [diseño VPF en crucero]")
-    lines.append("    φ(cond,sec)      = Va_cond / (ω × r_sec)           [coef. de flujo]")
-    lines.append("    ε(r, cond)       = CL/CD_vpf / CL/CD_fijo          [Stage 4]")
-    lines.append("    Δη_profile       = mean_r[(min(ε,1.10)−1)×τ],  cap ≤ 0.04")
+    lines.append("  Mechanism 1 — Profile (2D → 3D via τ):")
+    lines.append("    α_fixed(cond,sec) = β_cruise(sec) − φ(cond,sec)   [velocity triangles]")
+    lines.append("    β_cruise(sec)     = α_opt_cruise + φ_cruise        [VPF design at cruise]")
+    lines.append("    φ(cond,sec)       = Va_cond / (ω × r_sec)          [flow coefficient]")
+    lines.append("    ε(r, cond)        = CL/CD_vpf / CL/CD_fixed        [Stage 4]")
+    lines.append("    Δη_profile        = mean_r[(min(ε,1.10)−1)×τ],  cap ≤ 0.04")
     lines.append("")
-    lines.append("  Mecanismo 2 — Mapa del fan (coeficiente de flujo φ):")
+    lines.append("  Mechanism 2 — Fan map (flow coefficient φ):")
     lines.append("    Δη_map           = k_map × ((φ − φ_opt) / φ_opt)²,  cap ≤ 0.015")
-    lines.append("    k_map = 0.22  (recovery fraction ≈ 20% pérdida de mapa)")
+    lines.append("    k_map = 0.22  (recovery fraction ≈ 20% map loss)")
     lines.append("")
     lines.append("  Combinado:")
     lines.append("    Δη_fan           = min(Δη_profile + Δη_map, 0.048)")
@@ -51,18 +51,18 @@ def generate_sfc_summary(
     lines.append("       Dickens & Day (2011) J. Turbomach. 133(3):031007.")
     lines.append("")
 
-    # ── 1. Ratio ε por sección ─────────────────────────────────────────
+    # ── 1. ε ratio per section ─────────────────────────────────────────
     if section_results:
         lines.append("-" * 70)
-        lines.append("1. RATIO DE EFICIENCIA ε POR SECCIÓN")
-        lines.append("   (Mecanismo de perfil — corrección por triángulos de velocidad)")
+        lines.append("1. EFFICIENCY RATIO ε PER SECTION")
+        lines.append("   (Profile mechanism — velocity-triangle correction)")
         lines.append("-" * 70)
         lines.append("")
         conditions_order = ["takeoff", "climb", "cruise", "descent"]
         sections_order   = ["root", "mid_span", "tip"]
         header = (
-            f"  {'Condición':<12}  {'Sección':<10}  {'CL/CD_fijo':>10}  "
-            f"{'CL/CD_vpf':>9}  {'ε_real':>7}  {'ε_ef':>5}  {'Δα [°]':>7}  {'Ganancia':>8}"
+            f"  {'Condition':<12}  {'Section':<10}  {'CL/CD_fixed':>11}  "
+            f"{'CL/CD_vpf':>9}  {'ε_raw':>7}  {'ε_eff':>5}  {'Δα [°]':>7}  {'Gain':>8}"
         )
         lines.append(header)
         lines.append("  " + "-" * 74)
@@ -85,19 +85,19 @@ def generate_sfc_summary(
                 )
         lines.append("")
 
-        # ── Mecanismo de mapa del fan por sección ──────────────────────
+        # ── Fan map mechanism per section ──────────────────────────────
         has_map = any(
             not math.isnan(r.phi_condition) for r in section_results
         )
         if has_map:
             lines.append("-" * 70)
-            lines.append("1b. MECANISMO DE MAPA DEL FAN POR SECCIÓN")
-            lines.append("    (φ = Va/U — desviación respecto al punto de diseño en crucero)")
+            lines.append("1b. FAN MAP MECHANISM PER SECTION")
+            lines.append("    (φ = Va/U — deviation from cruise design point)")
             lines.append("-" * 70)
             lines.append("")
             header2 = (
-                f"  {'Condición':<12}  {'Sección':<10}  {'φ_diseño':>9}  "
-                f"{'φ_cond':>8}  {'Δφ/φ [%]':>9}  {'Δη_mapa':>8}"
+                f"  {'Condition':<12}  {'Section':<10}  {'φ_design':>9}  "
+                f"{'φ_cond':>8}  {'Δφ/φ [%]':>9}  {'Δη_map':>8}"
             )
             lines.append(header2)
             lines.append("  " + "-" * 64)
@@ -121,90 +121,90 @@ def generate_sfc_summary(
                     )
             lines.append("")
 
-    # ── 2. Eficiencia aerodinámica agregada ────────────────────────────
+    # ── 2. Aggregated aerodynamic efficiency ────────────────────────────
     lines.append("-" * 70)
-    lines.append("2. EFICIENCIA AERODINÁMICA MEDIA (por condición)")
+    lines.append("2. MEAN AERODYNAMIC EFFICIENCY (per condition)")
     lines.append("-" * 70)
     lines.append("")
     for result in sorted(sfc_results, key=lambda x: x.condition):
         improvement = (result.epsilon_mean - 1.0) * 100.0
         lines.append(f"  {result.condition.upper():<10}")
-        lines.append(f"    CL/CD paso fijo : {result.cl_cd_fixed:7.2f}")
+        lines.append(f"    CL/CD fixed-pitch: {result.cl_cd_fixed:7.2f}")
         lines.append(
-            f"    CL/CD VPF       : {result.cl_cd_vpf:7.2f}  "
-            f"(ε_medio = {result.epsilon_mean:.3f}, +{improvement:.1f}%)"
+            f"    CL/CD VPF        : {result.cl_cd_vpf:7.2f}  "
+            f"(ε_mean = {result.epsilon_mean:.3f}, +{improvement:.1f}%)"
         )
-        lines.append(f"    Δα medio        : {result.delta_alpha_mean_deg:.2f}°")
+        lines.append(f"    Δα mean          : {result.delta_alpha_mean_deg:.2f}°")
         lines.append("")
 
-    # ── 3. Eficiencia de fan — desglose por mecanismo ──────────────────
+    # ── 3. Fan efficiency — breakdown by mechanism ──────────────────────
     lines.append("-" * 70)
-    lines.append("3. EFICIENCIA DE FAN — DESGLOSE POR MECANISMO")
+    lines.append("3. FAN EFFICIENCY — BREAKDOWN BY MECHANISM")
     lines.append("-" * 70)
     lines.append("")
     for result in sorted(sfc_results, key=lambda x: x.condition):
         lines.append(f"  {result.condition.upper():<10}")
-        lines.append(f"    η_fan base       : {result.fan_efficiency_baseline:.4f}")
+        lines.append(f"    η_fan baseline   : {result.fan_efficiency_baseline:.4f}")
 
-        # Mecanismo de perfil
+        # Profile mechanism
         if not math.isnan(result.delta_eta_profile):
-            lines.append(f"    Δη_perfil        : {result.delta_eta_profile:+.5f}  (mecanismo 1 — CL/CD profile)")
+            lines.append(f"    Δη_profile       : {result.delta_eta_profile:+.5f}  (mechanism 1 — CL/CD profile)")
         else:
-            lines.append(f"    Δη_perfil        : n/a")
+            lines.append(f"    Δη_profile       : n/a")
 
-        # Mecanismo de mapa
+        # Map mechanism
         if not math.isnan(result.delta_eta_map):
             phi_info = ""
             if not math.isnan(result.phi_condition) and not math.isnan(result.phi_design) and result.phi_design > 0:
                 delta_phi_pct = (result.phi_condition - result.phi_design) / result.phi_design * 100.0
                 phi_info = f"  φ={result.phi_condition:.4f} vs φ_opt={result.phi_design:.4f} ({delta_phi_pct:+.1f}%)"
-            lines.append(f"    Δη_mapa          : {result.delta_eta_map:+.5f}  (mecanismo 2 — map φ){phi_info}")
+            lines.append(f"    Δη_map           : {result.delta_eta_map:+.5f}  (mechanism 2 — map φ){phi_info}")
         else:
-            lines.append(f"    Δη_mapa          : n/a")
+            lines.append(f"    Δη_map           : n/a")
 
-        lines.append(f"    Δη_fan aplicado  : {result.delta_eta_fan:+.5f}  (combinado, tras caps)")
+        lines.append(f"    Δη_fan applied   : {result.delta_eta_fan:+.5f}  (combined, after caps)")
         lines.append(f"    η_fan VPF        : {result.fan_efficiency_new:.4f}")
         lines.append(f"    k = BPR/(1+BPR)  = {result.k_sensitivity:.4f}")
         lines.append("")
 
-    # ── 4. Impacto en SFC ─────────────────────────────────────────────
+    # ── 4. SFC impact ─────────────────────────────────────────────────
     lines.append("-" * 70)
-    lines.append("4. IMPACTO EN SFC")
+    lines.append("4. SFC IMPACT")
     lines.append("-" * 70)
     lines.append("")
     for result in sorted(sfc_results, key=lambda x: x.condition):
         lines.append(f"  {result.condition.upper():<10}")
-        lines.append(f"    SFC base    : {result.sfc_baseline:.4f} lb/(lbf·hr)")
+        lines.append(f"    SFC baseline: {result.sfc_baseline:.4f} lb/(lbf·hr)")
         lines.append(f"    SFC VPF     : {result.sfc_new:.4f} lb/(lbf·hr)")
-        lines.append(f"    Reducción   : {result.sfc_reduction_percent:6.2f}%")
+        lines.append(f"    Reduction   : {result.sfc_reduction_percent:6.2f}%")
         lines.append("")
 
-    # ── 5. Resultados clave ────────────────────────────────────────────
+    # ── 5. Key results ────────────────────────────────────────────────
     avg_reduction = sum(r.sfc_reduction_percent for r in sfc_results) / len(sfc_results)
     max_reduction = max(r.sfc_reduction_percent for r in sfc_results)
     max_cond      = max(sfc_results, key=lambda r: r.sfc_reduction_percent).condition
     lines.append("-" * 70)
-    lines.append("5. RESULTADOS CLAVE")
+    lines.append("5. KEY RESULTS")
     lines.append("-" * 70)
     lines.append("")
-    lines.append(f"  Reducción media de SFC   : {avg_reduction:.2f}%")
-    lines.append(f"  Reducción máxima de SFC  : {max_reduction:.2f}%  ({max_cond})")
+    lines.append(f"  Mean SFC reduction    : {avg_reduction:.2f}%")
+    lines.append(f"  Maximum SFC reduction : {max_reduction:.2f}%  ({max_cond})")
     lines.append("")
-    lines.append("  Rango literario para VPF (Cumpsty 2004 p.280): 2–5%")
-    lines.append(f"  → Resultado dentro del rango: {'SÍ' if 1.0 <= avg_reduction <= 6.0 else 'REVISAR'}")
+    lines.append("  Literature range for VPF (Cumpsty 2004 p.280): 2–5%")
+    lines.append(f"  → Result within range: {'YES' if 1.0 <= avg_reduction <= 6.0 else 'CHECK'}")
     lines.append("")
 
-    # ── 6. Referencias ────────────────────────────────────────────────
+    # ── 6. References ─────────────────────────────────────────────────
     lines.append("-" * 70)
-    lines.append("6. REFERENCIAS DEL MODELO FÍSICO")
+    lines.append("6. PHYSICAL MODEL REFERENCES")
     lines.append("-" * 70)
     lines.append("")
     lines.append("  [1] Saravanamuttoo, H.I.H. et al. (2017). Gas Turbine Theory,")
-    lines.append("      7ª ed. Pearson. §5.3, ec. 5.14.")
-    lines.append("  [2] Cumpsty, N.A. (2004). Compressor Aerodynamics, 2ª ed.")
+    lines.append("      7th ed. Pearson. §5.3, eq. 5.14.")
+    lines.append("  [2] Cumpsty, N.A. (2004). Compressor Aerodynamics, 2nd ed.")
     lines.append("      Krieger. p. 280, ch. 8, fig. 8.10.")
     lines.append("  [3] Dixon, S.L. & Hall, C.A. (2013). Fluid Mechanics and")
-    lines.append("      Thermodynamics of Turbomachinery, 7ª ed. Butterworth. §7.4.")
+    lines.append("      Thermodynamics of Turbomachinery, 7th ed. Butterworth. §7.4.")
     lines.append("  [4] Wisler, D.C. (1998). The technical and economic relevance of")
     lines.append("      understanding blade row interaction effects in turbomachinery.")
     lines.append("      VKI Lecture Series.")
@@ -212,19 +212,19 @@ def generate_sfc_summary(
     lines.append("      Compressors. J. Turbomachinery, 133(3):031007.")
     lines.append("")
 
-    # ── 7. Misión — ahorro total de combustible ───────────────────────────
+    # ── 7. Mission — total fuel saving ────────────────────────────────────
     if mission_summary is not None and mission_summary.total_fuel_baseline_kg > 0:
         lines.append("-" * 70)
-        lines.append("7. MISIÓN — AHORRO TOTAL DE COMBUSTIBLE")
+        lines.append("7. MISSION — TOTAL FUEL SAVING")
         lines.append("-" * 70)
         lines.append("")
-        lines.append("  Modelo: fuel_phase = SFC(phase) × thrust_lbf × duration_hr × 0.453592")
-        lines.append("  Ref: CORSIA (2022) — factor CO₂/kerosene = 3.16 kg/kg")
+        lines.append("  Model: fuel_phase = SFC(phase) × thrust_lbf × duration_hr × 0.453592")
+        lines.append("  Ref: CORSIA (2022) — CO₂/kerosene factor = 3.16 kg/kg")
         lines.append("")
         header_m = (
-            f"  {'Fase':<10}  {'Dur [min]':>9}  {'Emp [kN]':>8}  "
+            f"  {'Phase':<10}  {'Dur [min]':>9}  {'Thr [kN]':>8}  "
             f"{'Fuel base [kg]':>14}  {'Fuel VPF [kg]':>13}  "
-            f"{'Ahorro [kg]':>11}  {'CO₂ [kg]':>9}  {'Coste [$]':>9}"
+            f"{'Saving [kg]':>11}  {'CO₂ [kg]':>9}  {'Cost [$]':>9}"
         )
         lines.append(header_m)
         lines.append("  " + "-" * 94)
@@ -245,7 +245,7 @@ def generate_sfc_summary(
             f"{mission_summary.total_cost_saving_usd:>9.2f}"
         )
         lines.append("")
-        lines.append(f"  Ahorro relativo por misión: {mission_summary.total_fuel_saving_pct:.2f}%")
+        lines.append(f"  Relative mission saving: {mission_summary.total_fuel_saving_pct:.2f}%")
         lines.append("")
 
     lines.append("=" * 70)

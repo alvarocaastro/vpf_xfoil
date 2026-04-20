@@ -1,28 +1,28 @@
 """
 cascade_correction_service.py
 ------------------------------
-Correcciones de cascada para el fan de paso variable.
+Cascade corrections for the variable pitch fan.
 
-En un fan real, las palas no operan como perfiles aislados sino en cascada:
-la interferencia mutua modifica la sustentación efectiva y el ángulo de salida
-del flujo. La magnitud del efecto depende de la solidez σ = c/s, donde
-s = 2πr/Z es la separación circunferencial entre palas.
+In a real fan, blades do not operate as isolated aerofoils but in cascade:
+mutual interference modifies the effective lift and the flow exit angle.
+The magnitude of the effect depends on solidity σ = c/s, where
+s = 2πr/Z is the circumferential blade spacing.
 
-Modelos implementados:
+Models implemented:
 
-1. Factor de Weinig (corrección de la pendiente de sustentación en cascada)
+1. Weinig factor (cascade lift-slope correction)
    CL_cascade = CL_2D · K_weinig
    K_weinig = (π/2 · σ) / arctan(π · σ / 2)
-   Referencia: Dixon & Hall (2013), ec. 3.54; Cumpsty (2004), cap. 3
+   Reference: Dixon & Hall (2013), eq. 3.54; Cumpsty (2004), ch. 3
 
-2. Regla de Carter (ángulo de desviación de salida)
+2. Carter rule (exit deviation angle)
    δ_carter = m · θ / √σ
-   m = 0.23  (para NACA 6-series con a/c = 0.5)
-   θ = ángulo de combadura [°]
-   Referencia: Carter (1950), NACA TN-2273; ESDU 05017
+   m = 0.23  (for NACA 6-series with a/c = 0.5)
+   θ = camber angle [°]
+   Reference: Carter (1950), NACA TN-2273; ESDU 05017
 
 Outputs:
-    CascadeResult por sección (geométrico, independiente de condición de vuelo)
+    CascadeResult per section (geometric, independent of flight condition)
 """
 
 from __future__ import annotations
@@ -34,47 +34,47 @@ from typing import Dict, List
 import pandas as pd
 
 
-# Coeficiente m de la regla de Carter para NACA 6-series (a/c = 0.5)
-# Se lee de PhysicsConstants para mantener consistencia con settings.py
+# Carter rule coefficient m for NACA 6-series (a/c = 0.5)
+# Read from PhysicsConstants to stay consistent with settings.py
 from vfp_analysis.settings import get_settings as _get_settings
 _CARTER_M_NACA6: float = _get_settings().physics.CARTER_M_NACA6
 
 
 @dataclass
 class CascadeResult:
-    """Resultado de las correcciones de cascada para una sección de pala."""
+    """Cascade correction results for a blade section."""
     section: str
     radius_m: float
     chord_m: float
     blade_spacing_m: float       # s = 2πr / Z  [m]
     solidity: float              # σ = c / s     [—]
-    k_weinig: float              # factor de corrección de CL en cascada  [—]
-    delta_carter_deg: float      # ángulo de desviación de Carter  [°]
-    cl_2d_at_alpha_opt: float    # CL_2D en α_opt (antes de corrección)  [—]
-    cl_cascade_at_alpha_opt: float  # CL en cascada en α_opt  [—]
+    k_weinig: float              # cascade CL correction factor  [—]
+    delta_carter_deg: float      # Carter deviation angle  [°]
+    cl_2d_at_alpha_opt: float    # CL_2D at α_opt (before correction)  [—]
+    cl_cascade_at_alpha_opt: float  # cascade CL at α_opt  [—]
 
 
 def _weinig_factor(sigma: float) -> float:
-    """Factor de Weinig para la pendiente de sustentación en cascada.
+    """Weinig factor for the cascade lift slope.
 
-    Ajuste lineal empírico calibrado a los datos de ESDU 05017 y Cumpsty (2004,
-    cap. 3, fig. 3.6) para cascadas de fan de alto bypass con stagger 20–50°:
+    Empirical linear fit calibrated to ESDU 05017 and Cumpsty (2004,
+    ch. 3, fig. 3.6) for high-bypass fan cascades with stagger 20–50°:
 
-        K_weinig ≈ 1 − 0.12·σ     (cota inferior 0.78, cota superior 0.99)
+        K_weinig ≈ 1 − 0.12·σ     (lower bound 0.78, upper bound 0.99)
 
-    Valores característicos del GE9X:
-        σ = 0.69 (tip)   → K ≈ 0.92   ( −8% vs perfil aislado)
+    Representative GE9X values:
+        σ = 0.69 (tip)   → K ≈ 0.92   ( −8% vs isolated aerofoil)
         σ = 1.17 (mid)   → K ≈ 0.86   (−14%)
         σ = 1.73 (root)  → K ≈ 0.79   (−21%)
 
-    Límites físicos: σ→0 → K=1 (aislado); σ→∞ → K→0.78 (cap mínimo).
+    Physical limits: σ→0 → K=1 (isolated); σ→∞ → K→0.78 (minimum cap).
 
-    Nota: la fórmula teórica de Weinig/Schlichting para cascada axial pura
-    [arctan(πσ/2)/(πσ/2)] da correcciones demasiado agresivas (K≈0.45–0.77)
-    para fans con stagger grande. El ajuste lineal es más conservador y se
-    corresponde mejor con datos de ensayo de fan GE-class (ESDU 05017, sec. 5).
+    Note: the theoretical Weinig/Schlichting formula for a pure axial cascade
+    [arctan(πσ/2)/(πσ/2)] gives overly aggressive corrections (K≈0.45–0.77)
+    for fans with large stagger. The linear fit is more conservative and
+    agrees better with GE-class fan test data (ESDU 05017, sec. 5).
 
-    Referencia: ESDU 05017 (2005); Cumpsty (2004), cap. 3, fig. 3.6.
+    Reference: ESDU 05017 (2005); Cumpsty (2004), ch. 3, fig. 3.6.
     """
     if sigma <= 0.0:
         return 1.0
@@ -83,25 +83,25 @@ def _weinig_factor(sigma: float) -> float:
 
 
 def _carter_deviation(theta_deg: float, sigma: float, m: float = _CARTER_M_NACA6) -> float:
-    """Ángulo de desviación de salida según la regla de Carter.
+    """Exit deviation angle according to Carter's rule.
 
     δ = m · θ / √σ
 
-    Parámetros
+    Parameters
     ----------
     theta_deg : float
-        Ángulo de combadura de la pala [°].
+        Blade camber angle [°].
     sigma : float
-        Solidez de la cascada σ = c/s [—].
+        Cascade solidity σ = c/s [—].
     m : float
-        Coeficiente de Carter (0.23 para NACA 6-series).
+        Carter coefficient (0.23 for NACA 6-series).
 
-    Retorna
+    Returns
     -------
     float
-        Ángulo de desviación δ [°].
+        Deviation angle δ [°].
 
-    Referencia: Carter (1950), NACA TN-2273; ESDU 05017
+    Reference: Carter (1950), NACA TN-2273; ESDU 05017
     """
     if sigma <= 0.0:
         return 0.0
@@ -113,23 +113,23 @@ def compute_cascade_corrections(
     alpha_opt_by_section: Dict[str, float],
     df_polars: pd.DataFrame,
 ) -> List[CascadeResult]:
-    """Calcula las correcciones de cascada para cada sección de pala.
+    """Compute cascade corrections for each blade section.
 
-    Las correcciones son geométricas (dependen de r, c, Z, θ) y no de la
-    condición de vuelo. Se evalúan en el α_opt de crucero de cada sección.
+    The corrections are geometric (depend on r, c, Z, θ) and not on flight
+    condition. They are evaluated at the cruise α_opt of each section.
 
-    Parámetros
+    Parameters
     ----------
     blade_geometry : dict
-        Salida de config_loader.get_blade_geometry().
-        Claves: num_blades, chord (dict), theta_camber_deg.
+        Output of config_loader.get_blade_geometry().
+        Keys: num_blades, chord (dict), theta_camber_deg.
     alpha_opt_by_section : dict[str, float]
-        α_opt en crucero por sección (para evaluar CL_2D de referencia).
+        α_opt at cruise per section (to evaluate the reference CL_2D).
     df_polars : pd.DataFrame
-        DataFrame de polares (columnas: section, condition, alpha, CL_CD o ld,
-        cl o cl_corrected, cd o cd_corrected).
+        Polars DataFrame (columns: section, condition, alpha, CL_CD or ld,
+        cl or cl_corrected, cd or cd_corrected).
 
-    Retorna
+    Returns
     -------
     List[CascadeResult]
     """
@@ -144,13 +144,13 @@ def compute_cascade_corrections(
 
     for section, r in radii.items():
         c = chords.get(section, 0.10)
-        s = 2.0 * math.pi * r / Z          # separación circunferencial [m]
-        sigma = c / s                        # solidez [—]
+        s = 2.0 * math.pi * r / Z          # circumferential blade spacing [m]
+        sigma = c / s                        # solidity [—]
 
         k_w = _weinig_factor(sigma)
         delta_c = _carter_deviation(theta, sigma)
 
-        # CL_2D en α_opt_cruise de esta sección
+        # CL_2D at α_opt_cruise for this section
         alpha_ref = alpha_opt_by_section.get(section, float("nan"))
         cl_2d = _lookup_cl(df_polars, section, "cruise", alpha_ref)
         cl_cascade = cl_2d * k_w if not math.isnan(cl_2d) else float("nan")
@@ -175,24 +175,24 @@ def apply_weinig_to_polar(
     k_weinig: float,
     cl_col: str = "cl",
 ) -> pd.DataFrame:
-    """Aplica la corrección de Weinig a una polar completa.
+    """Apply the Weinig correction to a full polar.
 
-    Crea columna ``cl_cascade`` = cl_col × K_weinig y recalcula
+    Creates column ``cl_cascade`` = cl_col × K_weinig and recalculates
     ``ld_cascade`` = cl_cascade / cd.
 
-    Parámetros
+    Parameters
     ----------
     df : pd.DataFrame
-        DataFrame de polar con columnas cl_col y 'cd'.
+        Polar DataFrame with columns cl_col and 'cd'.
     k_weinig : float
-        Factor de Weinig para esta sección.
+        Weinig factor for this section.
     cl_col : str
-        Nombre de la columna de CL de entrada.
+        Name of the input CL column.
 
-    Retorna
+    Returns
     -------
     pd.DataFrame
-        DataFrame con columnas añadidas: cl_cascade, ld_cascade.
+        DataFrame with added columns: cl_cascade, ld_cascade.
     """
     df = df.copy()
     cd_col = "cd_corrected" if "cd_corrected" in df.columns else "cd"
@@ -212,7 +212,7 @@ def _lookup_cl(
     alpha: float,
     tol: float = 0.5,
 ) -> float:
-    """Devuelve CL interpolado en (section, condition, alpha) del DataFrame de polares."""
+    """Return interpolated CL at (section, condition, alpha) from the polars DataFrame."""
     if math.isnan(alpha):
         return float("nan")
 

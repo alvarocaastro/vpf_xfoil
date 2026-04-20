@@ -208,7 +208,7 @@ def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
                 low_eff = df[df["max_efficiency"] < EFF_THRESHOLD]
                 if not low_eff.empty:
                     lines += [""]
-                    lines += [f"AVISO — Casos con (CL/CD)_max < {EFF_THRESHOLD:.0f} (penalizacion por wave drag):"]
+                    lines += [f"WARNING — Cases with (CL/CD)_max < {EFF_THRESHOLD:.0f} (wave drag penalty):"]
                     for _, row in low_eff.iterrows():
                         lines += [
                             f"     {row['flight_condition']}/{row['blade_section']}: "
@@ -217,14 +217,14 @@ def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
 
                 # Design reference summary
                 if "alpha_design_deg" in df.columns and "delta_alpha_deg" in df.columns:
-                    lines += ["", "Referencia de diseno: alpha_opt de crucero por seccion"]
+                    lines += ["", "Design reference: cruise alpha_opt per section"]
                     cruise = df[df["flight_condition"] == "cruise"]
                     for _, row in cruise.sort_values("blade_section").iterrows():
                         lines += [
                             f"  {row['blade_section']:10s}: alpha_design = {row['alpha_design_deg']:.2f}"
                         ]
 
-                    lines += ["", "Ajuste VPF requerido (delta_alpha) por condicion:"]
+                    lines += ["", "VPF pitch adjustment required (delta_alpha) per condition:"]
                     non_cruise = df[df["flight_condition"] != "cruise"]
                     for cond in ["takeoff", "climb", "descent"]:
                         sub = non_cruise[non_cruise["flight_condition"] == cond]
@@ -233,11 +233,11 @@ def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
                         lines += [
                             f"  {cond:8s}: {sub['delta_alpha_deg'].min():.1f} – "
                             f"{sub['delta_alpha_deg'].max():.1f}  "
-                            f"(media {sub['delta_alpha_deg'].mean():.1f})"
+                            f"(mean {sub['delta_alpha_deg'].mean():.1f})"
                         ]
 
                     if "eff_gain_pct" in df.columns:
-                        lines += ["", "Ganancia de eficiencia VPF (eff_gain_pct):"]
+                        lines += ["", "VPF efficiency gain (eff_gain_pct):"]
                         for cond in ["takeoff", "climb", "descent"]:
                             sub = non_cruise[non_cruise["flight_condition"] == cond]
                             if sub.empty:
@@ -245,7 +245,7 @@ def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
                             lines += [
                                 f"  {cond:8s}: {sub['eff_gain_pct'].min():.1f}% – "
                                 f"{sub['eff_gain_pct'].max():.1f}%  "
-                                f"(media {sub['eff_gain_pct'].mean():.1f}%)"
+                                f"(mean {sub['eff_gain_pct'].mean():.1f}%)"
                             ]
         except Exception:
             pass
@@ -260,17 +260,17 @@ def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
         f"  clcd_max_by_section.csv → {tables_dir / 'clcd_max_by_section.csv'}",
         "",
         f"Figures generated: {n_figs}",
-        "  design_reference_root.png         — curvas CL/CD vs alpha, seccion root",
-        "  design_reference_mid_span.png     — curvas CL/CD vs alpha, seccion mid_span",
-        "  design_reference_tip.png          — curvas CL/CD vs alpha, seccion tip",
-        "  efficiency_penalty_overview.png   — figura resumen con anotaciones delta",
+        "  design_reference_root.png         — CL/CD vs alpha curves, root section",
+        "  design_reference_mid_span.png     — CL/CD vs alpha curves, mid_span section",
+        "  design_reference_tip.png          — CL/CD vs alpha curves, tip section",
+        "  efficiency_penalty_overview.png   — overview figure with delta annotations",
     ]
     lines += _footer()
     return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
-# Stage 5 — Pitch & Kinematics (fusión de los anteriores Stage 6 + Stage 7)
+# Stage 5 — Pitch & Kinematics (merged from former Stage 6 + Stage 7)
 # ---------------------------------------------------------------------------
 
 def generate_stage5_summary(stage_dir: Path) -> str:
@@ -279,8 +279,8 @@ def generate_stage5_summary(stage_dir: Path) -> str:
 
     lines = _header(5, "PITCH & KINEMATICS ANALYSIS (FULL 3D AERODYNAMICS)")
     lines += [
-        "Cascada (Weinig/Carter) + correcciones rotacionales 3D (Snel) + twist de diseño",
-        "+ carga de etapa (Euler, φ-ψ) + triángulos de velocidad (Δβ_mech).",
+        "Cascade (Weinig/Carter) + 3D rotational corrections (Snel) + design twist",
+        "+ stage loading (Euler, φ-ψ) + velocity triangles (Δβ_mech).",
         "",
     ]
 
@@ -290,7 +290,7 @@ def generate_stage5_summary(stage_dir: Path) -> str:
         try:
             df = pd.read_csv(cascade_file)
             if not df.empty:
-                lines += ["── Correcciones de cascada (Weinig + Carter) ──────────────"]
+                lines += ["── Cascade corrections (Weinig + Carter) ──────────────────"]
                 for _, row in df.iterrows():
                     lines += [
                         f"  {row['section']:10s}: σ={row['solidity']:.3f}  "
@@ -307,15 +307,15 @@ def generate_stage5_summary(stage_dir: Path) -> str:
         try:
             df = pd.read_csv(rot_file)
             if not df.empty:
-                lines += ["── Correcciones rotacionales 3D (Snel 1994) ───────────────"]
+                lines += ["── 3D rotational corrections (Snel 1994) ──────────────────"]
                 for cond in df["condition"].unique():
                     sub = df[df["condition"] == cond]
                     gains = sub["CL_gain_pct"].dropna()
                     if gains.empty:
                         continue
                     lines += [
-                        f"  {cond:8s}: ganancia CL  {gains.min():.1f}% – {gains.max():.1f}%  "
-                        f"(media {gains.mean():.1f}%)"
+                        f"  {cond:8s}: CL gain  {gains.min():.1f}% – {gains.max():.1f}%  "
+                        f"(mean {gains.mean():.1f}%)"
                     ]
                 # α_opt shift 2D → 3D
                 if "alpha_opt_2D_deg" in df.columns and "alpha_opt_3D_deg" in df.columns:
@@ -335,7 +335,7 @@ def generate_stage5_summary(stage_dir: Path) -> str:
             if not df.empty:
                 col_alpha = "alpha_opt" if "alpha_opt" in df.columns else df.columns[2]
                 col_clcd  = "CL_CD_max" if "CL_CD_max" in df.columns else None
-                lines += ["── Incidencia óptima 3D ───────────────────────────────────"]
+                lines += ["── 3D optimal incidence ───────────────────────────────────"]
                 lines += [
                     f"  α_opt_3D : {df[col_alpha].min():.1f}° – {df[col_alpha].max():.1f}°  "
                     f"(media {df[col_alpha].mean():.1f}°)",
@@ -352,7 +352,7 @@ def generate_stage5_summary(stage_dir: Path) -> str:
         try:
             df = pd.read_csv(twist_file)
             if not df.empty and "beta_metal_deg" in df.columns:
-                lines += ["── Twist de diseño (crucero) ──────────────────────────────"]
+                lines += ["── Design twist (cruise) ──────────────────────────────────"]
                 for _, row in df.iterrows():
                     lines += [
                         f"  {row['section']:10s}: β_metal={row['beta_metal_deg']:.2f}°  "
@@ -362,7 +362,7 @@ def generate_stage5_summary(stage_dir: Path) -> str:
                 # Total twist
                 bm = df["beta_metal_deg"].dropna()
                 if len(bm) >= 2:
-                    lines += [f"  Twist total (root−tip): {bm.max() - bm.min():.2f}°"]
+                    lines += [f"  Total twist (root−tip): {bm.max() - bm.min():.2f}°"]
                 lines += [""]
         except Exception:
             pass
@@ -373,14 +373,14 @@ def generate_stage5_summary(stage_dir: Path) -> str:
         try:
             df = pd.read_csv(offdesign_file)
             if not df.empty and "efficiency_loss_pct" in df.columns:
-                lines += ["── Compromiso span-wise off-design ────────────────────────"]
+                lines += ["── Off-design span-wise compromise ────────────────────────"]
                 for cond in [c for c in ["takeoff", "climb", "descent"] if c in df["condition"].unique()]:
                     sub = df[df["condition"] == cond]["efficiency_loss_pct"].dropna()
                     if sub.empty:
                         continue
                     lines += [
-                        f"  {cond:8s}: pérdida eficiencia {sub.min():.1f}% – {sub.max():.1f}%  "
-                        f"(media {sub.mean():.1f}%)"
+                        f"  {cond:8s}: efficiency loss {sub.min():.1f}% – {sub.max():.1f}%  "
+                        f"(mean {sub.mean():.1f}%)"
                     ]
                 lines += [""]
         except Exception:
@@ -394,9 +394,9 @@ def generate_stage5_summary(stage_dir: Path) -> str:
             if not df.empty and "delta_beta_mech_deg" in df.columns:
                 non_cruise = df[df["condition"] != "cruise"]
                 if not non_cruise.empty:
-                    lines += ["── Cinemática — comando de actuador ───────────────────────"]
+                    lines += ["── Kinematics — actuator command ──────────────────────────"]
                     lines += [
-                        f"  Δβ_mech (no crucero): "
+                        f"  Δβ_mech (non-cruise): "
                         f"{non_cruise['delta_beta_mech_deg'].min():.2f}° – "
                         f"{non_cruise['delta_beta_mech_deg'].max():.2f}°",
                     ]
@@ -404,45 +404,45 @@ def generate_stage5_summary(stage_dir: Path) -> str:
         except Exception:
             pass
 
-    # --- Stage loading (ideal: pitch libre por condición) ---
+    # --- Stage loading (ideal: free pitch per condition) ---
     loading_file = tables_dir / "stage_loading.csv"
     if loading_file.exists():
         try:
             df = pd.read_csv(loading_file)
             if not df.empty:
-                lines += ["── Carga de etapa — ideal (α = α_opt_3D) ──────────────────"]
+                lines += ["── Stage loading — ideal (α = α_opt_3D) ───────────────────"]
                 phi = df["phi_coeff"].dropna()
                 psi = df["psi_loading"].dropna()
                 w   = df["W_specific_kJ_kg"].dropna()
                 in_zone = df["in_design_zone"].sum() if "in_design_zone" in df.columns else "?"
                 total   = len(df)
                 lines += [
-                    f"  φ (caudal)  : {phi.min():.3f} – {phi.max():.3f}  (media {phi.mean():.3f})",
-                    f"  ψ (trabajo) : {psi.min():.3f} – {psi.max():.3f}  (media {psi.mean():.3f})",
+                    f"  φ (flow)    : {phi.min():.3f} – {phi.max():.3f}  (mean {phi.mean():.3f})",
+                    f"  ψ (work)    : {psi.min():.3f} – {psi.max():.3f}  (mean {psi.mean():.3f})",
                     f"  W_spec      : {w.min():.2f} – {w.max():.2f} kJ/kg",
-                    f"  Puntos en zona de diseño: {in_zone}/{total}",
+                    f"  Points in design zone: {in_zone}/{total}",
                 ]
                 lines += [""]
         except Exception:
             pass
 
-    # --- Stage loading (real: actuador único) ---
+    # --- Stage loading (actual: single actuator) ---
     loading_actual_file = tables_dir / "stage_loading_single_actuator.csv"
     if loading_actual_file.exists():
         try:
             df = pd.read_csv(loading_actual_file)
             if not df.empty:
-                lines += ["── Carga de etapa — real (actuador único, α = α_actual) ──"]
+                lines += ["── Stage loading — actual (single actuator, α = α_actual) ─"]
                 psi = df["psi_loading"].dropna()
                 w   = df["W_specific_kJ_kg"].dropna()
                 in_zone = df["in_design_zone"].sum() if "in_design_zone" in df.columns else "?"
                 total   = len(df)
                 lines += [
-                    f"  ψ (trabajo) : {psi.min():.3f} – {psi.max():.3f}  (media {psi.mean():.3f})",
+                    f"  ψ (work)    : {psi.min():.3f} – {psi.max():.3f}  (mean {psi.mean():.3f})",
                     f"  W_spec      : {w.min():.2f} – {w.max():.2f} kJ/kg",
-                    f"  Puntos en zona de diseño: {in_zone}/{total}",
-                    "  Nota: zona Dixon & Hall es para fan de paso fijo a PR objetivo;",
-                    "        el VPF opera bajo ψ para ganar CL/CD (trade-off de diseño).",
+                    f"  Points in design zone: {in_zone}/{total}",
+                    "  Note: Dixon & Hall zone is for a fixed-pitch fan at a target PR;",
+                    "        VPF operates at lower ψ to gain CL/CD (design trade-off).",
                 ]
                 lines += [""]
         except Exception:
@@ -450,8 +450,8 @@ def generate_stage5_summary(stage_dir: Path) -> str:
 
     n_figs = len(list(figures_dir.glob("*.png"))) if figures_dir.exists() else 0
     lines += [
-        f"Figuras generadas : {n_figs}",
-        "Tablas exportadas : cascade_corrections, rotational_corrections,",
+        f"Figures generated : {n_figs}",
+        "Tables exported   : cascade_corrections, rotational_corrections,",
         "                    optimal_incidence, pitch_adjustment, blade_twist_design,",
         "                    off_design_incidence, stage_loading,",
         "                    stage_loading_single_actuator, kinematics_analysis",
@@ -471,8 +471,8 @@ def generate_stage6_summary(stage_dir: Path) -> str:
 
     lines = _header(6, "VPF REVERSE THRUST MODELING")
     lines += [
-        "Modelado BEM de la reversa de empuje con pala a paso negativo.",
-        "dT/dr = Z·0.5ρW²c·(CL sinφ − CD cosφ)  por sección de pala.",
+        "BEM modelling of reverse thrust with blade at negative pitch.",
+        "dT/dr = Z·0.5ρW²c·(CL sinφ − CD cosφ)  per blade section.",
         "",
     ]
 
@@ -481,9 +481,9 @@ def generate_stage6_summary(stage_dir: Path) -> str:
             idx = pd.read_csv(optimal_csv).set_index("metric")["value"]
             lines += [
                 f"delta_beta_opt       : {float(idx.get('delta_beta_opt_deg', float('nan'))):.1f} deg",
-                f"Empuje inverso       : {abs(float(idx.get('thrust_net_kN', float('nan')))):.1f} kN"
-                f"  ({float(idx.get('thrust_fraction_pct', float('nan'))):.1f}% del empuje fwd)",
-                f"Eficiencia fan rev.  : {float(idx.get('eta_fan_rev', float('nan'))):.3f}",
+                f"Reverse thrust       : {abs(float(idx.get('thrust_net_kN', float('nan')))):.1f} kN"
+                f"  ({float(idx.get('thrust_fraction_pct', float('nan'))):.1f}% of fwd thrust)",
+                f"Fan efficiency rev.  : {float(idx.get('eta_fan_rev', float('nan'))):.3f}",
             ]
         except Exception:
             pass
@@ -492,9 +492,9 @@ def generate_stage6_summary(stage_dir: Path) -> str:
         try:
             idx = pd.read_csv(mw_csv).set_index("metric")["value"]
             lines += [
-                f"Peso mecanismo VPF   : {float(idx.get('mechanism_weight_kg', float('nan'))):.0f} kg (ambos motores)",
-                f"Ahorro vs reversor cascada: {float(idx.get('weight_saving_vs_conventional_kg', float('nan'))):.0f} kg",
-                f"Penalización SFC crucero : +{float(idx.get('sfc_cruise_penalty_pct', float('nan'))):.3f}%",
+                f"VPF mechanism weight : {float(idx.get('mechanism_weight_kg', float('nan'))):.0f} kg (both engines)",
+                f"Saving vs cascade rev: {float(idx.get('weight_saving_vs_conventional_kg', float('nan'))):.0f} kg",
+                f"Cruise SFC penalty   : +{float(idx.get('sfc_cruise_penalty_pct', float('nan'))):.3f}%",
             ]
         except Exception:
             pass
@@ -513,9 +513,9 @@ def generate_stage7_summary(stage_dir: Path) -> str:
 
     lines = _header(7, "SPECIFIC FUEL CONSUMPTION (SFC) IMPACT ANALYSIS")
     lines += [
-        "Estima la reducción de SFC debida al VPF con paso óptimo.",
+        "Estimates the SFC reduction due to VPF with optimal pitch.",
         "η_fan,new = η_base·[1 + τ·((CL/CD)_new/(CL/CD)_base − 1)]",
-        "Factor de amortiguamiento τ = 0.50  (pérdidas 3D: huelgo, flujos secundarios).",
+        "Damping factor τ = 0.50  (3D losses: tip clearance, secondary flows).",
         "",
     ]
 
@@ -526,15 +526,15 @@ def generate_stage7_summary(stage_dir: Path) -> str:
                 mean_red = df["SFC_reduction_percent"].mean()
                 max_red  = df["SFC_reduction_percent"].max()
                 lines += [
-                    f"Reducción SFC rango  : {df['SFC_reduction_percent'].min():.2f}% – {max_red:.2f}%",
-                    f"Media                : {mean_red:.2f}%",
+                    f"SFC reduction range  : {df['SFC_reduction_percent'].min():.2f}% – {max_red:.2f}%",
+                    f"Mean                 : {mean_red:.2f}%",
                 ]
         except Exception:
             pass
 
     lines += [
         "",
-        "Outputs: tabla de SFC, figuras comparativas y resumen generados.",
+        "Outputs: SFC table, comparison figures, and summary generated.",
     ]
     lines += _footer()
     return "\n".join(lines)

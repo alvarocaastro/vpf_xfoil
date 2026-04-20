@@ -1,27 +1,27 @@
 """
 run_sfc_analysis.py
 -------------------
-Orquestador del Stage 6: Análisis de Consumo Específico de Combustible (SFC).
+Stage 7 orchestrator: Specific Fuel Consumption (SFC) Analysis.
 
-Lee los datos de rendimiento aerodináimico de Stage 4 y estima la reducción de SFC
-que permite el fan de paso variable, comparando VPF (α_opt) vs paso fijo (α_design).
+Reads aerodynamic performance data from Stage 4 and estimates the SFC reduction
+enabled by the variable pitch fan, comparing VPF (α_opt) vs fixed pitch (α_design).
 
 Inputs:
     results/stage4_performance_metrics/tables/summary_table.csv
     config/engine_parameters.yaml
 
-Outputs (en results/stage7_sfc_analysis/):
-    tables/sfc_section_breakdown.csv     — ε, Δη por condición × sección
-    tables/sfc_analysis.csv              — resultados agregados por condición
-    tables/sfc_sensitivity.csv           — barrido de τ × condición
-    tables/mission_fuel_burn.csv         — ahorro de combustible por fase de misión
-    figures/fixed_vs_vpf_efficiency.png    — CL/CD_fixed vs CL/CD_vpf por sección
-    figures/epsilon_spanwise.png           — ε_eff(r) capeado por sección y condición
-    figures/sfc_sensitivity_tau.png        — sensibilidad de ΔSFC a τ
-    figures/sfc_combined.png               — SFC base/VPF (izq.) + % reducción (der.)
-    figures/fan_efficiency_improvement.png — η_fan base vs VPF por condición
-    figures/efficiency_mechanism_breakdown.png — desglose Δη perfil vs mapa por condición
-    figures/mission_fuel_burn.png          — ahorro de combustible, CO₂ y coste por fase
+Outputs (in results/stage7_sfc_analysis/):
+    tables/sfc_section_breakdown.csv     — ε, Δη per condition × section
+    tables/sfc_analysis.csv              — aggregated results per condition
+    tables/sfc_sensitivity.csv           — τ sweep × condition
+    tables/mission_fuel_burn.csv         — fuel saving per mission phase
+    figures/fixed_vs_vpf_efficiency.png    — CL/CD_fixed vs CL/CD_vpf per section
+    figures/epsilon_spanwise.png           — capped ε_eff(r) per section and condition
+    figures/sfc_sensitivity_tau.png        — ΔSFC sensitivity to τ
+    figures/sfc_combined.png               — SFC base/VPF (left) + % reduction (right)
+    figures/fan_efficiency_improvement.png — baseline vs VPF η_fan per condition
+    figures/efficiency_mechanism_breakdown.png — Δη profile vs map breakdown per condition
+    figures/mission_fuel_burn.png          — fuel saving, CO₂ and cost per phase
     sfc_analysis_summary.txt
     finalresults_stage6.txt
 """
@@ -102,7 +102,7 @@ def _plot_fixed_vs_vpf_efficiency(
     section_results: List[SfcSectionResult],
     figures_dir: Path,
 ) -> None:
-    """2×2 subplots: CL/CD paso fijo vs VPF por sección, para cada condición."""
+    """2×2 subplots: CL/CD fixed pitch vs VPF per section, for each condition."""
     fig, axes = plt.subplots(2, 2, figsize=(11, 8), sharey=False)
     conditions = [c for c in _CONDITIONS_ORDER]
 
@@ -114,7 +114,7 @@ def _plot_fixed_vs_vpf_efficiency(
         vpf   = [next((r.cl_cd_vpf   for r in subset if r.blade_section == s), 0.0)
                  for s in _SECTIONS_ORDER]
 
-        bars_f = ax.bar(x - 0.20, fixed, 0.35, label=r"Paso fijo ($\alpha_{design}$)",
+        bars_f = ax.bar(x - 0.20, fixed, 0.35, label=r"Fixed pitch ($\alpha_{design}$)",
                         color=_COLOR_BASELINE, edgecolor="white", linewidth=0.5, zorder=3)
         bars_v = ax.bar(x + 0.20, vpf,   0.35, label=r"VPF ($\alpha_{opt}$)",
                         color=_COLOR_VPF,      edgecolor="white", linewidth=0.5, zorder=3)
@@ -128,7 +128,7 @@ def _plot_fixed_vs_vpf_efficiency(
         ax.grid(axis="y", alpha=0.3)
 
     fig.suptitle(
-        "Eficiencia de perfil: paso fijo vs VPF por sección de pala",
+        "Profile efficiency: fixed pitch vs VPF per blade section",
         fontsize=11, fontweight="bold", y=1.01,
     )
     fig.tight_layout()
@@ -140,11 +140,11 @@ def _plot_epsilon_spanwise(
     section_results: List[SfcSectionResult],
     figures_dir: Path,
 ) -> None:
-    """Barras agrupadas: ε_eff capeado por sección y condición.
+    """Grouped bars: capped ε_eff per section and condition.
 
-    Las barras muestran epsilon_eff = min(ε, 1.10), que es el valor que realmente
-    se transfiere a la eficiencia del fan.  Cuando ε_bruto > 1.10 se anota el valor
-    real sobre la barra correspondiente para evidenciar la magnitud de la ganancia.
+    Bars show epsilon_eff = min(ε, 1.10), which is the value actually transferred
+    to fan efficiency. When ε_raw > 1.10 the actual value is annotated above the
+    corresponding bar to show the magnitude of the gain.
     """
     from vfp_analysis.stage7_sfc_analysis.core.domain.sfc_parameters import EPSILON_CAP
 
@@ -222,10 +222,10 @@ def _plot_sfc_sensitivity_tau(
 
     ax.axvline(0.65, ls="--", color="gray", lw=1.2, alpha=0.8, label=r"$\tau$ nominal = 0.65")
     ax.axhspan(2.0, 5.0, alpha=0.08, color="#228833",
-               label="Banda de referencia 2–5% (Cumpsty 2004)")
-    ax.set_xlabel("Coeficiente de transferencia de eficiencia τ [–]")
-    ax.set_ylabel("Reducción de SFC [%]")
-    ax.set_title(r"Sensibilidad del $\Delta$SFC al coeficiente de transferencia τ", fontweight="bold")
+               label="Reference band 2–5% (Cumpsty 2004)")
+    ax.set_xlabel("Efficiency transfer coefficient τ [–]")
+    ax.set_ylabel("SFC reduction [%]")
+    ax.set_title(r"$\Delta$SFC sensitivity to transfer coefficient τ", fontweight="bold")
     ax.legend(fontsize=8)
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
@@ -253,15 +253,15 @@ def _plot_sfc_combined(
     fig, (ax_sfc, ax_pct) = plt.subplots(1, 2, figsize=(13, 5.5))
 
     # ── Panel izquierdo: SFC absoluto ───────────────────────────────────────
-    bars_b = ax_sfc.bar(x - width / 2, sfc_base, width, label="Paso fijo (referencia)",
+    bars_b = ax_sfc.bar(x - width / 2, sfc_base, width, label="Fixed pitch (reference)",
                         color=_COLOR_BASELINE, edgecolor="white", linewidth=0.6, zorder=3)
-    bars_v = ax_sfc.bar(x + width / 2, sfc_new,  width, label="VPF (paso variable)",
+    bars_v = ax_sfc.bar(x + width / 2, sfc_new,  width, label="VPF (variable pitch)",
                         color=_COLOR_VPF,      edgecolor="white", linewidth=0.6, zorder=3)
     ax_sfc.bar_label(bars_b, fmt="%.4f", padding=3, fontsize=7)
     ax_sfc.bar_label(bars_v, fmt="%.4f", padding=3, fontsize=7)
-    ax_sfc.set_xlabel("Condición de vuelo")
+    ax_sfc.set_xlabel("Flight condition")
     ax_sfc.set_ylabel("SFC [lb/(lbf·hr)]")
-    ax_sfc.set_title("SFC absoluto: paso fijo vs VPF", fontweight="bold")
+    ax_sfc.set_title("Absolute SFC: fixed pitch vs VPF", fontweight="bold")
     ax_sfc.set_xticks(x)
     ax_sfc.set_xticklabels(labels)
     ax_sfc.legend(loc="lower right", fontsize=8)
@@ -273,17 +273,17 @@ def _plot_sfc_combined(
                         edgecolor="white", linewidth=0.6, zorder=3)
     ax_pct.bar_label(bars_r, fmt="%.2f%%", padding=3, fontsize=8, fontweight="bold")
     ax_pct.axhspan(2.0, 5.0, alpha=0.10, color="#228833",
-                   label="Banda de referencia 2–5%\n(Cumpsty 2004, p. 280)")
+                   label="Reference band 2–5%\n(Cumpsty 2004, p. 280)")
     ax_pct.axhline(0, color="0.4", lw=0.8)
-    ax_pct.set_xlabel("Condición de vuelo")
-    ax_pct.set_ylabel("Reducción de SFC [%]")
-    ax_pct.set_title("Reducción de SFC con VPF [%]", fontweight="bold")
+    ax_pct.set_xlabel("Flight condition")
+    ax_pct.set_ylabel("SFC reduction [%]")
+    ax_pct.set_title("SFC reduction with VPF [%]", fontweight="bold")
     ax_pct.set_xticks(x)
     ax_pct.set_xticklabels(labels)
     ax_pct.legend(fontsize=8)
     ax_pct.grid(axis="y", alpha=0.3)
 
-    fig.suptitle("Impacto del VPF en el consumo específico de combustible", fontsize=12,
+    fig.suptitle("VPF impact on specific fuel consumption", fontsize=12,
                  fontweight="bold", y=1.01)
     fig.tight_layout()
     fig.savefig(figures_dir / "sfc_combined.png")
@@ -294,7 +294,7 @@ def _plot_fan_efficiency_improvement(
     sfc_results: List[SfcAnalysisResult],
     figures_dir: Path,
 ) -> None:
-    """Eficiencia de fan base vs VPF por condición."""
+    """Baseline vs VPF fan efficiency per condition."""
     ordered = [r for c in _CONDITIONS_ORDER for r in sfc_results if r.condition == c]
     conditions   = [r.condition for r in ordered]
     fan_baseline = [r.fan_efficiency_baseline * 100 for r in ordered]
@@ -303,15 +303,15 @@ def _plot_fan_efficiency_improvement(
     width = 0.35
 
     fig, ax = plt.subplots(figsize=(7.5, 5.0))
-    bars_b = ax.bar(x - width / 2, fan_baseline, width, label="Paso fijo (referencia)",
+    bars_b = ax.bar(x - width / 2, fan_baseline, width, label="Fixed pitch (reference)",
                     color=_COLOR_BASELINE, edgecolor="white", linewidth=0.6, zorder=3)
-    bars_v = ax.bar(x + width / 2, fan_new, width, label="VPF (paso variable)",
+    bars_v = ax.bar(x + width / 2, fan_new, width, label="VPF (variable pitch)",
                     color=_COLOR_VPF, edgecolor="white", linewidth=0.6, zorder=3)
     ax.bar_label(bars_b, fmt="%.1f%%", padding=3, fontsize=7)
     ax.bar_label(bars_v, fmt="%.1f%%", padding=3, fontsize=7)
-    ax.set_xlabel("Condición de vuelo")
-    ax.set_ylabel("Eficiencia isentrópica de fan [%]")
-    ax.set_title("Eficiencia isentrópica del fan: paso fijo vs VPF", fontweight="bold")
+    ax.set_xlabel("Flight condition")
+    ax.set_ylabel("Fan isentropic efficiency [%]")
+    ax.set_title("Fan isentropic efficiency: fixed pitch vs VPF", fontweight="bold")
     ax.set_xticks(x)
     ax.set_xticklabels([FLIGHT_LABELS.get(c, c) for c in conditions])
     ax.legend(loc="lower right")
@@ -603,16 +603,16 @@ def run_sfc_analysis() -> None:
     metrics_df = pd.read_csv(metrics_path)
     LOGGER.info("Métricas de Stage 4 cargadas: %d filas", len(metrics_df))
 
-    # Verificar columnas requeridas
+    # Verify required columns
     required_cols = {"flight_condition", "blade_section", "max_efficiency", "eff_at_design_alpha"}
     missing = required_cols - set(metrics_df.columns)
     if missing:
-        LOGGER.error("Columnas faltantes en summary_table.csv: %s", missing)
+        LOGGER.error("Missing columns in summary_table.csv: %s", missing)
         return
 
-    # Filtrar crucero con delta_alpha = 0 (referencia, sin mejora VPF)
+    # Filter cruise with delta_alpha = 0 (reference, no VPF improvement)
     n_cruise_valid = (metrics_df["flight_condition"] == "cruise").sum()
-    LOGGER.info("Condición de referencia 'cruise': %d secciones", n_cruise_valid)
+    LOGGER.info("Reference condition 'cruise': %d sections", n_cruise_valid)
 
     # ── 2. Cargar parámetros base del motor ─────────────────────────────
     engine_config_path = base_config.ROOT_DIR / "config" / "engine_parameters.yaml"
@@ -635,7 +635,7 @@ def run_sfc_analysis() -> None:
         LOGGER.info("VPF mechanism weight penalty: +%.3f%% SFC cruise", float(idx["sfc_cruise_penalty_pct"]))
         LOGGER.info("VPF vs conventional reverser: −%.3f%% SFC cruise", float(idx["sfc_benefit_vs_conventional_pct"]))
 
-    # ── 3. Calcular mejoras de SFC ───────────────────────────────────────
+    # ── 3. Compute SFC improvements ────────────────────────────────────────
     stage5_dir = base_config.get_stage_dir(5)
     stage3_dir = base_config.get_stage_dir(3)
     sfc_results, section_results = compute_sfc_analysis(
@@ -643,15 +643,15 @@ def run_sfc_analysis() -> None:
         stage5_dir=stage5_dir,
         stage3_dir=stage3_dir,
     )
-    LOGGER.info("Análisis SFC: %d condiciones, %d secciones", len(sfc_results), len(section_results))
+    LOGGER.info("SFC analysis: %d conditions, %d sections", len(sfc_results), len(section_results))
 
-    # ── 4. Análisis de sensibilidad a τ ─────────────────────────────────
+    # ── 4. Sensitivity analysis to τ ─────────────────────────────────────
     sensitivity_results = compute_sfc_sensitivity(
         metrics_df, engine_baseline, config_path=engine_config_path,
     )
-    LOGGER.info("Sensibilidad: %d puntos (τ × condición)", len(sensitivity_results))
+    LOGGER.info("Sensitivity: %d points (τ × condition)", len(sensitivity_results))
 
-    # ── 5. Análisis de misión ────────────────────────────────────────────
+    # ── 5. Mission analysis ──────────────────────────────────────────────
     try:
         from vfp_analysis.config_loader import get_mission_profile
         mission_profile = get_mission_profile()
@@ -659,32 +659,32 @@ def run_sfc_analysis() -> None:
             sfc_results, mission_profile,
         )
         LOGGER.info(
-            "Misión: ahorro=%.1f kg (%.2f%%), CO₂=%.1f kg, coste=$%.0f",
+            "Mission: saving=%.1f kg (%.2f%%), CO2=%.1f kg, cost=$%.0f",
             mission_summary.total_fuel_saving_kg,
             mission_summary.total_fuel_saving_pct,
             mission_summary.total_co2_saving_kg,
             mission_summary.total_cost_saving_usd,
         )
     except Exception as exc:
-        LOGGER.warning("Análisis de misión no disponible: %s", exc)
+        LOGGER.warning("Mission analysis not available: %s", exc)
         mission_summary = None
         mission_phase_results = []
 
-    # ── 6. Figuras ───────────────────────────────────────────────────────
+    # ── 6. Figures ───────────────────────────────────────────────────────
     generate_sfc_figures(
         sfc_results, section_results, sensitivity_results, figures_dir,
         mission_phase_results=mission_phase_results or None,
         mission_summary=mission_summary,
     )
 
-    # ── 7. Tablas ────────────────────────────────────────────────────────
+    # ── 7. Tables ────────────────────────────────────────────────────────
     _write_section_table(section_results, tables_dir / "sfc_section_breakdown.csv")
     _write_sfc_table(sfc_results,         tables_dir / "sfc_analysis.csv")
     _write_sensitivity_table(sensitivity_results, tables_dir / "sfc_sensitivity.csv")
     if mission_phase_results:
         _write_mission_table(mission_phase_results, tables_dir / "mission_fuel_burn.csv")
 
-    # ── 8. Resúmenes de texto ────────────────────────────────────────────
+    # ── 8. Text summaries ────────────────────────────────────────────────
     summary_text = generate_sfc_summary(sfc_results, section_results, mission_summary=mission_summary)
     (stage7_dir / "sfc_analysis_summary.txt").write_text(summary_text, encoding="utf-8")
 
@@ -695,17 +695,17 @@ def run_sfc_analysis() -> None:
     stage7_summary = generate_stage7_summary(stage7_dir)
     write_stage_summary(7, stage7_summary, stage7_dir)
 
-    # ── 8. Log resumen ───────────────────────────────────────────────────
+    # ── 8. Log summary ───────────────────────────────────────────────────
     if sfc_results:
         mean_reduction = sum(r.sfc_reduction_percent for r in sfc_results) / len(sfc_results)
         max_reduction  = max(r.sfc_reduction_percent for r in sfc_results)
-        LOGGER.info("Reducción media de SFC: %.2f%%", mean_reduction)
-        LOGGER.info("Reducción máxima de SFC: %.2f%%", max_reduction)
+        LOGGER.info("Mean SFC reduction: %.2f%%", mean_reduction)
+        LOGGER.info("Max SFC reduction: %.2f%%", max_reduction)
 
     LOGGER.info("=" * 70)
-    LOGGER.info("Stage 7 completado.")
-    LOGGER.info("  Tablas:  %s", tables_dir)
-    LOGGER.info("  Figuras: %s", figures_dir)
+    LOGGER.info("Stage 7 complete.")
+    LOGGER.info("  Tables:  %s", tables_dir)
+    LOGGER.info("  Figures: %s", figures_dir)
     LOGGER.info("=" * 70)
 
 

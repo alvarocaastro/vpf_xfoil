@@ -1,19 +1,19 @@
 """
 propulsion_model_service.py
 ---------------------------
-Sub-modelos físicos para el cálculo de mejoras de SFC mediante VPF.
+Physical sub-models for computing SFC improvements via VPF.
 
-Modelo de transferencia de eficiencia de perfil a fan:
+Profile-to-fan efficiency transfer model:
     ε_eff           = min(ε, EPSILON_CAP)
     Δη_profile(r)   = (ε_eff − 1) × τ
     Δη_fan          = mean_r(Δη_profile),  capped at ETA_FAN_DELTA_CAP
     η_fan,new       = min(η_base × (1 + Δη_fan), ETA_FAN_ABS_CAP)
     SFC_new         = SFC_base / (1 + k × Δη_applied / η_base)
-    k = BPR/(1+BPR) (Saravanamuttoo 2017 ec. 5.14)
+    k = BPR/(1+BPR) (Saravanamuttoo 2017 eq. 5.14)
 
-τ (profile_efficiency_transfer) amortigua las pérdidas 3D que impiden que
-la mejora 2D del perfil se transfiera íntegramente al fan completo.
-EPSILON_CAP limita el ratio ε a valores físicamente creíbles en cascada 3D.
+τ (profile_efficiency_transfer) damps the 3D losses that prevent the 2D
+profile improvement from fully transferring to the complete fan.
+EPSILON_CAP bounds ε to physically credible values in a 3D cascade.
 """
 
 from __future__ import annotations
@@ -34,42 +34,42 @@ LOGGER = logging.getLogger(__name__)
 
 
 def compute_bypass_sensitivity_factor(bypass_ratio: float) -> float:
-    """Fracción de empuje neto producida por el flujo de derivación (fan).
+    """Net thrust fraction produced by the bypass (fan) stream.
 
     k = BPR / (1 + BPR)
 
-    Derivación: para un turbofan de flujos separados con relación de derivación BPR,
-    ignorando diferencias de velocidad del chorro caliente, el fan produce
-    k = BPR/(1+BPR) del empuje total de momento. La perturbación de 1er orden
-    de TSFC con δη_fan da: ΔTSFC/TSFC ≈ −k · δη_fan / η_fan.
+    Derivation: for a separate-flow turbofan with bypass ratio BPR,
+    neglecting hot-jet velocity differences, the fan produces
+    k = BPR/(1+BPR) of the total momentum thrust. First-order perturbation
+    of TSFC with δη_fan gives: ΔTSFC/TSFC ≈ −k · δη_fan / η_fan.
 
-    Ref: Saravanamuttoo et al. (2017) *Gas Turbine Theory*, 7ª ed., ec. 5.14.
+    Ref: Saravanamuttoo et al. (2017) *Gas Turbine Theory*, 7th ed., eq. 5.14.
 
     Parameters
     ----------
-    bypass_ratio : float  Relación de derivación (BPR > 0).
+    bypass_ratio : float  Bypass ratio (BPR > 0).
 
     Returns
     -------
     float  Factor k ∈ (0, 1).
     """
     if bypass_ratio <= 0:
-        raise ValueError("bypass_ratio debe ser positivo.")
+        raise ValueError("bypass_ratio must be positive.")
     return bypass_ratio / (1.0 + bypass_ratio)
 
 
 def compute_propulsion_efficiency(v0: float, vj: float) -> float:
-    """Eficiencia propulsiva: η_prop = 2 / (1 + V_j / V_0).
+    """Propulsive efficiency: η_prop = 2 / (1 + V_j / V_0).
 
     Parameters
     ----------
-    v0 : float  Velocidad de vuelo [m/s].
-    vj : float  Velocidad de salida del chorro [m/s].
+    v0 : float  Flight speed [m/s].
+    vj : float  Jet exit speed [m/s].
     """
     if v0 <= 0:
-        raise ValueError("La velocidad de vuelo debe ser positiva.")
+        raise ValueError("Flight speed must be positive.")
     if vj <= 0:
-        raise ValueError("La velocidad del chorro debe ser positiva.")
+        raise ValueError("Jet speed must be positive.")
     return 2.0 / (1.0 + vj / v0)
 
 
@@ -81,10 +81,10 @@ def compute_fan_efficiency_improvement(
     eta_fan_delta_cap: float = ETA_FAN_DELTA_CAP,
     eta_fan_abs_cap: float = ETA_FAN_ABS_CAP,
 ) -> Tuple[float, float, float]:
-    """Estima la mejora de eficiencia de fan a partir de los ratios ε por sección.
+    """Estimate the fan efficiency improvement from the per-section ε ratios.
 
-    Proceso:
-        1. Para cada sección: ε_eff = min(ε, epsilon_cap)
+    Procedure:
+        1. Per section: ε_eff = min(ε, epsilon_cap)
         2. Δη_profile(r) = (ε_eff − 1) × τ
         3. Δη_fan_raw = mean(Δη_profile)
         4. Δη_fan_capped = min(Δη_fan_raw, eta_fan_delta_cap)
@@ -93,20 +93,20 @@ def compute_fan_efficiency_improvement(
     Parameters
     ----------
     epsilon_values : list[float]
-        Ratios ε por sección [–] (= CL/CD_vpf / CL/CD_fixed).
+        Per-section ε ratios [–] (= CL/CD_vpf / CL/CD_fixed).
     fan_efficiency_baseline : float
-        η_fan base [–].
+        Baseline η_fan [–].
     tau : float
-        Coeficiente de transferencia 2D→3D (default: 0.65).
+        2D→3D transfer coefficient (default: 0.65).
         Ref: Cumpsty (2004) §8; Peretz & Gany (1992).
     epsilon_cap : float
-        Límite físico para ε antes de aplicar τ (default: EPSILON_CAP = 1.10).
+        Physical cap on ε before applying τ (default: EPSILON_CAP = 1.10).
         Ref: Cumpsty (2004) p. 280; Wisler (1998) VKI.
     eta_fan_delta_cap : float
-        Mejora absoluta máxima de η_fan (default: ETA_FAN_DELTA_CAP = 0.04).
+        Maximum absolute η_fan improvement (default: ETA_FAN_DELTA_CAP = 0.04).
         Ref: Cumpsty (2004) p. 280.
     eta_fan_abs_cap : float
-        Límite absoluto de η_fan (default: ETA_FAN_ABS_CAP = 0.96).
+        Absolute η_fan upper bound (default: ETA_FAN_ABS_CAP = 0.96).
         Ref: Cumpsty (2004) ch. 8.
 
     Returns
@@ -116,9 +116,9 @@ def compute_fan_efficiency_improvement(
     delta_eta_applied : float  Δη_fan realmente aplicado (= η_fan_new − η_base).
     """
     if fan_efficiency_baseline <= 0:
-        raise ValueError("fan_efficiency_baseline debe ser positivo.")
+        raise ValueError("fan_efficiency_baseline must be positive.")
     if not epsilon_values:
-        raise ValueError("epsilon_values no puede estar vacío.")
+        raise ValueError("epsilon_values cannot be empty.")
 
     delta_etas = [(min(eps, epsilon_cap) - 1.0) * tau for eps in epsilon_values]
     delta_eta_raw = sum(delta_etas) / len(delta_etas)
@@ -139,19 +139,19 @@ def compute_fan_map_efficiency_gain(
     k_map: float = FAN_MAP_LOSS_COEFFICIENT,
     map_cap: float = ETA_FAN_MAP_CAP,
 ) -> float:
-    """Ganancia de eficiencia del fan por el mecanismo de mapa (coef. de flujo φ).
+    """Fan efficiency gain from the fan-map mechanism (flow coefficient φ).
 
-    Un fan de paso fijo se ve forzado a operar en puntos donde φ = Va/U ≠ φ_opt
-    cuando la condición de vuelo cambia (Va varía entre fases). Esta desviación
-    introduce pérdidas cuadráticas en el mapa del fan que VPF recupera parcialmente
-    al mantener la incidencia óptima.
+    A fixed-pitch fan is forced to operate at points where φ = Va/U ≠ φ_opt
+    when the flight condition changes (Va varies between phases). This deviation
+    introduces quadratic losses in the fan map that VPF partially recovers
+    by maintaining optimal incidence.
 
-        Δη_map = k_map × ((φ − φ_opt) / φ_opt)²    [modelo parabólico simple]
+        Δη_map = k_map × ((φ − φ_opt) / φ_opt)²    [simple parabolic model]
         Δη_map_capped = min(Δη_map, map_cap)
 
-    Esta ganancia es **independiente y aditiva** al mecanismo de perfil (τ-mediado):
-    la pérdida de mapa no pasa por la cadena 2D→3D de τ — es una pérdida de
-    sistema directamente recuperable ajustando la ley de paso.
+    This gain is **independent and additive** to the profile mechanism (τ-mediated):
+    the map loss does not pass through the 2D→3D τ chain — it is a system
+    loss directly recoverable by adjusting the pitch schedule.
 
     Ref: Cumpsty (2004) *Compressor Aerodynamics*, ch. 8 (fig. 8.10);
          Dickens & Day (2011). "The Design of Highly Loaded Axial Compressors".
@@ -160,13 +160,13 @@ def compute_fan_map_efficiency_gain(
     Parameters
     ----------
     phi_condition : float
-        Coeficiente de flujo en la condición off-design: Va_cond / U_section.
+        Flow coefficient at the off-design condition: Va_cond / U_section.
     phi_design : float
-        Coeficiente de flujo en diseño (crucero): Va_cruise / U_section.
+        Design flow coefficient (cruise): Va_cruise / U_section.
     k_map : float
-        Coeficiente de pérdida cuadrática de mapa (default: FAN_MAP_LOSS_COEFFICIENT).
+        Quadratic map-loss coefficient (default: FAN_MAP_LOSS_COEFFICIENT).
     map_cap : float
-        Límite superior de esta ganancia (default: ETA_FAN_MAP_CAP).
+        Upper bound on this gain (default: ETA_FAN_MAP_CAP).
 
     Returns
     -------
@@ -193,27 +193,27 @@ def compute_combined_fan_efficiency_improvement(
     k_map: float = FAN_MAP_LOSS_COEFFICIENT,
     map_cap: float = ETA_FAN_MAP_CAP,
 ) -> tuple:
-    """Mejora de eficiencia de fan combinando mecanismo de perfil y de mapa.
+    """Fan efficiency improvement combining profile and map mechanisms.
 
-    Mecanismo 1 — Perfil (ya existente):
+    Mechanism 1 — Profile (existing):
         Δη_profile = mean_r[(min(ε, ε_cap) − 1) × τ],  cap ≤ ETA_FAN_DELTA_CAP
 
-    Mecanismo 2 — Mapa del fan (nuevo):
+    Mechanism 2 — Fan map (new):
         Δη_map = mean_r[k_map × ((φ_r − φ_opt) / φ_opt)²],  cap ≤ ETA_FAN_MAP_CAP
 
-    Combinado:
+    Combined:
         Δη_combined = min(Δη_profile + Δη_map, ETA_FAN_COMBINED_CAP)
         η_fan,new = min(η_base × (1 + Δη_combined), ETA_FAN_ABS_CAP)
 
     Parameters
     ----------
-    epsilon_values : list[float]   Ratios ε por sección (mecanismo de perfil).
-    phi_values : list[float]       Coeficientes de flujo φ por sección.
-    phi_design : float             φ de diseño (crucero, mismo para todas las secciones como media).
-    fan_efficiency_baseline : float  η_fan base.
-    tau : float                    Coeficiente de transferencia 2D→3D.
+    epsilon_values : list[float]   Per-section ε ratios (profile mechanism).
+    phi_values : list[float]       Per-section flow coefficients φ.
+    phi_design : float             Design φ (cruise, averaged across sections).
+    fan_efficiency_baseline : float  Baseline η_fan.
+    tau : float                    2D→3D transfer coefficient.
     epsilon_cap, eta_fan_delta_cap, eta_fan_combined_cap, eta_fan_abs_cap,
-    k_map, map_cap : ver parámetros de cada sub-función.
+    k_map, map_cap : see parameters of each sub-function.
 
     Returns
     -------
@@ -223,18 +223,18 @@ def compute_combined_fan_efficiency_improvement(
     delta_eta_applied : float   Δη total aplicado (= η_fan_new − η_base).
     """
     if fan_efficiency_baseline <= 0:
-        raise ValueError("fan_efficiency_baseline debe ser positivo.")
+        raise ValueError("fan_efficiency_baseline must be positive.")
     if not epsilon_values:
-        raise ValueError("epsilon_values no puede estar vacío.")
+        raise ValueError("epsilon_values cannot be empty.")
 
-    # Mecanismo 1: perfil
+    # Mechanism 1: profile
     profile_deltas = [(min(eps, epsilon_cap) - 1.0) * tau for eps in epsilon_values]
     delta_eta_profile = min(
         sum(profile_deltas) / len(profile_deltas),
         eta_fan_delta_cap,
     )
 
-    # Mecanismo 2: mapa del fan
+    # Mechanism 2: fan map
     if phi_values and phi_design > 0:
         map_deltas = [compute_fan_map_efficiency_gain(phi, phi_design, k_map, map_cap)
                       for phi in phi_values]
@@ -245,7 +245,7 @@ def compute_combined_fan_efficiency_improvement(
     else:
         delta_eta_map = 0.0
 
-    # Combinado con cap global
+    # Combined with global cap
     delta_eta_combined = min(delta_eta_profile + delta_eta_map, eta_fan_combined_cap)
 
     eta_fan_new = min(
@@ -263,37 +263,37 @@ def compute_sfc_improvement(
     eta_fan_baseline: float,
     k: float = 1.0,
 ) -> float:
-    """Estima el SFC mejorado mediante perturbación de 1er orden.
+    """Estimate the improved SFC via first-order perturbation.
 
     SFC_new = SFC_base / (1 + k × Δη_fan / η_fan_base)
 
-    Derivación: si η_fan aumenta en δη, el trabajo del fan disminuye en la misma
-    proporción para igual empuje. La fracción k = BPR/(1+BPR) pondera la
-    contribución del fan al empuje total (Saravanamuttoo 2017 §5.3).
+    Derivation: if η_fan increases by δη, the fan work decreases by the same
+    proportion for equal thrust. The fraction k = BPR/(1+BPR) weights the
+    fan contribution to total thrust (Saravanamuttoo 2017 §5.3).
 
     Parameters
     ----------
-    sfc_baseline : float     SFC base [lb/(lbf·hr)].
-    delta_eta_fan : float    Δη_fan aplicado [–] (debe ser ≥ 0).
-    eta_fan_baseline : float η_fan base [–].
-    k : float                Factor de sensibilidad BPR/(1+BPR) (default: 1.0).
+    sfc_baseline : float     Baseline SFC [lb/(lbf·hr)].
+    delta_eta_fan : float    Applied Δη_fan [–] (should be ≥ 0).
+    eta_fan_baseline : float Baseline η_fan [–].
+    k : float                Sensitivity factor BPR/(1+BPR) (default: 1.0).
 
     Returns
     -------
-    float  SFC mejorado ≥ 0.
+    float  Improved SFC ≥ 0.
     """
     if sfc_baseline <= 0:
-        raise ValueError("sfc_baseline debe ser positivo.")
+        raise ValueError("sfc_baseline must be positive.")
     if eta_fan_baseline <= 0:
-        raise ValueError("eta_fan_baseline debe ser positivo.")
+        raise ValueError("eta_fan_baseline must be positive.")
     if delta_eta_fan < 0:
-        LOGGER.debug("delta_eta_fan < 0 (%.4f) — SFC aumentará ligeramente.", delta_eta_fan)
+        LOGGER.debug("delta_eta_fan < 0 (%.4f) — SFC will increase slightly.", delta_eta_fan)
     sensitivity = k * delta_eta_fan / eta_fan_baseline
     return max(sfc_baseline / (1.0 + sensitivity), 0.0)
 
 
 def compute_sfc_reduction_percent(sfc_baseline: float, sfc_new: float) -> float:
-    """Porcentaje de reducción de SFC: [(SFC_base − SFC_new) / SFC_base] × 100."""
+    """Percentage SFC reduction: [(SFC_base − SFC_new) / SFC_base] × 100."""
     if sfc_baseline <= 0:
-        raise ValueError("SFC base debe ser positivo.")
+        raise ValueError("Baseline SFC must be positive.")
     return ((sfc_baseline - sfc_new) / sfc_baseline) * 100.0

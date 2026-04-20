@@ -1,32 +1,32 @@
 """
 blade_twist_service.py
 -----------------------
-Análisis de twist de diseño y compromiso aerodinámico off-design.
+Design twist analysis and aerodynamic off-design compromise.
 
-En un fan de paso variable, la pala tiene un twist de diseño (variación de
-β_metal a lo largo del radio) que centra α en su óptimo individual en cada
-sección durante el punto de diseño (crucero). En condiciones off-design, el
-único actuador mecánico gira toda la pala el mismo ángulo Δβ_hub, de modo
-que las secciones root y tip se desvían de su α_opt individual.
+In a variable pitch fan, the blade has a design twist (variation of β_metal
+along the radius) that centres α at its individual optimum in each section
+during the design point (cruise). In off-design conditions, the single
+mechanical actuator rotates the entire blade by the same angle Δβ_hub, so
+the root and tip sections deviate from their individual α_opt.
 
-Este módulo cuantifica:
+This module quantifies:
 
-1. Twist de diseño en crucero:
+1. Design twist at cruise:
    φ_flow(r) = arctan(Va_cruise / U(r))
    β_metal(r) = α_opt_3D_cruise(r) + φ_flow(r)
    twist_total = β_metal(root) − β_metal(tip)
 
-2. Off-design con un solo actuador (estrategia: optimizar mid_span):
-   Δβ_hub(cond) = Δβ calculado para que mid_span alcance su α_opt_3D
+2. Off-design with a single actuator (strategy: optimise mid_span):
+   Δβ_hub(cond) = Δβ computed so that mid_span reaches its α_opt_3D
    α_actual(r, cond) = β_metal(r) + Δβ_hub(cond) − φ_flow(r, cond)
 
-3. Penalización por compromiso span-wise:
+3. Span-wise compromise penalty:
    loss_pct(r, cond) = 1 − (CL_3D/CD)[α_actual] / (CL/CD)_max_3D(r, cond)
 
-Referencias:
-- Dixon & Hall (2013), cap. 5 — Velocity triangles and blade design
-- Saravanamuttoo et al. (2017), cap. 5 — Fan design and off-design performance
-- Cumpsty (2004), cap. 9 — Three-dimensional flows and blade twist
+References:
+- Dixon & Hall (2013), ch. 5 — Velocity triangles and blade design
+- Saravanamuttoo et al. (2017), ch. 5 — Fan design and off-design performance
+- Cumpsty (2004), ch. 9 — Three-dimensional flows and blade twist
 """
 
 from __future__ import annotations
@@ -41,31 +41,31 @@ import pandas as pd
 
 @dataclass
 class TwistDesignResult:
-    """Twist de diseño de la pala en la condición de crucero."""
+    """Design twist of the blade at the cruise design point."""
     section: str
     radius_m: float
-    u_cruise_m_s: float          # velocidad tangencial de pala [m/s]
-    phi_cruise_deg: float         # ángulo de flujo en crucero φ = arctan(Va/U) [°]
-    alpha_opt_3d_cruise: float    # α_opt_3D en crucero para esta sección [°]
-    beta_metal_deg: float         # ángulo metal de diseño β_metal = α_opt + φ [°]
-    twist_from_tip_deg: float     # twist relativo a la punta (β_metal − β_metal_tip) [°]
+    u_cruise_m_s: float          # blade tangential velocity [m/s]
+    phi_cruise_deg: float         # cruise inflow angle φ = arctan(Va/U) [°]
+    alpha_opt_3d_cruise: float    # α_opt_3D at cruise for this section [°]
+    beta_metal_deg: float         # design metal angle β_metal = α_opt + φ [°]
+    twist_from_tip_deg: float     # twist relative to tip (β_metal − β_metal_tip) [°]
 
 
 @dataclass
 class OffDesignIncidenceResult:
-    """Incidencia real y penalización de eficiencia en condición off-design."""
+    """Actual incidence and efficiency penalty under off-design conditions."""
     condition: str
     section: str
-    va_m_s: float                # velocidad axial [m/s]
-    u_m_s: float                 # velocidad tangencial de pala [m/s]
-    phi_flow_deg: float          # ángulo de flujo φ en esta condición [°]
-    delta_beta_hub_deg: float    # comando único del actuador [°]
-    alpha_opt_3d: float          # α_opt_3D individual de esta sección [°]
-    alpha_actual_deg: float      # α real con el actuador único [°]
-    delta_alpha_compromise_deg: float  # α_actual − α_opt_3D (desvío) [°]
-    cl_cd_max_3d: float          # (CL/CD)_max_3D si estuviera en α_opt [—]
-    cl_cd_actual: float          # (CL/CD)_3D en α_actual [—]
-    efficiency_loss_pct: float   # pérdida de eficiencia [%]
+    va_m_s: float                # axial velocity [m/s]
+    u_m_s: float                 # blade tangential velocity [m/s]
+    phi_flow_deg: float          # inflow angle φ in this condition [°]
+    delta_beta_hub_deg: float    # single actuator command [°]
+    alpha_opt_3d: float          # individual α_opt_3D for this section [°]
+    alpha_actual_deg: float      # actual α with single actuator [°]
+    delta_alpha_compromise_deg: float  # α_actual − α_opt_3D (deviation) [°]
+    cl_cd_max_3d: float          # (CL/CD)_max_3D at α_opt [—]
+    cl_cd_actual: float          # (CL/CD)_3D at α_actual [—]
+    efficiency_loss_pct: float   # efficiency loss [%]
 
 
 def compute_blade_twist(
@@ -74,18 +74,18 @@ def compute_blade_twist(
     omega: float,
     radii: Dict[str, float],
 ) -> List[TwistDesignResult]:
-    """Calcula el twist de diseño de la pala en crucero.
+    """Compute the blade design twist at cruise.
 
-    Parámetros
+    Parameters
     ----------
     alpha_opt_3d_cruise : dict[section, alpha_opt_3D_cruise]
-    va_cruise : float — velocidad axial en crucero [m/s]
-    omega : float — velocidad angular del fan [rad/s]
+    va_cruise : float — axial velocity at cruise [m/s]
+    omega : float — fan angular velocity [rad/s]
     radii : dict[section, r_m]
 
-    Retorna
+    Returns
     -------
-    List[TwistDesignResult] ordenado por radio (root → tip)
+    List[TwistDesignResult] sorted by radius (root → tip)
     """
     results: List[TwistDesignResult] = []
     for section, r in radii.items():
@@ -102,10 +102,10 @@ def compute_blade_twist(
             phi_cruise_deg=phi,
             alpha_opt_3d_cruise=alpha,
             beta_metal_deg=beta_metal,
-            twist_from_tip_deg=float("nan"),  # se rellena abajo
+            twist_from_tip_deg=float("nan"),  # filled below
         ))
 
-    # Twist relativo a la punta
+    # Twist relative to tip
     tip_beta = next(
         (res.beta_metal_deg for res in results if res.section == "tip"), float("nan")
     )
@@ -127,23 +127,23 @@ def compute_off_design_incidence(
     reference_condition: str = "cruise",
     hub_section: str = "mid_span",
 ) -> List[OffDesignIncidenceResult]:
-    """Calcula la incidencia real y la pérdida de eficiencia en condiciones off-design.
+    """Compute actual incidence and efficiency loss in off-design conditions.
 
-    Estrategia del actuador: Δβ_hub se elige para llevar hub_section a su α_opt_3D.
+    Actuator strategy: Δβ_hub is chosen to bring hub_section to its α_opt_3D.
 
-    Parámetros
+    Parameters
     ----------
     twist_results : List[TwistDesignResult]
     alpha_opt_3d_map : dict[(condition, section), alpha_opt_3D]
     cl_cd_max_3d_map : dict[(condition, section), (CL/CD)_max_3D]
-    polar_3d_map : dict[(condition, section), DataFrame con ld_3d]
+    polar_3d_map : dict[(condition, section), DataFrame with ld_3d]
     axial_velocities : dict[condition, Va_m_s]
     omega : float [rad/s]
     radii : dict[section, r_m]
-    reference_condition : str — condición de referencia (crucero = Δβ=0)
-    hub_section : str — sección que el actuador optimiza
+    reference_condition : str — reference condition (cruise = Δβ=0)
+    hub_section : str — section that the actuator optimises
 
-    Retorna
+    Returns
     -------
     List[OffDesignIncidenceResult]
     """
@@ -155,7 +155,7 @@ def compute_off_design_incidence(
     for condition in conditions:
         va = axial_velocities.get(condition, float("nan"))
 
-        # Δβ_hub: ángulo que lleva hub_section a su α_opt_3D en esta condición
+        # Δβ_hub: angle that brings hub_section to its α_opt_3D in this condition
         r_hub = radii.get(hub_section, float("nan"))
         u_hub = omega * r_hub
         phi_hub = math.degrees(math.atan2(va, u_hub)) if u_hub > 0 else 0.0
@@ -168,7 +168,7 @@ def compute_off_design_incidence(
         else:
             delta_beta_hub = 0.0
 
-        # Para la condición de referencia, Δβ = 0 por definición
+        # For the reference condition, Δβ = 0 by definition
         if condition == reference_condition:
             delta_beta_hub = 0.0
 
@@ -226,7 +226,7 @@ def _lookup_ld_3d(
     alpha: float,
     tol: float = 1.0,
 ) -> float:
-    """Interpolación de ld_3d en (condition, section, alpha)."""
+    """Interpolate ld_3d at (condition, section, alpha)."""
     if math.isnan(alpha):
         return float("nan")
     df = polar_map.get((condition, section))

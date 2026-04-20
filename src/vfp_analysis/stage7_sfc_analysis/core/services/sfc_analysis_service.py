@@ -1,8 +1,8 @@
 """
 sfc_analysis_service.py
 -----------------------
-Orquesta el cálculo de reducción de SFC para todas las condiciones de vuelo
-usando los resultados 3D de Stage 5 (cascada + Snel) como fuente de epsilon.
+Orchestrates the SFC reduction calculation for all flight conditions
+using the Stage 5 3D results (cascade + Snel) as the source of epsilon.
 
 Modelo físico (ver sfc_parameters.py para notación):
     ε(r, cond)      = CL/CD_vpf_3D / CL/CD_fijo_3D
@@ -59,7 +59,7 @@ _DEFAULT_TAU_VALUES: List[float] = [0.30, 0.37, 0.43, 0.50, 0.57, 0.65, 0.73, 0.
 
 
 # ---------------------------------------------------------------------------
-# Análisis principal
+# Main analysis
 # ---------------------------------------------------------------------------
 
 def compute_sfc_analysis(
@@ -69,23 +69,23 @@ def compute_sfc_analysis(
     stage5_dir: Path | None = None,
     stage3_dir: Path | None = None,
 ) -> Tuple[List[SfcAnalysisResult], List[SfcSectionResult]]:
-    """Calcula el análisis de SFC para todas las condiciones de vuelo.
+    """Compute the SFC analysis for all flight conditions.
 
-    Integra dos mecanismos físicos independientes de mejora de eficiencia:
+    Integrates two independent physical efficiency-improvement mechanisms:
 
-    **Mecanismo 1 — Perfil (3D, Stage 5)**:
-        ε = CL/CD_vpf_3D / CL/CD_fijo_3D
-          CL/CD_vpf_3D  de Stage5 optimal_incidence.csv (cascada + Snel)
-          CL/CD_fijo_3D = K_weinig × interp(Stage3 polar KT, alpha_fixed)
+    **Mechanism 1 — Profile (3D, Stage 5)**:
+        ε = CL/CD_vpf_3D / CL/CD_fixed_3D
+          CL/CD_vpf_3D  from Stage5 optimal_incidence.csv (cascade + Snel)
+          CL/CD_fixed_3D = K_weinig × interp(Stage3 polar KT, alpha_fixed)
           alpha_fixed   = beta_metal[sec] − phi_inflow[cond, sec]
         Δη_profile = weighted_mean_r[(min(ε, ε_cap) − 1) × τ],  cap ≤ ETA_FAN_DELTA_CAP
-        Ponderación por área anular de cada sección.
+        Weighted by annular area of each section.
 
-    **Mecanismo 2 — Mapa del fan (coeficiente de flujo φ)**:
-        φ(cond, sec) = Va_cond / U_sec   (cambia con condición de vuelo)
+    **Mechanism 2 — Fan map (flow coefficient φ)**:
+        φ(cond, sec) = Va_cond / U_sec   (changes with flight condition)
         Δη_map = k_map × ((φ − φ_opt) / φ_opt)²,  cap ≤ ETA_FAN_MAP_CAP
 
-    **Combinado**:
+    **Combined**:
         Δη_fan = min(Δη_profile + Δη_map, ETA_FAN_COMBINED_CAP)
 
     Parameters
@@ -127,9 +127,9 @@ def compute_sfc_analysis(
         _use_map = True
         _va_cruise = _va.get("cruise", 150.0)
         _phi_design: dict = {sec: _va_cruise / (_omega * r) for sec, r in _radii.items()}
-        LOGGER.info("Mecanismo de mapa activo: RPM=%.0f, Va_cruise=%.1f m/s", _rpm, _va_cruise)
+        LOGGER.info("Fan map mechanism active: RPM=%.0f, Va_cruise=%.1f m/s", _rpm, _va_cruise)
     except Exception as exc:
-        LOGGER.warning("No se pudo cargar datos cinemáticos para mapa: %s — solo mecanismo perfil.", exc)
+        LOGGER.warning("Could not load kinematic data for map mechanism: %s — profile mechanism only.", exc)
         _use_map = False
         _va = {}
         _radii = {}
@@ -141,11 +141,11 @@ def compute_sfc_analysis(
     if stage5_dir is not None and stage5_dir.is_dir():
         try:
             _s5 = _load_stage5_tables(stage5_dir)
-            LOGGER.info("Datos 3D de Stage 5 cargados desde %s", stage5_dir)
+            LOGGER.info("Stage 5 3D data loaded from %s", stage5_dir)
         except Exception as exc:
-            LOGGER.warning("No se pudo cargar Stage 5: %s — fallback a Stage 4.", exc)
+            LOGGER.warning("Could not load Stage 5: %s — falling back to Stage 4.", exc)
 
-    # ── Pesos por área anular (para media ponderada de epsilon) ───────────
+    # ── Annular area weights (for epsilon weighted mean) ─────────────────
     _annular_w = _annular_weights(_radii) if _radii else {}
 
     section_results: List[SfcSectionResult] = []
@@ -154,24 +154,24 @@ def compute_sfc_analysis(
     for condition in flight_conditions:
         cond_df = metrics_df[metrics_df["flight_condition"] == condition]
         if cond_df.empty:
-            LOGGER.warning("No hay datos de Stage 4 para condición '%s' — omitida.", condition)
+            LOGGER.warning("No Stage 4 data for condition '%s' — skipped.", condition)
             continue
 
         _va_cond = _va.get(condition, 0.0) if _use_map else 0.0
 
-        # ── Nivel de sección ─────────────────────────────────────────────
+        # ── Section level ────────────────────────────────────────────────
         cond_sections: List[SfcSectionResult] = []
         for _, row in cond_df.iterrows():
             section = str(row.get("blade_section", "unknown"))
 
-            # Mecanismo de perfil: usar Stage 5 si disponible, sino Stage 4
+            # Profile mechanism: use Stage 5 if available, otherwise Stage 4
             if _s5 is not None and stage3_dir is not None:
                 sr_base = _compute_section_result_stage5(condition, row, tau, _s5, stage3_dir)
             else:
                 sr_base = _compute_section_result(condition, row, tau)
 
-            # Mecanismo de mapa
-            # Crucero es el punto de diseño del mapa: φ_cond = φ_design → Δη_map = 0
+            # Map mechanism
+            # Cruise is the map design point: φ_cond = φ_design → Δη_map = 0
             if condition.lower() == "cruise":
                 phi_des  = _phi_design.get(section, float("nan"))
                 phi_cond = phi_des   # por definición en el punto de diseño
@@ -203,7 +203,7 @@ def compute_sfc_analysis(
             cond_sections.append(sr)
         section_results.extend(cond_sections)
 
-        # ── Agregación por condición (media ponderada por área anular) ────
+        # ── Condition-level aggregation (annular-area weighted mean) ──────
         epsilon_values   = [s.epsilon for s in cond_sections]
         epsilon_w_values = [
             (s.epsilon, _annular_w.get(s.blade_section, 1.0))
@@ -217,7 +217,7 @@ def compute_sfc_analysis(
         cl_cd_fixed_vals = [s.cl_cd_fixed for s in cond_sections]
         cl_cd_vpf_vals   = [s.cl_cd_vpf for s in cond_sections]
 
-        # Usar media ponderada de epsilon para el mecanismo de perfil
+        # Use weighted mean of epsilon for the profile mechanism
         epsilon_weighted = _weighted_mean(epsilon_w_values) if epsilon_w_values else _mean(epsilon_values)
 
         # Cruise is the design point: no map gain (phi_cond = phi_design by definition)
@@ -264,7 +264,7 @@ def compute_sfc_analysis(
         ))
 
         LOGGER.info(
-            "%s: ε_pond=%.3f  Δη_perfil=%.4f  Δη_mapa=%.4f  Δη_total=%.4f  "
+            "%s: ε_weighted=%.3f  Δη_profile=%.4f  Δη_map=%.4f  Δη_total=%.4f  "
             "η_new=%.4f  ΔSFC=%.2f%%",
             condition, epsilon_weighted,
             delta_eta_profile, delta_eta_map_mean, delta_eta_applied,
@@ -275,7 +275,7 @@ def compute_sfc_analysis(
 
 
 # ---------------------------------------------------------------------------
-# Análisis de sensibilidad a τ
+# Sensitivity analysis to τ
 # ---------------------------------------------------------------------------
 
 def compute_sfc_sensitivity(
@@ -293,7 +293,7 @@ def compute_sfc_sensitivity(
     engine_baseline : EngineBaseline
         Parámetros base del motor.
     tau_values : list[float], optional
-        Valores de τ a evaluar. Por defecto: [0.30, 0.37, 0.43, 0.50, 0.57, 0.65, 0.73, 0.80].
+        Values of τ to evaluate. Default: [0.30, 0.37, 0.43, 0.50, 0.57, 0.65, 0.73, 0.80].
     config_path : Path, optional
         Ruta a ``engine_parameters.yaml`` (para SFC multipliers).
 
@@ -360,7 +360,7 @@ def compute_sfc_sensitivity(
 
 
 # ---------------------------------------------------------------------------
-# Helpers privados
+# Private helpers
 # ---------------------------------------------------------------------------
 
 def _compute_section_result(
@@ -368,11 +368,11 @@ def _compute_section_result(
     row: pd.Series,
     tau: float,
 ) -> SfcSectionResult:
-    """Calcula el resultado por sección para una fila de Stage 4.
+    """Compute the per-section result for a Stage 4 row.
 
-    ``eff_at_design_alpha`` contiene CL/CD evaluado en la incidencia real
-    sin VPF (α_fixed = β_cruise − φ_condition), calculada con triángulos de
-    velocidad en Stage 4. ``delta_alpha_deg`` es el ajuste total de VPF.
+    ``eff_at_design_alpha`` contains CL/CD evaluated at the actual incidence
+    without VPF (α_fixed = β_cruise − φ_condition), computed with velocity
+    triangles in Stage 4. ``delta_alpha_deg`` is the total VPF adjustment.
     """
     cl_cd_fixed = float(row.get("eff_at_design_alpha", 0.0))
     cl_cd_vpf = float(row.get("max_efficiency", 0.0))
@@ -383,7 +383,7 @@ def _compute_section_result(
         epsilon = cl_cd_vpf / cl_cd_fixed
     else:
         epsilon = 1.0
-        LOGGER.warning("eff_at_design_alpha = 0 para %s/%s — asumiendo ε = 1.0", condition, section)
+        LOGGER.warning("eff_at_design_alpha = 0 for %s/%s — assuming ε = 1.0", condition, section)
 
     epsilon_eff = min(epsilon, EPSILON_CAP)
     delta_eta_profile = (epsilon_eff - 1.0) * tau
@@ -424,7 +424,7 @@ def _compute_section_result_stage5(
     section = str(row.get("blade_section", "unknown"))
     delta_alpha = float(row.get("delta_alpha_deg", 0.0))
 
-    # ── Obtener alpha_fixed (paso fijo) ──────────────────────────────────
+    # ── Get alpha_fixed (fixed pitch) ────────────────────────────────────
     btd = s5["blade_twist_design"]
     kin = s5["kinematics"]
 
@@ -432,7 +432,7 @@ def _compute_section_result_stage5(
     row_kin_cond = kin[(kin["condition"] == condition) & (kin["section"] == section)]
 
     if row_btd.empty or row_kin_cond.empty:
-        LOGGER.warning("Datos cinemáticos Stage 5 incompletos para %s/%s — fallback.", condition, section)
+        LOGGER.warning("Incomplete Stage 5 kinematic data for %s/%s — fallback.", condition, section)
         return _compute_section_result(condition, row, tau)
 
     beta_metal  = float(row_btd["beta_metal_deg"].iloc[0])
@@ -456,7 +456,7 @@ def _compute_section_result_stage5(
     # ── Cargar polar Stage 3 de la condición/sección ─────────────────────
     polar_path = stage3_dir / condition.lower() / section / "corrected_polar.csv"
     if not polar_path.is_file():
-        LOGGER.warning("Polar Stage 3 no encontrado: %s — fallback Stage 4.", polar_path)
+        LOGGER.warning("Stage 3 polar not found: %s — fallback to Stage 4.", polar_path)
         return _compute_section_result(condition, row, tau)
 
     polar_df  = pd.read_csv(polar_path)
@@ -496,7 +496,7 @@ def _compute_section_result_stage5(
         epsilon = cl_cd_vpf / cl_cd_fixed
     else:
         epsilon = 1.0
-        LOGGER.warning("CL/CD_fixed inválido para %s/%s — epsilon=1.", condition, section)
+        LOGGER.warning("Invalid CL/CD_fixed for %s/%s — epsilon=1.", condition, section)
 
     epsilon_eff = min(epsilon, EPSILON_CAP)
     delta_eta_profile = (epsilon_eff - 1.0) * tau
@@ -523,7 +523,7 @@ def _compute_section_result_stage5(
 
 
 def _load_stage5_tables(stage5_dir: Path) -> Dict:
-    """Carga las tablas necesarias de Stage 5."""
+    """Load the required Stage 5 tables."""
     td = stage5_dir / "tables"
     return {
         "optimal_incidence": pd.read_csv(td / "optimal_incidence.csv"),
@@ -534,19 +534,19 @@ def _load_stage5_tables(stage5_dir: Path) -> Dict:
 
 
 def _annular_weights(radii: Dict[str, float]) -> Dict[str, float]:
-    """Pesos proporcionales al área anular de cada sección de pala.
+    """Weights proportional to the annular area of each blade section.
 
-    Aproxima el área del anillo representado por cada punto de control
-    usando los puntos medios entre secciones adyacentes como fronteras.
-    La sección más interna (root) se extiende hasta el radio de cubo (estimado).
+    Approximates the ring area represented by each control point using
+    midpoints between adjacent sections as boundaries. The innermost
+    section (root) extends to the hub radius (estimated).
     """
     sections = ["root", "mid_span", "tip"]
     r = [radii.get(s, 0.0) for s in sections]
     if any(v <= 0 for v in r):
         return {}
 
-    # Fronteras del anillo: punto medio entre secciones adyacentes
-    # Hub estimado como root - (mid - root)/2, con mínimo de 0.
+    # Ring boundaries: midpoint between adjacent sections
+    # Hub estimated as root - (mid - root)/2, with minimum of 0.
     r_hub = max(r[0] - (r[1] - r[0]) / 2.0, 0.0)
     boundaries = [
         r_hub,
@@ -562,7 +562,7 @@ def _annular_weights(radii: Dict[str, float]) -> Dict[str, float]:
 
 
 def _load_config(config_path: Path | None) -> Tuple[float, dict]:
-    """Lee τ y sfc_multipliers de engine_parameters.yaml."""
+    """Read τ and sfc_multipliers from engine_parameters.yaml."""
     tau = 0.65
     sfc_multipliers: dict = {}
     if config_path and config_path.exists():
@@ -572,7 +572,7 @@ def _load_config(config_path: Path | None) -> Tuple[float, dict]:
             tau = float(cfg.get("profile_efficiency_transfer", tau))
             sfc_multipliers = cfg.get("sfc_multipliers", {})
         except Exception as exc:
-            LOGGER.warning("No se pudo leer engine_parameters.yaml: %s — usando τ=%.2f", exc, tau)
+            LOGGER.warning("Could not read engine_parameters.yaml: %s — using τ=%.2f", exc, tau)
     return tau, sfc_multipliers
 
 
@@ -581,7 +581,7 @@ def _mean(values: List[float]) -> float:
 
 
 def _weighted_mean(values_weights: List[Tuple[float, float]]) -> float:
-    """Media ponderada: [(valor, peso), ...]."""
+    """Weighted mean: [(value, weight), ...]."""
     total_w = sum(w for _, w in values_weights)
     if total_w <= 0:
         return _mean([v for v, _ in values_weights])

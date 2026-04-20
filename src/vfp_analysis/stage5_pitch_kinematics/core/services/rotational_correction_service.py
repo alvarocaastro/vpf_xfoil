@@ -1,32 +1,32 @@
 """
 rotational_correction_service.py
 ---------------------------------
-Correcciones rotacionales 3D para palas de fan giratorio.
+3D rotational corrections for rotating fan blades.
 
-En una pala giratoria, las fuerzas de Coriolis y el gradiente de presión
-centrífuga modifican la capa límite, incrementando la sustentación y
-retrasando el stall respecto a los datos 2D de XFOIL. El efecto es más
-pronunciado cerca de la raíz (donde c/r es grande) y negligible en la punta.
+In a rotating blade, Coriolis forces and the centrifugal pressure gradient
+modify the boundary layer, increasing lift and delaying stall relative to
+2D XFOIL data. The effect is most pronounced near the root (where c/r is
+large) and negligible at the tip.
 
-Modelos implementados:
+Models implemented:
 
   Snel (1994):
     ΔCL_rot(r) = a · (c/r)² · CL_2D(α)         a = 3.0
 
   Du-Selig (2000):
     Λ_r        = ω·r / Va                        [local tip-speed-ratio]
-    f(Λ_r)     = Λ_r² / (Λ_r² + 1)              [0 → 1 con Λ_r]
+    f(Λ_r)     = Λ_r² / (Λ_r² + 1)              [0 → 1 with Λ_r]
     ΔCL_DS(r)  = A_ds · f(Λ_r) · (c/r)^1.6 · CL_2D(α)   A_ds = 1.6
 
-  Diferencia física: Du-Selig pondera la corrección con f(Λ_r), que
-  disminuye a bajos Λ_r (despegue, raíz). Snel usa un coeficiente fijo.
-  Du-Selig es más preciso cuando Λ_r varía significativamente entre fases
-  (rango GE9X: Λ_r ≈ 0.68–2.4 en raíz, 1.28–4.5 en punta).
+  Physical difference: Du-Selig weights the correction with f(Λ_r), which
+  decreases at low Λ_r (takeoff, root). Snel uses a fixed coefficient.
+  Du-Selig is more accurate when Λ_r varies significantly between phases
+  (GE9X range: Λ_r ≈ 0.68–2.4 at root, 1.28–4.5 at tip).
 
   CL_3D(α)   = CL_2D(α) + ΔCL_rot(α)
-  CD_3D(α)   ≈ CD_2D(α)   (corrección de CD < 2 %, despreciable)
+  CD_3D(α)   ≈ CD_2D(α)   (CD correction < 2 %, negligible)
 
-El α_opt_3D se halla buscando el segundo pico de (CL_3D/CD) en α ≥ 3°.
+α_opt_3D is found by searching for the second peak of (CL_3D/CD) at α ≥ 3°.
 
 Referencias:
 - Snel, H., Houwink, R. & Bosschers, J. (1994). Sectional prediction of 3D
@@ -47,54 +47,54 @@ import numpy as np
 import pandas as pd
 
 
-# Constantes físicas leídas de PhysicsConstants (settings.py) — no hardcoded aquí
+# Physical constants read from PhysicsConstants (settings.py) — not hardcoded here
 from vfp_analysis.settings import get_settings as _get_settings
 _physics = _get_settings().physics
-_SNEL_A         = _physics.SNEL_A            # coeficiente empírico Snel (flujo adherido)
-_ALPHA_MIN_OPT  = _physics.ALPHA_MIN_OPT_DEG # α mínimo para buscar α_opt
-_CL_MIN_VIABLE  = _physics.CL_MIN_3D         # CL mínimo viable en 3D
+_SNEL_A         = _physics.SNEL_A            # empirical Snel coefficient (attached flow)
+_ALPHA_MIN_OPT  = _physics.ALPHA_MIN_OPT_DEG # minimum α for α_opt search
+_CL_MIN_VIABLE  = _physics.CL_MIN_3D         # minimum viable CL in 3D
 
-# Coeficiente Du-Selig (calibrado Du & Selig 2000, eq. 11)
+# Du-Selig coefficient (calibrated Du & Selig 2000, eq. 11)
 _DU_SELIG_A: float = 1.6
 
 
 @dataclass
 class DuSeligCorrectionResult:
-    """Resultado de las correcciones rotacionales 3D con el modelo Du-Selig (2000)."""
+    """3D rotational correction results using the Du-Selig (2000) model."""
     condition: str
     section: str
     radius_m: float
     chord_m: float
-    c_over_r: float              # relación cuerda/radio [—]
-    lambda_r: float              # tip-speed-ratio local Λ_r = ω·r / Va [—]
+    c_over_r: float              # chord-to-radius ratio [—]
+    lambda_r: float              # local tip-speed-ratio Λ_r = ω·r / Va [—]
     du_selig_factor: float       # A_ds · f(Λ_r) · (c/r)^1.6 [—]
-    alpha_opt_2d: float          # α_opt del polar 2D [°]
-    cl_cd_max_2d: float          # (CL/CD)_max del polar 2D [—]
-    alpha_opt_3d: float          # α_opt del polar 3D (Du-Selig) [°]
-    cl_cd_max_3d: float          # (CL/CD)_max del polar 3D [—]
-    delta_cl_du_selig_at_opt: float  # ΔCL_du_selig en α_opt_3D [—]
-    cl_gain_pct: float           # ganancia porcentual de CL en α_opt_3D [%]
+    alpha_opt_2d: float          # α_opt from 2D polar [°]
+    cl_cd_max_2d: float          # (CL/CD)_max from 2D polar [—]
+    alpha_opt_3d: float          # α_opt from 3D polar (Du-Selig) [°]
+    cl_cd_max_3d: float          # (CL/CD)_max from 3D polar [—]
+    delta_cl_du_selig_at_opt: float  # ΔCL_du_selig at α_opt_3D [—]
+    cl_gain_pct: float           # percentage CL gain at α_opt_3D [%]
 
 
 @dataclass
 class RotationalCorrectionResult:
-    """Resultado de las correcciones rotacionales 3D para un caso (condition, section)."""
+    """3D rotational correction results for a (condition, section) case."""
     condition: str
     section: str
     radius_m: float
     chord_m: float
-    c_over_r: float              # relación cuerda/radio [—]
+    c_over_r: float              # chord-to-radius ratio [—]
     snel_factor: float           # a · (c/r)² [—]
-    alpha_opt_2d: float          # α_opt del polar 2D (corregido por compresibilidad) [°]
-    cl_cd_max_2d: float          # (CL/CD)_max del polar 2D [—]
-    alpha_opt_3d: float          # α_opt del polar 3D (con corrección Snel) [°]
-    cl_cd_max_3d: float          # (CL/CD)_max del polar 3D [—]
-    delta_cl_snel_at_opt: float  # ΔCL_snel en α_opt_3D [—]
-    cl_gain_pct: float           # ganancia porcentual de CL en α_opt_3D [%]
+    alpha_opt_2d: float          # α_opt from 2D polar (compressibility-corrected) [°]
+    cl_cd_max_2d: float          # (CL/CD)_max from 2D polar [—]
+    alpha_opt_3d: float          # α_opt from 3D polar (with Snel correction) [°]
+    cl_cd_max_3d: float          # (CL/CD)_max from 3D polar [—]
+    delta_cl_snel_at_opt: float  # ΔCL_snel at α_opt_3D [—]
+    cl_gain_pct: float           # percentage CL gain at α_opt_3D [%]
 
 
 def _apply_snel(df: pd.DataFrame, c_over_r: float, cl_col: str) -> pd.DataFrame:
-    """Añade columna cl_3d y ld_3d al DataFrame de polar.
+    """Add cl_3d and ld_3d columns to the polar DataFrame.
 
     ΔCL_rot = a · (c/r)² · CL_2D
     CL_3D   = CL_2D + ΔCL_rot
@@ -110,14 +110,14 @@ def _apply_snel(df: pd.DataFrame, c_over_r: float, cl_col: str) -> pd.DataFrame:
 
 
 def _find_second_peak_3d(df: pd.DataFrame) -> tuple[float, float]:
-    """Encuentra el segundo pico de ld_3d en α ≥ _ALPHA_MIN_OPT.
+    """Find the second peak of ld_3d at α ≥ _ALPHA_MIN_OPT.
 
-    Devuelve (alpha_opt, ld_max). Si no hay datos, devuelve (nan, nan).
+    Returns (alpha_opt, ld_max). If no data, returns (nan, nan).
     """
     sub = df[df["alpha"] >= _ALPHA_MIN_OPT].copy()
     if sub.empty:
         return float("nan"), float("nan")
-    # Filtro mínimo de CL viable
+    # Minimum viable CL filter
     sub = sub[sub["cl_3d"] >= _CL_MIN_VIABLE]
     if sub.empty:
         return float("nan"), float("nan")
@@ -131,21 +131,21 @@ def compute_rotational_corrections(
     alpha_opt_2d_map: Dict[tuple, float],
     cl_cd_max_2d_map: Dict[tuple, float],
 ) -> List[RotationalCorrectionResult]:
-    """Calcula las correcciones 3D de Snel para cada (condition, section).
+    """Compute Snel 3D corrections for each (condition, section).
 
-    Parámetros
+    Parameters
     ----------
     df_polars : pd.DataFrame
-        DataFrame de polares con columnas: condition, section, alpha,
+        Polars DataFrame with columns: condition, section, alpha,
         cl/cl_corrected, cd/cd_corrected.
     blade_geometry : dict
-        Salida de config_loader.get_blade_geometry().
+        Output of config_loader.get_blade_geometry().
     alpha_opt_2d_map : dict[(condition, section), float]
-        α_opt 2D de referencia (para calcular la ganancia).
+        Reference 2D α_opt (to compute the gain).
     cl_cd_max_2d_map : dict[(condition, section), float]
-        (CL/CD)_max 2D de referencia.
+        Reference 2D (CL/CD)_max.
 
-    Retorna
+    Returns
     -------
     List[RotationalCorrectionResult]
     """
@@ -186,7 +186,7 @@ def compute_rotational_corrections(
             alpha_2d = alpha_opt_2d_map.get((condition, section), float("nan"))
             ld_2d = cl_cd_max_2d_map.get((condition, section), float("nan"))
 
-            # ΔCL_snel evaluado en α_opt_3D
+            # ΔCL_snel evaluated at α_opt_3D
             if not math.isnan(alpha_3d):
                 close = df_3d[(df_3d["alpha"] - alpha_3d).abs() < 0.5]
                 if not close.empty:
@@ -260,9 +260,9 @@ def compute_rotational_corrections_du_selig(
     alpha_opt_2d_map: Dict[tuple, float],
     cl_cd_max_2d_map: Dict[tuple, float],
 ) -> List[DuSeligCorrectionResult]:
-    """Calcula las correcciones 3D de Du-Selig para cada (condition, section).
+    """Compute Du-Selig 3D corrections for each (condition, section).
 
-    Requiere Va y RPM del config para calcular Λ_r = ω·r / Va por condición.
+    Requires Va and RPM from config to compute Λ_r = ω·r / Va per condition.
 
     Parameters
     ----------
@@ -359,9 +359,9 @@ def build_3d_polar_map(
     df_polars: pd.DataFrame,
     blade_geometry: dict,
 ) -> Dict[tuple, pd.DataFrame]:
-    """Construye un mapa de polares 3D corregidas por Snel.
+    """Build a map of Snel-corrected 3D polars.
 
-    Retorna {(condition, section): DataFrame con cl_3d, ld_3d}.
+    Returns {(condition, section): DataFrame with cl_3d, ld_3d}.
     """
     from vfp_analysis.config_loader import get_blade_radii
 

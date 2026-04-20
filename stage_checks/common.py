@@ -54,47 +54,47 @@ def _validate_stage_outputs(stage_num: int) -> list[str]:
 
     if stage_num == 1:
         checks = [
-            (stage_dir / "airfoil_selection" / "selected_airfoil.dat", "perfil seleccionado (.dat)"),
+            (stage_dir / "airfoil_selection" / "selected_airfoil.dat", "selected airfoil (.dat)"),
         ]
     elif stage_num == 2:
         checks = [
-            (stage_dir / "simulation_plots", "directorio simulation_plots"),
-            (stage_dir / "polars",           "directorio polares planas"),
+            (stage_dir / "simulation_plots", "simulation_plots directory"),
+            (stage_dir / "polars",           "flat polars directory"),
         ]
     elif stage_num == 3:
         checks = [
-            (stage_dir, "directorio de salida correcciones"),
+            (stage_dir, "corrections output directory"),
         ]
     elif stage_num == 4:
         checks = [
-            (stage_dir / "tables" / "summary_table.csv",      "tabla de métricas"),
-            (stage_dir / "tables" / "clcd_max_by_section.csv","tabla CL/CD por sección"),
-            (stage_dir / "figures",                            "directorio de figuras"),
+            (stage_dir / "tables" / "summary_table.csv",      "metrics table"),
+            (stage_dir / "tables" / "clcd_max_by_section.csv","CL/CD by section table"),
+            (stage_dir / "figures",                            "figures directory"),
         ]
     elif stage_num == 5:
         checks = [
-            (stage_dir / "tables" / "optimal_incidence.csv",        "tabla de incidencia óptima"),
-            (stage_dir / "tables" / "stage_loading.csv",            "tabla de carga de etapa"),
-            (stage_dir / "tables" / "blade_twist_design.csv",       "tabla de twist de diseño"),
-            (stage_dir / "tables" / "off_design_incidence.csv",     "tabla de incidencia off-design"),
-            (stage_dir / "tables" / "cascade_corrections.csv",      "tabla de correcciones de cascada"),
-            (stage_dir / "tables" / "rotational_corrections.csv",   "tabla de correcciones rotacionales"),
-            (stage_dir / "figures",                                  "directorio de figuras"),
+            (stage_dir / "tables" / "optimal_incidence.csv",        "optimal incidence table"),
+            (stage_dir / "tables" / "stage_loading.csv",            "stage loading table"),
+            (stage_dir / "tables" / "blade_twist_design.csv",       "blade twist design table"),
+            (stage_dir / "tables" / "off_design_incidence.csv",     "off-design incidence table"),
+            (stage_dir / "tables" / "cascade_corrections.csv",      "cascade corrections table"),
+            (stage_dir / "tables" / "rotational_corrections.csv",   "rotational corrections table"),
+            (stage_dir / "figures",                                  "figures directory"),
         ]
     elif stage_num == 6:
         checks = [
-            (stage_dir / "tables" / "reverse_kinematics.csv",    "tabla cinemática reversa"),
-            (stage_dir / "tables" / "reverse_thrust_sweep.csv",  "tabla barrido de empuje inverso"),
-            (stage_dir / "tables" / "reverse_thrust_optimal.csv","tabla punto óptimo reversa"),
-            (stage_dir / "tables" / "mechanism_weight.csv",      "tabla peso del mecanismo"),
-            (stage_dir / "figures",                               "directorio de figuras"),
+            (stage_dir / "tables" / "reverse_kinematics.csv",    "reverse kinematics table"),
+            (stage_dir / "tables" / "reverse_thrust_sweep.csv",  "reverse thrust sweep table"),
+            (stage_dir / "tables" / "reverse_thrust_optimal.csv","reverse thrust optimal point table"),
+            (stage_dir / "tables" / "mechanism_weight.csv",      "mechanism weight table"),
+            (stage_dir / "figures",                               "figures directory"),
         ]
     elif stage_num == 7:
         checks = [
-            (stage_dir / "tables" / "sfc_analysis.csv",          "tabla SFC agregada"),
-            (stage_dir / "tables" / "sfc_section_breakdown.csv", "tabla SFC por sección"),
-            (stage_dir / "tables" / "sfc_sensitivity.csv",       "tabla sensibilidad tau"),
-            (stage_dir / "figures",                               "directorio de figuras"),
+            (stage_dir / "tables" / "sfc_analysis.csv",          "aggregated SFC table"),
+            (stage_dir / "tables" / "sfc_section_breakdown.csv", "SFC by section table"),
+            (stage_dir / "tables" / "sfc_sensitivity.csv",       "tau sensitivity table"),
+            (stage_dir / "figures",                               "figures directory"),
         ]
 
     messages: list[str] = []
@@ -105,26 +105,26 @@ def _validate_stage_outputs(stage_num: int) -> list[str]:
     # Count artifacts
     if stage_num == 2:
         polars_dir = stage_dir / "polars"
-        messages.append(f"[INFO] Polares planas (csv): {_existing_count(polars_dir, '*.csv')}")
+        messages.append(f"[INFO] Flat polars (csv): {_existing_count(polars_dir, '*.csv')}")
     elif stage_num == 3:
         corrected = _existing_count(stage_dir, "*/*/corrected_polar.csv")
-        messages.append(f"[INFO] Polares corregidas: {corrected}")
+        messages.append(f"[INFO] Corrected polars: {corrected}")
     elif stage_num == 4:
         figures_dir = stage_dir / "figures"
-        messages.append(f"[INFO] Figuras Stage 4: {_existing_count(figures_dir, '*.png')}")
+        messages.append(f"[INFO] Stage 4 figures: {_existing_count(figures_dir, '*.png')}")
     elif stage_num == 5:
         figures_dir = stage_dir / "figures"
         tables_dir = stage_dir / "tables"
-        messages.append(f"[INFO] Figuras Stage 5: {_existing_count(figures_dir, '*.png')}")
-        messages.append(f"[INFO] Tablas Stage 5:  {_existing_count(tables_dir, '*.csv')}")
+        messages.append(f"[INFO] Stage 5 figures: {_existing_count(figures_dir, '*.png')}")
+        messages.append(f"[INFO] Stage 5 tables:  {_existing_count(tables_dir, '*.csv')}")
     elif stage_num == 6:
         figures_dir = stage_dir / "figures"
         tables_dir = stage_dir / "tables"
-        messages.append(f"[INFO] Figuras Stage 6: {_existing_count(figures_dir, '*.png')}")
-        messages.append(f"[INFO] Tablas Stage 6:  {_existing_count(tables_dir, '*.csv')}")
+        messages.append(f"[INFO] Stage 6 figures: {_existing_count(figures_dir, '*.png')}")
+        messages.append(f"[INFO] Stage 6 tables:  {_existing_count(tables_dir, '*.csv')}")
     elif stage_num == 7:
         figures_dir = stage_dir / "figures"
-        messages.append(f"[INFO] Figuras Stage 7: {_existing_count(figures_dir, '*.png')}")
+        messages.append(f"[INFO] Stage 7 figures: {_existing_count(figures_dir, '*.png')}")
 
     return messages
 
@@ -284,11 +284,11 @@ def run_stage_check(stage_num: int, clean: bool = True, cache: bool = False) -> 
 
     print("=" * 80)
     print(f"Stage check: Stage {stage_num}"
-          + ("  [cache — saltando stages completados]" if cache else ""))
+          + ("  [cache — skipping completed stages]" if cache else ""))
     print("=" * 80)
 
     if clean:
-        print("[RUN] Limpiando resultados anteriores")
+        print("[RUN] Cleaning previous results")
         run_analysis.step_1_clean_results()
 
     s1: Stage1Result | None = None
@@ -297,76 +297,76 @@ def run_stage_check(stage_num: int, clean: bool = True, cache: bool = False) -> 
     s4: Stage4Result | None = None
     s5: Stage5Result | None = None
 
-    # ── Stage 1 — selección de perfil ───────────────────────────────────────
+    # ── Stage 1 — airfoil selection ──────────────────────────────────────────
     if stage_num >= 1:
         if cache and (r := _cached_s1()) is not None:
             s1 = r
-            print(f"[CACHE] Stage 1 — perfil: {s1.selected_airfoil_name}")
+            print(f"[CACHE] Stage 1 — airfoil: {s1.selected_airfoil_name}")
         else:
-            print("[RUN] Stage 1 — selección de perfil")
+            print("[RUN] Stage 1 — airfoil selection")
             s1 = run_analysis.step_2_airfoil_selection()
-            print(f"[INFO] Perfil seleccionado: {s1.selected_airfoil_name}")
+            print(f"[INFO] Selected airfoil: {s1.selected_airfoil_name}")
 
-    # ── Stage 2 — simulaciones XFOIL ────────────────────────────────────────
+    # ── Stage 2 — XFOIL simulations ─────────────────────────────────────────
     if stage_num >= 2:
         if cache and (r := _cached_s2()) is not None:
             s2 = r
-            print(f"[CACHE] Stage 2 — {s2.n_simulations} polares en disco")
+            print(f"[CACHE] Stage 2 — {s2.n_simulations} polars on disk")
         else:
-            print("[RUN] Stage 2 — simulaciones XFOIL")
+            print("[RUN] Stage 2 — XFOIL simulations")
             s2 = run_analysis.step_3_xfoil_simulations(s1)
-            print(f"[INFO] Simulaciones: {s2.n_simulations}")
+            print(f"[INFO] Simulations: {s2.n_simulations}")
 
-    # ── Stage 3 — correcciones de compresibilidad ────────────────────────────
+    # ── Stage 3 — compressibility corrections ───────────────────────────────
     if stage_num >= 3:
         if cache and (r := _cached_s3()) is not None:
             s3 = r
-            print(f"[CACHE] Stage 3 — {s3.n_cases_corrected} polares corregidas en disco")
+            print(f"[CACHE] Stage 3 — {s3.n_cases_corrected} corrected polars on disk")
         else:
-            print("[RUN] Stage 3 — correcciones de compresibilidad")
+            print("[RUN] Stage 3 — compressibility corrections")
             s3 = run_analysis.step_4_compressibility_correction(s2)
-            print(f"[INFO] Casos corregidos: {s3.n_cases_corrected}")
+            print(f"[INFO] Corrected cases: {s3.n_cases_corrected}")
 
-    # ── Stage 4 — métricas y figuras ────────────────────────────────────────
+    # ── Stage 4 — aerodynamic metrics and figures ────────────────────────────
     if stage_num >= 4:
         if cache and (r := _cached_s4()) is not None:
             s4 = r
-            print("[CACHE] Stage 4 — métricas en disco")
+            print("[CACHE] Stage 4 — metrics on disk")
         else:
-            print("[RUN] Stage 4 — métricas aerodinámicas y figuras")
+            print("[RUN] Stage 4 — aerodynamic metrics and figures")
             s4 = run_analysis.step_5_metrics_and_figures(s3)
-            print(f"[INFO] Métricas computadas: {len(s4.metrics)}")
+            print(f"[INFO] Metrics computed: {len(s4.metrics)}")
 
-    # ── Stage 5 — cinemática de pitch ───────────────────────────────────────
+    # ── Stage 5 — pitch kinematics ───────────────────────────────────────────
     if stage_num >= 5:
         if cache and (r := _cached_s5()) is not None:
             s5 = r
-            print(f"[CACHE] Stage 5 — {s5.n_tables} tablas, {s5.n_figures} figuras en disco")
+            print(f"[CACHE] Stage 5 — {s5.n_tables} tables, {s5.n_figures} figures on disk")
         else:
-            print("[RUN] Stage 5 — cinemática de paso (análisis 3D de fan)")
+            print("[RUN] Stage 5 — pitch kinematics (3D fan analysis)")
             s5 = run_analysis.step_6_pitch_kinematics()
-            print(f"[INFO] Tablas: {s5.n_tables}  Figuras: {s5.n_figures}")
+            print(f"[INFO] Tables: {s5.n_tables}  Figures: {s5.n_figures}")
 
-    # ── Stage 6 — modelado de reversa de empuje ─────────────────────────────
+    # ── Stage 6 — reverse thrust modelling ──────────────────────────────────
     if stage_num >= 6:
         if cache and (r := _cached_s6()) is not None:
             s6 = r
             print(f"[CACHE] Stage 6 — beta_opt={s6.beta_opt_deg:.1f} deg thrust_frac={s6.thrust_fraction:.3f}")
         else:
-            print("[RUN] Stage 6 — modelado de reversa de empuje (BEM)")
+            print("[RUN] Stage 6 — reverse thrust modelling (BEM)")
             s6 = run_analysis.step_7_reverse_thrust()
             print(f"[INFO] beta_opt: {s6.beta_opt_deg:.1f} deg  thrust_fraction: {s6.thrust_fraction:.3f}")
-            print(f"[INFO] Mecanismo: {s6.mechanism_weight_kg:.0f} kg  penalizacion SFC: +{s6.sfc_cruise_penalty_pct:.3f}%")
+            print(f"[INFO] Mechanism: {s6.mechanism_weight_kg:.0f} kg  SFC penalty: +{s6.sfc_cruise_penalty_pct:.3f}%")
 
-    # ── Stage 7 — análisis de SFC ───────────────────────────────────────────
+    # ── Stage 7 — SFC analysis ──────────────────────────────────────────────
     if stage_num >= 7:
         if cache and (r := _cached_s7()) is not None:
             s7 = r
-            print(f"[CACHE] Stage 7 — reducción media SFC: {s7.mean_sfc_reduction_pct:.2f}%")
+            print(f"[CACHE] Stage 7 — mean SFC reduction: {s7.mean_sfc_reduction_pct:.2f}%")
         else:
-            print("[RUN] Stage 7 — análisis de SFC")
+            print("[RUN] Stage 7 — SFC analysis")
             s7 = run_analysis.step_8_sfc_analysis()
-            print(f"[INFO] Reducción media SFC: {s7.mean_sfc_reduction_pct:.2f}%")
+            print(f"[INFO] Mean SFC reduction: {s7.mean_sfc_reduction_pct:.2f}%")
 
     print("-" * 80)
     for line in _validate_stage_outputs(stage_num):
@@ -376,19 +376,19 @@ def run_stage_check(stage_num: int, clean: bool = True, cache: bool = False) -> 
 
 def build_parser(stage_num: int) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description=f"Ejecuta y valida el pipeline hasta el Stage {stage_num}."
+        description=f"Run and validate the pipeline up to Stage {stage_num}."
     )
     parser.add_argument(
         "--no-clean",
         action="store_true",
-        help="No eliminar resultados anteriores antes de ejecutar.",
+        help="Do not delete previous results before running.",
     )
     parser.add_argument(
         "--cache",
         action="store_true",
         help=(
-            "Saltar stages cuyos resultados ya existen en disco. "
-            "Implica --no-clean."
+            "Skip stages whose results already exist on disk. "
+            "Implies --no-clean."
         ),
     )
     return parser

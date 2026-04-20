@@ -1,11 +1,11 @@
 """
 optimal_incidence_service.py
 ----------------------------
-Calcula el ángulo de ataque óptimo (α_opt) por condición de vuelo y sección
-de pala a partir de los polares de Stage 2/3.
+Computes the optimal angle of attack (α_opt) per flight condition and blade
+section from the Stage 2/3 polars.
 
-El punto óptimo se define como el segundo pico de CL/CD (α ≥ 3°) para evitar
-el artefacto de burbuja de separación laminar a ángulos bajos.
+The optimal point is defined as the second peak of CL/CD (α ≥ 3°) to avoid
+the laminar separation bubble artefact at low angles.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def compute_optimal_incidence(
     mach: float,
 ) -> OptimalIncidence:
     """
-    Calcula el punto de incidencia óptima de un polar dado.
+    Compute the optimal incidence point for a given polar.
 
     Parameters
     ----------
@@ -71,17 +71,17 @@ def compute_all_optimal_incidences(
     df_corrected: pd.DataFrame | None = None,
 ) -> List[OptimalIncidence]:
     """
-    Calcula la incidencia óptima para todas las condiciones y secciones.
+    Compute optimal incidence for all conditions and sections.
 
-    Usa los polares corregidos de Stage 3 cuando están disponibles
-    (mayor fidelidad a Mach real); si no, usa los polares de Stage 2.
+    Uses Stage 3 corrected polars when available (higher fidelity to actual
+    Mach); otherwise uses Stage 2 polars.
 
     Parameters
     ----------
     df_polars : pd.DataFrame
-        Polares de Stage 2 con columnas ``condition`` y ``section``.
+        Stage 2 polars with columns ``condition`` and ``section``.
     df_corrected : pd.DataFrame, optional
-        Polares corregidos de Stage 3.
+        Stage 3 corrected polars.
 
     Returns
     -------
@@ -104,7 +104,7 @@ def compute_all_optimal_incidences(
             if df_case.empty:
                 continue
 
-            # Preferir datos corregidos si existen
+            # Prefer corrected data if available
             if df_corrected is not None and not df_corrected.empty:
                 df_corr_case = df_corrected[
                     (df_corrected["condition"] == condition)
@@ -119,7 +119,7 @@ def compute_all_optimal_incidences(
                 if "re" in df_case.columns:
                     reynolds = float(df_case["re"].iloc[0])
                 else:
-                    LOGGER.warning("Re no encontrado para %s/%s — omitiendo.", condition, section)
+                    LOGGER.warning("Re not found for %s/%s — skipping.", condition, section)
                     continue
 
             mach = (
@@ -133,7 +133,7 @@ def compute_all_optimal_incidences(
                 all_incidences.append(incidence)
             except Exception as exc:
                 LOGGER.warning(
-                    "No se pudo calcular incidencia óptima para %s/%s: %s", condition, section, exc
+                    "Could not compute optimal incidence for %s/%s: %s", condition, section, exc
                 )
 
     return all_incidences

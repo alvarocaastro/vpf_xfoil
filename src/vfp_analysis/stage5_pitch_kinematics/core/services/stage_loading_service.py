@@ -1,31 +1,30 @@
 """
 stage_loading_service.py
 -------------------------
-Análisis de carga de etapa mediante la ecuación de Euler y coeficientes
-adimensionales φ (caudal) y ψ (trabajo) del fan de paso variable.
+Stage loading analysis using the Euler equation and dimensionless coefficients
+φ (flow) and ψ (work) for the variable pitch fan.
 
-La ecuación de Euler de turbomaquinaria (Dixon & Hall, ec. 5.2):
+Euler turbomachinery equation (Dixon & Hall, eq. 5.2):
 
-    W_especifico = U · ΔV_θ   [J/kg]
+    W_specific = U · ΔV_θ   [J/kg]
 
-Para un fan sin giro de entrada (V_θ_entrada ≈ 0):
+For a fan without inlet swirl (V_θ_inlet ≈ 0):
 
     V_θ = U − Va / tan(β_mech)      [m/s]
     ψ   = V_θ / U  = 1 − φ·cot(β)  [—]
     φ   = Va / U                    [—]
     W   = U · V_θ = U² · ψ         [J/kg]
 
-Zona de diseño eficiente (fan de alto bypass):
+Efficient design zone (high-bypass fan):
     φ ∈ [0.35, 0.55],  ψ ∈ [0.25, 0.50]
 
-El diagrama φ-ψ (también llamado "diagrama de Smith" o "mapa de etapa")
-permite verificar que todos los puntos de operación del VPF caen dentro de
-la zona de rendimiento aceptable.
+The φ-ψ diagram (also called "Smith chart" or "stage map") verifies that
+all VPF operating points fall within the acceptable performance zone.
 
-Referencias:
-- Dixon & Hall (2013), cap. 5 — Euler turbine equation and velocity diagrams
-- Cumpsty (2004), cap. 2 — Thermodynamic and aerodynamic fundamentals
-- Saravanamuttoo et al. (2017), cap. 5 — Axial flow compressors and fans
+References:
+- Dixon & Hall (2013), ch. 5 — Euler turbine equation and velocity diagrams
+- Cumpsty (2004), ch. 2 — Thermodynamic and aerodynamic fundamentals
+- Saravanamuttoo et al. (2017), ch. 5 — Axial flow compressors and fans
 """
 
 from __future__ import annotations
@@ -37,8 +36,8 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 
-# Zona de diseño eficiente — leída de PhysicsConstants (settings.py)
-# Referencias: Dixon & Hall (2013), Cumpsty (2004)
+# Efficient design zone — read from PhysicsConstants (settings.py)
+# References: Dixon & Hall (2013), Cumpsty (2004)
 from vfp_analysis.settings import get_settings as _get_settings
 _p = _get_settings().physics
 _PHI_MIN_DESIGN = _p.PHI_DESIGN_MIN
@@ -49,19 +48,19 @@ _PSI_MAX_DESIGN = _p.PSI_DESIGN_MAX
 
 @dataclass
 class StageLoadingResult:
-    """Resultado del análisis de carga de etapa para un caso (condition, section)."""
+    """Stage loading analysis result for a (condition, section) case."""
     condition: str
     section: str
-    va_m_s: float               # velocidad axial Va [m/s]
-    u_m_s: float                # velocidad tangencial de pala U = ωr [m/s]
-    alpha_opt_3d_deg: float     # ángulo de ataque óptimo 3D [°]
-    beta_mech_deg: float        # ángulo mecánico β = α_opt_3D + φ_flow [°]
-    phi_flow_deg: float         # ángulo de flujo φ = arctan(Va/U) [°]
-    phi_coeff: float            # coeficiente de caudal φ = Va/U [—]
-    v_theta_m_s: float          # velocidad tangencial impartida V_θ [m/s]
-    psi_loading: float          # coeficiente de trabajo ψ = V_θ/U [—]
-    w_specific_kj_kg: float     # trabajo específico W = U·V_θ [kJ/kg]
-    in_design_zone: bool        # True si (φ, ψ) cae en la zona de diseño
+    va_m_s: float               # axial velocity Va [m/s]
+    u_m_s: float                # blade tangential velocity U = ωr [m/s]
+    alpha_opt_3d_deg: float     # 3D optimal angle of attack [°]
+    beta_mech_deg: float        # mechanical angle β = α_opt_3D + φ_flow [°]
+    phi_flow_deg: float         # inflow angle φ = arctan(Va/U) [°]
+    phi_coeff: float            # flow coefficient φ = Va/U [—]
+    v_theta_m_s: float          # imparted tangential velocity V_θ [m/s]
+    psi_loading: float          # work coefficient ψ = V_θ/U [—]
+    w_specific_kj_kg: float     # specific work W = U·V_θ [kJ/kg]
+    in_design_zone: bool        # True if (φ, ψ) falls in the design zone
 
 
 def _in_design_zone(phi: float, psi: float) -> bool:
@@ -77,29 +76,29 @@ def compute_stage_loading(
     omega: float,
     radii: Dict[str, float],
 ) -> List[StageLoadingResult]:
-    """Calcula la carga de etapa para cada (condition, section).
+    """Compute stage loading for each (condition, section).
 
-    La función es agnóstica del origen del ángulo de incidencia: puede
-    alimentarse con α_opt_3D (pitch ideal libre por condición, escenario
-    aerodinámicamente óptimo) o con α_actual (comando único de actuador,
-    escenario físico real del VPF). En ambos casos los coeficientes φ, ψ
-    y W_spec se derivan de β_mech = α + arctan(Va/U).
+    The function is agnostic to the source of the incidence angle: it can be
+    fed with α_opt_3D (ideal pitch free per condition, aerodynamically optimal
+    scenario) or α_actual (single actuator command, real physical VPF scenario).
+    In both cases the coefficients φ, ψ and W_spec are derived from
+    β_mech = α + arctan(Va/U).
 
-    Nota sobre la zona de diseño: los límites PHI_DESIGN y PSI_DESIGN
-    (Dixon & Hall, 2013, cap. 5) corresponden al punto de diseño de un
-    fan de paso fijo dimensionado para una PR objetivo. Un VPF operando
-    en α_opt aerodinámico genera ψ inferior (menor turning) a cambio de
-    mayor CL/CD — el check `in_design_zone` es informativo, no prescriptivo.
+    Note on the design zone: the PHI_DESIGN and PSI_DESIGN limits
+    (Dixon & Hall, 2013, ch. 5) correspond to the design point of a fixed-pitch
+    fan sized for a target PR. A VPF operating at aerodynamic α_opt generates
+    lower ψ (less turning) in exchange for higher CL/CD — the `in_design_zone`
+    check is informative, not prescriptive.
 
-    Parámetros
+    Parameters
     ----------
     alpha_map_deg : dict[(condition, section), alpha_deg]
-        Mapa de incidencia por caso (α_opt_3D o α_actual según estrategia).
+        Incidence map per case (α_opt_3D or α_actual depending on strategy).
     axial_velocities : dict[condition, Va [m/s]]
-    omega : float — velocidad angular ω [rad/s]
+    omega : float — angular velocity ω [rad/s]
     radii : dict[section, r_m]
 
-    Retorna
+    Returns
     -------
     List[StageLoadingResult]
     """
@@ -119,7 +118,7 @@ def compute_stage_loading(
         beta_mech = alpha_deg + phi_flow
         phi_coeff = va / u
 
-        # V_θ = U − Va / tan(β_mech)
+        # V_θ = U − Va / tan(β_mech)  [tangential velocity imparted to flow]
         beta_rad = math.radians(beta_mech)
         tan_beta = math.tan(beta_rad)
         if abs(tan_beta) < 1e-6:

@@ -1,10 +1,10 @@
 """
 pitch_kinematics_result.py
 --------------------------
-Modelos de dominio para el análisis integrado de paso e incidencia.
+Domain models for the integrated pitch and incidence analysis.
 
-Consolida los anteriores OptimalIncidence (Stage 6) y KinematicsResult (Stage 7)
-en un módulo único que refleja que ambos análisis forman una cadena continua:
+Consolidates the former OptimalIncidence (Stage 6) and KinematicsResult (Stage 7)
+into a single module reflecting that both analyses form a continuous chain:
   OptimalIncidence → PitchAdjustment → KinematicsResult
 """
 
@@ -15,31 +15,31 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class OptimalIncidence:
-    """Ángulo de ataque óptimo para una condición de vuelo y sección de pala."""
+    """Optimal angle of attack for a flight condition and blade section."""
 
     condition: str
     section: str
     reynolds: float
     mach: float
-    alpha_opt: float   # Ángulo óptimo (2º pico de CL/CD, α ≥ 3°)
-    cl_cd_max: float   # Eficiencia máxima en el punto óptimo
+    alpha_opt: float   # Optimal angle (2nd peak of CL/CD, α ≥ 3°)
+    cl_cd_max: float   # Maximum efficiency at the optimal point
 
 
 @dataclass(frozen=True)
 class PitchAdjustment:
-    """Ajuste de paso requerido relativo a una condición de referencia (crucero)."""
+    """Required pitch adjustment relative to a reference condition (cruise)."""
 
     condition: str
     section: str
     alpha_opt: float
-    delta_pitch: float  # Δα = α_opt(condición) − α_opt(crucero)
+    delta_pitch: float  # Δα = α_opt(condition) − α_opt(cruise)
 
 
 class KinematicsResult:
     """
-    Resultado del análisis de triángulos de velocidad para una condición/sección.
+    Velocity-triangle analysis result for a condition/section.
 
-    Traduce el Δα aerodinámico en el Δβ_mech que debe aplicar el actuador de paso.
+    Translates the aerodynamic Δα into the Δβ_mech that the pitch actuator must apply.
     """
 
     def __init__(
@@ -60,4 +60,4 @@ class KinematicsResult:
         self.inflow_angle_deg     = inflow_angle_deg      # φ [°]
         self.alpha_aero_deg       = alpha_aero_deg        # α_opt [°]
         self.beta_mech_deg        = beta_mech_deg         # β = α + φ [°]
-        self.delta_beta_mech_deg  = delta_beta_mech_deg   # Δβ respecto a crucero [°]
+        self.delta_beta_mech_deg  = delta_beta_mech_deg   # Δβ relative to cruise [°]

@@ -225,14 +225,14 @@ def _write_summary(
         *(
             [
                 "",
-                "  AVISO — PUNTO INFEASIBLE: ningún Δβ del barrido cumple stall_margin ≥ 0",
-                "  simultáneamente con empuje inverso neto. El punto reportado es el más",
-                "  próximo al objetivo (40%) dentro de los puntos con T_rev < 0.",
-                "  Causa probable: los polares XFOIL de Stage 3 no cubren α muy negativos",
-                "  (rango actual α_min = -5°). Para el análisis de inversión se necesitaría",
-                "  extender el polar a α ∈ [-25°, +5°] o usar datos de ensayo en túnel.",
-                "  El análisis de peso del mecanismo y el impacto en SFC son independientes",
-                "  de este resultado y siguen siendo válidos.",
+                "  WARNING — INFEASIBLE POINT: no Δβ in the sweep satisfies stall_margin ≥ 0",
+                "  simultaneously with net reverse thrust. The reported point is the closest",
+                "  to the target (40%) among points with T_rev < 0.",
+                "  Likely cause: Stage 3 XFOIL polars do not cover very negative α",
+                "  (current range α_min = -5°). For reversal analysis it would be necessary",
+                "  to extend the polar to α ∈ [-25°, +5°] or use wind tunnel data.",
+                "  The mechanism weight analysis and SFC impact are independent",
+                "  of this result and remain valid.",
             ]
             if not opt.aerodynamically_valid
             else []

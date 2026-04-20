@@ -1,7 +1,7 @@
 """
 results_writer.py
 -----------------
-Persiste las tablas y resúmenes de texto del análisis de pitch y cinemática.
+Persists the tables and text summaries of the pitch and kinematics analysis.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import pandas as pd
 
 
 class FilesystemPitchKinematicsWriter:
-    """Escribe los CSV y resúmenes de Stage 5 en disco."""
+    """Writes Stage 5 CSVs and summaries to disk."""
 
     @staticmethod
     def write_optimal_incidence_table(
@@ -20,9 +20,9 @@ class FilesystemPitchKinematicsWriter:
         output_path: Path,
     ) -> None:
         """
-        Guarda la tabla de incidencias óptimas.
+        Save the optimal incidence table.
 
-        Columnas: condition, section, Re, Mach, alpha_opt, CL_CD_max
+        Columns: condition, section, Re, Mach, alpha_opt, CL_CD_max
         """
         rows = [
             {
@@ -45,9 +45,9 @@ class FilesystemPitchKinematicsWriter:
         output_path: Path,
     ) -> None:
         """
-        Guarda la tabla de ajustes de paso aerodinámico.
+        Save the aerodynamic pitch adjustment table.
 
-        Columnas: condition, section, alpha_opt, delta_pitch
+        Columns: condition, section, alpha_opt, delta_pitch
         """
         rows = [
             {
@@ -69,9 +69,9 @@ class FilesystemPitchKinematicsWriter:
         output_path: Path,
     ) -> None:
         """
-        Guarda la tabla de resultados cinemáticos completos.
+        Save the complete kinematics results table.
 
-        Columnas: condition, section, axial_velocity_m_s, tangential_velocity_m_s,
+        Columns: condition, section, axial_velocity_m_s, tangential_velocity_m_s,
                   inflow_angle_phi_deg, alpha_aero_deg, beta_mech_deg,
                   delta_alpha_aero_deg, delta_beta_mech_deg
         """
@@ -98,6 +98,6 @@ class FilesystemPitchKinematicsWriter:
 
     @staticmethod
     def write_text_summary(summary_text: str, output_path: Path) -> None:
-        """Escribe un resumen de texto en el path indicado."""
+        """Write a text summary to the given path."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(summary_text, encoding="utf-8")

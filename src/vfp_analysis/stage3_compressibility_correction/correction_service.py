@@ -140,7 +140,7 @@ class CompressibilityCorrectionService:
 
             # Mcr annotation
             mcr_label = (f"$M_{{cr}}$ ≈ {mcr:.3f}"
-                         + ("  ⚠ supercrítico" if is_supercritical else ""))
+                         + ("  ⚠ supercritical" if is_supercritical else ""))
             ax_cl.axvline(0, color="none")  # placeholder
             ax_cl.annotate(
                 mcr_label,
@@ -155,7 +155,7 @@ class CompressibilityCorrectionService:
             ax_cl.set_xlabel(r"$\alpha$ [°]")
             ax_cl.set_ylabel(r"$C_L$")
             ax_cl.set_title(
-                f"Corrección de compresibilidad — {flight_label} / {section_label}"
+                f"Compressibility correction — {flight_label} / {section_label}"
             )
             ax_cl.legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
 
@@ -224,12 +224,12 @@ class CompressibilityCorrectionService:
 
                 ax_cl.set_xlabel(r"$\alpha$ [°]")
                 ax_cl.set_ylabel(r"$C_L$  (Kármán-Tsien)")
-                ax_cl.set_title(f"$C_L$ vs $\\alpha$ por condición — Sección {section_label}")
+                ax_cl.set_title(f"$C_L$ vs $\\alpha$ per condition — Section {section_label}")
                 ax_cl.legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
 
                 ax_eff.set_xlabel(r"$\alpha$ [°]")
                 ax_eff.set_ylabel(r"$C_L / C_D$  (Kármán-Tsien)")
-                ax_eff.set_title(r"$C_L/C_D$ vs $\alpha$ por condición")
+                ax_eff.set_title(r"$C_L/C_D$ vs $\alpha$ per condition")
                 ax_eff.legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
 
                 figures_dir = base_output_dir / "figures"

@@ -95,7 +95,7 @@ class TestStage4ResultValidation:
             figures_dir=tmp_path / "figures",
             stage_dir=tmp_path,
         )
-        with pytest.raises(ValueError, match="métricas vacía"):
+        with pytest.raises(ValueError, match="metrics list is empty"):
             s4.validate()
 
     def test_raises_when_tables_dir_missing(self, tmp_path: Path) -> None:

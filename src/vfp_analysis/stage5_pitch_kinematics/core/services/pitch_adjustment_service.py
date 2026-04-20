@@ -1,12 +1,12 @@
 """
 pitch_adjustment_service.py
 ---------------------------
-Calcula el ajuste de paso aerodinámico relativo a la condición de referencia.
+Computes the aerodynamic pitch adjustment relative to the reference condition.
 
-  Δα(condición, sección) = α_opt(condición, sección) − α_opt(crucero, sección)
+  Δα(condition, section) = α_opt(condition, section) − α_opt(cruise, section)
 
-Un Δα positivo significa que la pala debe girar hacia mayor ángulo de ataque
-respecto al ajuste de crucero; negativo, hacia menor ángulo.
+A positive Δα means the blade must rotate toward a higher angle of attack
+relative to the cruise setting; negative, toward a lower angle.
 """
 
 from __future__ import annotations
@@ -28,13 +28,13 @@ def compute_pitch_adjustments(
     reference_condition: str = "cruise",
 ) -> List[PitchAdjustment]:
     """
-    Calcula los ajustes de paso relativos a una condición de referencia.
+    Compute pitch adjustments relative to a reference condition.
 
     Parameters
     ----------
     optimal_incidences : List[OptimalIncidence]
     reference_condition : str
-        Condición de referencia (por defecto "cruise").
+        Reference condition (default: "cruise").
 
     Returns
     -------
