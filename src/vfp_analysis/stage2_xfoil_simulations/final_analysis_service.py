@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -47,9 +47,20 @@ class FinalAnalysisService:
         self,
         airfoil: Airfoil,
         configs: Iterable[FinalSimulationConfig],
+        progress_callback: Optional[Callable[[str, str], None]] = None,
     ) -> Tuple[Dict[Tuple[str, str], float], Dict[Tuple[str, str], Tuple[float, float]]]:
         """
         Execute all final simulations.
+
+        Parameters
+        ----------
+        airfoil : Airfoil
+            Airfoil geometry to simulate.
+        configs : Iterable[FinalSimulationConfig]
+            One entry per (flight_condition, blade_section) combination.
+        progress_callback : callable(flight_name, section_name) | None
+            If provided, called after each config completes. Useful for
+            updating a progress bar in the calling script.
 
         Returns
         -------
@@ -58,6 +69,7 @@ class FinalAnalysisService:
         """
         alpha_eff_map: Dict[Tuple[str, str], float] = {}
         stall_map: Dict[Tuple[str, str], Tuple[float, float]] = {}
+        self._total_convergence_warnings = 0
 
         for cfg in configs:
             flight_dir = cfg.flight_name.lower()
@@ -65,16 +77,23 @@ class FinalAnalysisService:
             out_dir.mkdir(parents=True, exist_ok=True)
 
             polar_path = out_dir / "polar.dat"
-            self._xfoil.run_polar(airfoil.dat_path, cfg.condition, polar_path)
+            xfoil_result = self._xfoil.run_polar(airfoil.dat_path, cfg.condition, polar_path)
+            if xfoil_result.convergence_failures > 0:
+                self._total_convergence_warnings += 1
 
             df = self._build_polar_df(polar_path, airfoil, cfg)
             if df.empty:
+                if progress_callback is not None:
+                    progress_callback(cfg.flight_name, cfg.section.name)
                 continue
 
             self._export_csv(df, out_dir)
             alpha_eff, alpha_stall, cl_max = self._plot_all(df, out_dir, airfoil, cfg)
             alpha_eff_map[(cfg.flight_name, cfg.section.name)] = alpha_eff
             stall_map[(cfg.flight_name, cfg.section.name)] = (alpha_stall, cl_max)
+
+            if progress_callback is not None:
+                progress_callback(cfg.flight_name, cfg.section.name)
 
         return alpha_eff_map, stall_map
 

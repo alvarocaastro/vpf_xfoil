@@ -54,6 +54,12 @@ results/**
 !results/**/
 !results/**/.gitkeep
 
+# XFOIL — archivos temporales y de salida generados durante simulaciones
+# (XFOIL escribe en data/airfoils/ como cwd y puede dejar .dat sueltos)
+data/airfoils/polar.dat
+data/airfoils/*.test_polar.txt
+data/airfoils/*_polar.txt
+
 # Temporary files
 *.tmp
 *.bak

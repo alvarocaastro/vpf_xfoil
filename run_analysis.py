@@ -328,12 +328,35 @@ def step_3_xfoil_simulations(s1: Stage1Result) -> Stage2Result:
         runner = XfoilRunnerAdapter(final_analysis=True)
         service = FinalAnalysisService(runner, stage2_dir)
 
-        with console.status(
-            f"[bright_cyan]Running {n_sims} XFOIL simulations for "
-            f"[bold]{s1.selected_airfoil_name}[/bold]… (this may take several minutes)",
-            spinner="dots12",
-        ):
-            alpha_eff_map, stall_map = service.run(airfoil, configs)
+        with Progress(
+            SpinnerColumn(spinner_name="dots12", style="bright_cyan"),
+            TextColumn("[bright_cyan]{task.description}"),
+            BarColumn(bar_width=38, style="bright_cyan", complete_style="bright_green"),
+            TaskProgressColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            TimeRemainingColumn(),
+            console=console,
+            transient=True,
+        ) as prg:
+            sim_task = prg.add_task(
+                f"[bold]{s1.selected_airfoil_name}[/bold] — waiting…",
+                total=n_sims,
+            )
+
+            def _on_sim_done(flight: str, section: str) -> None:
+                prg.advance(sim_task)
+                remaining = n_sims - int(prg.tasks[sim_task].completed)
+                if remaining > 0:
+                    prg.update(
+                        sim_task,
+                        description=f"[bold]{s1.selected_airfoil_name}[/bold] — "
+                                    f"[dim]{flight}[/dim]/[dim]{section}[/dim] ✔",
+                    )
+                else:
+                    prg.update(sim_task, description=f"[bold]{s1.selected_airfoil_name}[/bold] — done ✔")
+
+            alpha_eff_map, stall_map = service.run(airfoil, configs, progress_callback=_on_sim_done)
 
         n_conv_warnings = getattr(service, "_total_convergence_warnings", 0)
 
