@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
@@ -42,12 +43,15 @@ class FinalAnalysisService:
     def __init__(self, xfoil_runner: XfoilRunnerPort, base_results_dir: Path) -> None:
         self._xfoil = xfoil_runner
         self._base = base_results_dir / "simulation_plots"
+        self._base_results_dir = base_results_dir
 
     def run(
         self,
         airfoil: Airfoil,
         configs: Iterable[FinalSimulationConfig],
         progress_callback: Optional[Callable[[str, str, float, int], None]] = None,
+        flight_conditions: Optional[List[str]] = None,
+        blade_sections: Optional[List[str]] = None,
     ) -> Tuple[Dict[Tuple[str, str], float], Dict[Tuple[str, str], Tuple[float, float]]]:
         """
         Execute all final simulations.
@@ -98,6 +102,15 @@ class FinalAnalysisService:
 
             if progress_callback is not None:
                 progress_callback(cfg.flight_name, cfg.section.name, conv_rate, conv_failures)
+
+        if flight_conditions is not None and blade_sections is not None:
+            polars_dir = self._base_results_dir / "polars"
+            polars_dir.mkdir(parents=True, exist_ok=True)
+            for flight in flight_conditions:
+                for section in blade_sections:
+                    source_file = self._base / flight.lower() / section / "polar.csv"
+                    if source_file.exists():
+                        shutil.copy2(source_file, polars_dir / f"{flight}_{section}.csv")
 
         return alpha_eff_map, stall_map
 

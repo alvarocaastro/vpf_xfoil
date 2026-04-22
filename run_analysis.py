@@ -84,7 +84,6 @@ from vfp_analysis.stage2_xfoil_simulations.pitch_map import (
     plot_vpf_efficiency_by_section,
     save_pitch_map_csv,
 )
-from vfp_analysis.stage2_xfoil_simulations.polar_organizer import organize_polars
 from vfp_analysis.stage3_compressibility_correction.compressibility_case import (
     CompressibilityCase,
 )
@@ -369,7 +368,12 @@ def step_3_xfoil_simulations(s1: Stage1Result) -> Stage2Result:
                 )
                 prg.update(sim_task, description=label)
 
-            alpha_eff_map, stall_map = service.run(airfoil, configs, progress_callback=_on_sim_done)
+            alpha_eff_map, stall_map = service.run(
+                airfoil, configs,
+                progress_callback=_on_sim_done,
+                flight_conditions=cfg.flight_conditions,
+                blade_sections=cfg.blade_sections,
+            )
 
         n_conv_warnings = getattr(service, "_total_convergence_warnings", 0)
 
@@ -425,10 +429,7 @@ def step_3_xfoil_simulations(s1: Stage1Result) -> Stage2Result:
         console.print()
 
         # Post-processing (pitch map, plots, organize polars)
-        console.print("    [vpf.info]Post-processing: organising polars & pitch maps…[/vpf.info]")
-        source_polars = stage2_dir / "simulation_plots"
-        target_polars = stage2_dir / "polars"
-        organize_polars(source_polars, target_polars, cfg.flight_conditions, cfg.blade_sections)
+        console.print("    [vpf.info]Post-processing: pitch maps…[/vpf.info]")
 
         pitch_map_dir = stage2_dir / "pitch_map"
         pitch_map_dir.mkdir(parents=True, exist_ok=True)
