@@ -56,35 +56,23 @@ from vfp_analysis.stage5_pitch_kinematics.adapters.filesystem.data_loader import
 from vfp_analysis.stage5_pitch_kinematics.adapters.filesystem.results_writer import (
     FilesystemPitchKinematicsWriter,
 )
-from vfp_analysis.stage5_pitch_kinematics.core.services.blade_twist_service import (
-    OffDesignIncidenceResult,
-    TwistDesignResult,
-    compute_blade_twist,
-    compute_off_design_incidence,
-)
-from vfp_analysis.stage5_pitch_kinematics.core.services.cascade_correction_service import (
+from vfp_analysis.stage5_pitch_kinematics.pitch_kinematics_core import (
     CascadeResult,
-    apply_weinig_to_polar,
-    compute_cascade_corrections,
-)
-from vfp_analysis.stage5_pitch_kinematics.core.services.kinematics_service import (
-    compute_kinematics,
-)
-from vfp_analysis.stage5_pitch_kinematics.core.services.optimal_incidence_service import (
-    compute_all_optimal_incidences,
-)
-from vfp_analysis.stage5_pitch_kinematics.core.services.pitch_adjustment_service import (
-    compute_pitch_adjustments,
-)
-from vfp_analysis.stage5_pitch_kinematics.core.services.rotational_correction_service import (
     DuSeligCorrectionResult,
+    OffDesignIncidenceResult,
     RotationalCorrectionResult,
+    StageLoadingResult,
+    TwistDesignResult,
+    apply_weinig_to_polar,
     build_3d_polar_map,
+    compute_all_optimal_incidences,
+    compute_blade_twist,
+    compute_cascade_corrections,
+    compute_kinematics,
+    compute_off_design_incidence,
+    compute_pitch_adjustments,
     compute_rotational_corrections,
     compute_rotational_corrections_du_selig,
-)
-from vfp_analysis.stage5_pitch_kinematics.core.services.stage_loading_service import (
-    StageLoadingResult,
     compute_stage_loading,
 )
 
