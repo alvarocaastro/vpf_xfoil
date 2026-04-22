@@ -97,8 +97,10 @@ from vfp_analysis.stage4_performance_metrics.metrics import (
     compute_all_metrics,
     enrich_with_cruise_reference,
 )
-from vfp_analysis.stage4_performance_metrics.plots import generate_stage4_figures
-from vfp_analysis.stage4_performance_metrics.publication_figures import generate_all_figures
+from vfp_analysis.stage4_performance_metrics.plots import (
+    generate_all_stage4_figures,
+    generate_stage4_figures,
+)
 from vfp_analysis.stage4_performance_metrics.table_generator import (
     export_clcd_max_table,
     export_summary_table,
@@ -585,11 +587,10 @@ def step_5_metrics_and_figures(s3: Stage3Result) -> Stage4Result:
             export_summary_table(metrics, tables_dir / "summary_table.csv")
             export_clcd_max_table(metrics, tables_dir / "clcd_max_by_section.csv")
             stage2_polars_flat = base_config.get_stage_dir(2) / "polars"
-            generate_stage4_figures(metrics, figures_dir, polars_dir=polars_dir)
-            generate_all_figures(
-                polars_dir=stage2_polars_flat,
-                figures_dir=figures_dir,
+            generate_all_stage4_figures(
                 metrics=metrics,
+                figures_dir=figures_dir,
+                polars_dir=polars_dir,
                 flight_conditions=cfg.flight_conditions,
                 blade_sections=cfg.blade_sections,
                 stage3_dir=s3.corrected_dir,
