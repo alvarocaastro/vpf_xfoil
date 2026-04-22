@@ -1,15 +1,146 @@
-"""settings.py — single source of truth for all physics constants and simulation parameters."""
+"""settings.py — single source of truth for all physics constants, paths, and simulation parameters."""
 
 from __future__ import annotations
 
 import math
+import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, Final, List, TypedDict
 
 import yaml
 
-from vfp_analysis import config as _base
+# ---------------------------------------------------------------------------
+# Path constants (previously in config.py)
+# ---------------------------------------------------------------------------
+
+ROOT_DIR: Final[Path] = Path(__file__).resolve().parents[2]
+AIRFOIL_DATA_DIR: Final[Path] = ROOT_DIR / "data" / "airfoils"
+RESULTS_DIR: Final[Path] = ROOT_DIR / "results"
+
+STAGE_DIR_NAMES: Final[dict[int, str]] = {
+    1: "stage1_airfoil_selection",
+    2: "stage2_xfoil_simulations",
+    3: "stage3_compressibility_correction",
+    4: "stage4_performance_metrics",
+    5: "stage5_pitch_kinematics",
+    6: "stage6_reverse_thrust",
+    7: "stage7_sfc_analysis",
+}
+
+
+def get_stage_dir(stage_num: int) -> Path:
+    """Return the canonical results directory for a numbered stage."""
+    try:
+        return RESULTS_DIR / STAGE_DIR_NAMES[stage_num]
+    except KeyError as exc:
+        raise ValueError(f"Unknown stage number: {stage_num}") from exc
+
+
+# ---------------------------------------------------------------------------
+# XFOIL executable discovery (previously in config.py)
+# ---------------------------------------------------------------------------
+
+def _normalize_xfoil_candidate(raw_path: str | Path) -> Path:
+    candidate = Path(raw_path).expanduser()
+    executable_name = "xfoil.exe" if os.name == "nt" else "xfoil"
+    if candidate.name.lower() not in {"xfoil", "xfoil.exe"}:
+        return candidate / executable_name
+    return candidate
+
+
+def _build_xfoil_search_paths() -> tuple[Path, ...]:
+    raw_candidates: list[Path] = []
+    env_path = os.getenv("XFOIL_EXE") or os.getenv("XFOIL_EXECUTABLE")
+    if env_path:
+        raw_candidates.append(_normalize_xfoil_candidate(env_path))
+    raw_candidates.extend([
+        _normalize_xfoil_candidate(ROOT_DIR.parent / "XFOIL6.99"),
+        _normalize_xfoil_candidate(ROOT_DIR / "XFOIL6.99"),
+        _normalize_xfoil_candidate(Path.home() / "Downloads" / "XFOIL6.99"),
+    ])
+    which_result = shutil.which("xfoil")
+    if which_result:
+        raw_candidates.append(Path(which_result))
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for c in raw_candidates:
+        key = str(c).lower()
+        if key not in seen:
+            seen.add(key)
+            unique.append(c)
+    return tuple(unique)
+
+
+def _resolve_xfoil_executable() -> Path:
+    for candidate in XFOIL_SEARCH_PATHS:
+        if candidate.is_file():
+            return candidate
+    return XFOIL_SEARCH_PATHS[0]
+
+
+XFOIL_SEARCH_PATHS: Final[tuple[Path, ...]] = _build_xfoil_search_paths()
+XFOIL_EXECUTABLE: Final[Path] = _resolve_xfoil_executable()
+
+MACH_DEFAULT: Final[float] = 0.2
+N_CRIT_DEFAULT: Final[float] = 9.0
+
+# ---------------------------------------------------------------------------
+# Airfoil definitions (previously in config.py)
+# ---------------------------------------------------------------------------
+
+
+class AirfoilSpec(TypedDict):
+    """Specification of a single airfoil for the analysis."""
+    name: str
+    dat_file: str
+    family: str
+    comment: str
+
+
+AIRFOILS: Final[list[AirfoilSpec]] = [
+    {
+        "name": "NACA 65-210",
+        "dat_file": "naca_65-210.dat",
+        "family": "NACA 65-series",
+        "comment": (
+            "Canonical controlled-diffusion compressor/fan profile with 2% "
+            "camber and 10% thickness, widely used as reference for fan "
+            "blades in the literature (Saravanamuttoo, Farokhi, Drela/XFOIL)."
+        ),
+    },
+    {
+        "name": "NACA 65-410",
+        "dat_file": "naca_65-410.dat",
+        "family": "NACA 65-series",
+        "comment": (
+            "Controlled-diffusion compressor/fan airfoil with 4% camber and "
+            "10% thickness, representative of front-stage fan blades in "
+            "high-bypass turbofans (see Saravanamuttoo, Farokhi)."
+        ),
+    },
+    {
+        "name": "NACA 63-215",
+        "dat_file": "naca_63-215.dat",
+        "family": "NACA 63-series",
+        "comment": (
+            "Low-drag laminar-flow section adapted to turbomachinery; useful "
+            "baseline to compare classic laminar profiles with controlled-"
+            "diffusion 65-series (Drela XFOIL docs, Bertin & Cummings)."
+        ),
+    },
+    {
+        "name": "NACA 0012",
+        "dat_file": "naca_0012.dat",
+        "family": "NACA 00-series",
+        "comment": (
+            "Symmetric 12% thick section widely used as reference; serves as "
+            "neutral baseline for assessing camber and thickness effects on "
+            "fan-blade performance (Farokhi, Bertin & Cummings)."
+        ),
+    },
+]
 
 # ---------------------------------------------------------------------------
 # Physics constants / empirical coefficients (not overridden by YAML)
@@ -198,7 +329,7 @@ class PipelineSettings:
         thickness_ratio=0.10, korn_kappa=0.87,
     ))
 
-    results_dir: Path = field(default_factory=lambda: _base.RESULTS_DIR)
+    results_dir: Path = field(default_factory=lambda: RESULTS_DIR)
 
 
 # ---------------------------------------------------------------------------
@@ -228,7 +359,7 @@ def clear_settings_cache() -> None:
 def _load_settings(config_path: Path | None) -> PipelineSettings:
     """Load and validate parameters from YAML files."""
     if config_path is None:
-        config_path = _base.ROOT_DIR / "config" / "analysis_config.yaml"
+        config_path = ROOT_DIR / "config" / "analysis_config.yaml"
 
     if not config_path.exists():
         raise FileNotFoundError(
@@ -308,5 +439,5 @@ def _load_settings(config_path: Path | None) -> PipelineSettings:
         fan=fan,
         blade=blade,
         airfoil_geometry=airfoil_geom,
-        results_dir=_base.RESULTS_DIR,
+        results_dir=RESULTS_DIR,
     )

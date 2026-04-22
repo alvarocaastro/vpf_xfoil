@@ -12,7 +12,7 @@ from typing import Any, Dict, Final
 
 import yaml
 
-from vfp_analysis import config as base_config
+from vfp_analysis import settings as base_config
 
 _CONFIG_CACHE: Dict[str, Any] | None = None
 

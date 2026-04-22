@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, List
 
-from .config import (
+from .settings import (
     AIRFOIL_DATA_DIR,
     MACH_DEFAULT,
     N_CRIT_DEFAULT,

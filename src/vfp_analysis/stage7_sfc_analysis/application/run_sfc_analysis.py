@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from vfp_analysis import config as base_config
+from vfp_analysis import settings as base_config
 from vfp_analysis.shared.plot_style import (
     COLORS,
     FLIGHT_LABELS,

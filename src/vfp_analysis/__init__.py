@@ -15,4 +15,4 @@ Modules
 - stage8_sfc_analysis: fan efficiency transfer and SFC estimation.
 """
 
-from . import config  # noqa: F401
+from . import settings  # noqa: F401

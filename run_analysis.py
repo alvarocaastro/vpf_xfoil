@@ -47,7 +47,7 @@ from rich.theme import Theme
 # ── Project path setup ───────────────────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from vfp_analysis import config as base_config
+from vfp_analysis import settings as base_config
 from vfp_analysis.adapters.xfoil.xfoil_runner_adapter import XfoilRunnerAdapter
 from vfp_analysis.core.domain.airfoil import Airfoil
 from vfp_analysis.core.domain.blade_section import BladeSection

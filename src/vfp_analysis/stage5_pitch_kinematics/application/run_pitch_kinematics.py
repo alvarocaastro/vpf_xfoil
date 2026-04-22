@@ -42,7 +42,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from vfp_analysis import config as base_config
+from vfp_analysis import settings as base_config
 from vfp_analysis.config_loader import (
     get_axial_velocities,
     get_blade_geometry,

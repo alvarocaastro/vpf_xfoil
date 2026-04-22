@@ -36,7 +36,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from vfp_analysis import config as base_config
+from vfp_analysis import settings as base_config
 from vfp_analysis.stage6_reverse_thrust.adapters.filesystem.data_loader import (
     ReverseDataLoader,
 )
