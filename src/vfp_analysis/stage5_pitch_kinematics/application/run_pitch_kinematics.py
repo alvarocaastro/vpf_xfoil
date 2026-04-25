@@ -1116,7 +1116,7 @@ def run_pitch_kinematics() -> None:
 
     # ── 6. Pitch adjustment ──────────────────────────────────────────────────
     LOGGER.info("Computing pitch adjustments (Δα_3D relative to cruise)...")
-    from vfp_analysis.stage5_pitch_kinematics.core.services.pitch_adjustment_service import (
+    from vfp_analysis.stage5_pitch_kinematics.pitch_kinematics_core import (
         compute_pitch_adjustments,
     )
     pitch_adjustments = compute_pitch_adjustments(optimal_incidences, reference_condition="cruise")

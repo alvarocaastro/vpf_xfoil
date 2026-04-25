@@ -403,11 +403,15 @@ def generate_efficiency_plots(
                 continue
 
             df = pd.read_csv(polar_file)
+            try:
+                eff_col = resolve_efficiency_column(df)
+            except ValueError:
+                continue
 
             try:
-                row_opt = find_second_peak_row(df, "ld")
+                row_opt = find_second_peak_row(df, eff_col)
                 alpha_opt = float(row_opt["alpha"])
-                ld_max = float(row_opt["ld"])
+                ld_max = float(row_opt[eff_col])
                 has_opt = True
             except (ValueError, KeyError):
                 has_opt = False
@@ -416,7 +420,7 @@ def generate_efficiency_plots(
 
             fig, ax = plt.subplots(figsize=(w, h))
             color = SECTION_COLORS.get(section, "#2166AC")
-            ax.plot(df["alpha"], df["ld"], color=color, label=r"$C_L/C_D$", zorder=3)
+            ax.plot(df["alpha"], df[eff_col], color=color, label=r"$C_L/C_D$", zorder=3)
 
             if has_opt:
                 ax.plot(
@@ -429,8 +433,8 @@ def generate_efficiency_plots(
                            linewidth=0.9, alpha=0.75, zorder=4)
                 alpha_range = float(df["alpha"].max() - df["alpha"].min())
                 ld_range = float(
-                    df["ld"].replace([np.inf, -np.inf], np.nan).dropna().max()
-                    - df["ld"].replace([np.inf, -np.inf], np.nan).dropna().min()
+                    df[eff_col].replace([np.inf, -np.inf], np.nan).dropna().max()
+                    - df[eff_col].replace([np.inf, -np.inf], np.nan).dropna().min()
                 )
                 _smart_annotation(
                     ax, alpha_opt, ld_max,
@@ -472,20 +476,25 @@ def generate_efficiency_by_section(
 
             df = pd.read_csv(polar_file)
             color = SECTION_COLORS[section]
+            try:
+                eff_col = resolve_efficiency_column(df)
+            except ValueError:
+                continue
 
             try:
-                row_opt = find_second_peak_row(df, "ld")
+                row_opt = find_second_peak_row(df, eff_col)
                 alpha_opt = float(row_opt["alpha"])
-                ld_max = float(row_opt["ld"])
+                ld_max = float(row_opt[eff_col])
                 legend_label = (
                     rf"{section.replace('_', ' ').title()} "
                     rf"($\alpha_{{opt}}$ = {alpha_opt:.1f}°)"
                 )
             except (ValueError, KeyError):
                 alpha_opt = None
+                ld_max = float("nan")
                 legend_label = section.replace("_", " ").title()
 
-            ax.plot(df["alpha"], df["ld"], color=color, label=legend_label, zorder=3)
+            ax.plot(df["alpha"], df[eff_col], color=color, label=legend_label, zorder=3)
 
             if alpha_opt is not None:
                 ax.plot(
