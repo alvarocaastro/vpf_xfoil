@@ -83,9 +83,13 @@ def run_ge9x_analysis(
     figures_dir: Path,
 ) -> Optional[float]:
     """Run GE9X parametric SFC analysis. Returns fuel_saving_pct at takeoff α_opt, or None."""
-    pitch_map_csv = stage4_dir / "tables" / "blade_pitch_map.csv"
+    # blade_pitch_map is written by Stage 2 pitch-map step
+    pitch_map_csv = stage2_dir / "pitch_map" / "blade_pitch_map.csv"
     polars_dir    = stage2_dir / "polars"
 
+    if not pitch_map_csv.exists():
+        # Fallback: Stage 4 tables
+        pitch_map_csv = stage4_dir / "tables" / "blade_pitch_map.csv"
     if not pitch_map_csv.exists():
         LOGGER.warning("blade_pitch_map.csv not found — skipping GE9X analysis")
         return None
@@ -126,27 +130,25 @@ def run_ge9x_analysis(
     df_key["SFC_lbh"] = df_key["SFC_new_kgNs"].apply(sfc_si_to_lbh)
     df_key.to_csv(tables_dir / "ge9x_sfc_improvement.csv", index=False, float_format="%.6f")
 
-    # ── LaTeX table ──────────────────────────────────────────────────────
-    df_latex = df_key[["ClCd_new", "SFC_lbh", "SFC_improvement_pct", "fuel_saving_pct"]].copy()
-    df_latex.columns = [
-        r"$C_L/C_D$ [-]",
-        "SFC [lb/lbf·h]",
-        r"$\Delta$SFC [\%]",  # noqa: W605
-        r"Fuel saving [\%]",
+    # ── LaTeX table (manual generation — no jinja2 dependency) ───────────
+    lines = [
+        r"\begin{table}[htbp]",
+        r"  \centering",
+        r"  \caption{Fuel consumption improvement as a function of aerodynamic efficiency"
+        r" $C_L/C_D$ for the GE9X-105B1A engine in takeoff phase.}",
+        r"  \label{tab:ge9x_sfc_improvement}",
+        r"  \begin{tabular}{cccc}",
+        r"    \toprule",
+        r"    $C_L/C_D$ [-] & SFC [lb/lbf$\cdot$h] & $\Delta$SFC [\%] & Fuel saving [\%] \\",
+        r"    \midrule",
     ]
-    latex_str = df_latex.to_latex(
-        index=False,
-        float_format="%.4f",
-        caption=(
-            r"Fuel consumption improvement as a function of aerodynamic efficiency "
-            r"$C_L/C_D$ for the GE9X-105B1A engine in takeoff phase."
-        ),
-        label="tab:ge9x_sfc_improvement",
-        column_format="cccc",
-        escape=False,
-        booktabs=True,
-    )
-    (tables_dir / "ge9x_sfc_improvement.tex").write_text(latex_str, encoding="utf-8")
+    for _, row in df_key.iterrows():
+        lines.append(
+            f"    {row['ClCd_new']:.0f} & {row['SFC_lbh']:.4f} & "
+            f"{row['SFC_improvement_pct']:.4f} & {row['fuel_saving_pct']:.4f} \\\\"
+        )
+    lines += [r"    \bottomrule", r"  \end{tabular}", r"\end{table}"]
+    (tables_dir / "ge9x_sfc_improvement.tex").write_text("\n".join(lines), encoding="utf-8")
     LOGGER.info("LaTeX table written: ge9x_sfc_improvement.tex")
 
     # ── Figures ───────────────────────────────────────────────────────────
