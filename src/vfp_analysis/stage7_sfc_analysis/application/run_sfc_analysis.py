@@ -59,6 +59,7 @@ from vfp_analysis.stage7_sfc_analysis.sfc_core import (
     compute_sfc_sensitivity,
     generate_sfc_summary,
 )
+from vfp_analysis.stage7_sfc_analysis.engine.ge9x_analysis import run_ge9x_analysis
 
 LOGGER = logging.getLogger(__name__)
 
@@ -691,7 +692,19 @@ def run_sfc_analysis() -> None:
     stage7_summary = generate_stage7_summary(stage7_dir)
     write_stage_summary(7, stage7_summary, stage7_dir)
 
-    # ── 8. Log summary ───────────────────────────────────────────────────
+    # ── 9. GE9X turbofan thermodynamic SFC analysis ─────────────────────
+    stage2_dir = base_config.get_stage_dir(2)
+    try:
+        run_ge9x_analysis(
+            stage4_dir=base_config.get_stage_dir(4),
+            stage2_dir=stage2_dir,
+            tables_dir=tables_dir,
+            figures_dir=figures_dir,
+        )
+    except Exception as exc:
+        LOGGER.warning("GE9X analysis failed (non-fatal): %s", exc)
+
+    # ── 10. Log summary ──────────────────────────────────────────────────
     if sfc_results:
         mean_reduction = sum(r.sfc_reduction_percent for r in sfc_results) / len(sfc_results)
         max_reduction  = max(r.sfc_reduction_percent for r in sfc_results)

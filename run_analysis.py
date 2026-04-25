@@ -687,10 +687,11 @@ def step_8_sfc_analysis() -> Stage7Result:
         tables_dir  = stage7_dir / "tables"
         figures_dir = stage7_dir / "figures"
 
-        mean_sfc_reduction = float("nan")
+        mean_sfc_reduction  = float("nan")
+        ge9x_fuel_saving    = float("nan")
+        import pandas as _pd
         sfc_file = tables_dir / "sfc_analysis.csv"
         if sfc_file.exists():
-            import pandas as _pd
             df_sfc = _pd.read_csv(sfc_file)
             col = next(
                 (c for c in df_sfc.columns if "sfc_reduction" in c.lower()), None
@@ -698,14 +699,24 @@ def step_8_sfc_analysis() -> Stage7Result:
             if col:
                 mean_sfc_reduction = float(df_sfc[col].mean(skipna=True))
 
+        ge9x_file = tables_dir / "ge9x_sfc_improvement.csv"
+        if ge9x_file.exists():
+            df_ge9x = _pd.read_csv(ge9x_file)
+            if "fuel_saving_pct" in df_ge9x.columns and not df_ge9x.empty:
+                # Row where ClCd_new closest to 120 (typical optimised point)
+                idx_120 = (df_ge9x["ClCd_new"] - 120.0).abs().idxmin()
+                ge9x_fuel_saving = float(df_ge9x.loc[idx_120, "fuel_saving_pct"])
+
         console.print(f"    [vpf.ok]→[/vpf.ok]  Mean SFC reduction: "
-                      f"[vpf.highlight]{mean_sfc_reduction:.2f}%[/vpf.highlight]")
+                      f"[vpf.highlight]{mean_sfc_reduction:.2f}%[/vpf.highlight]  |  "
+                      f"GE9X fuel saving (α_opt): {ge9x_fuel_saving:.2f}%")
 
         s7 = Stage7Result(
             tables_dir=tables_dir,
             figures_dir=figures_dir,
             mean_sfc_reduction_pct=mean_sfc_reduction,
             stage_dir=stage7_dir,
+            ge9x_fuel_saving_pct=ge9x_fuel_saving,
         )
         s7.validate()
         return s7

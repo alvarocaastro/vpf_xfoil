@@ -165,6 +165,7 @@ class Stage7Result:
     figures_dir: Path
     mean_sfc_reduction_pct: float
     stage_dir: Path
+    ge9x_fuel_saving_pct: float = float("nan")
 
     def validate(self) -> None:
         from vfp_analysis.validation.validators import require_dir
