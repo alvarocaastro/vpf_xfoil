@@ -97,6 +97,10 @@ from vfp_analysis.stage4_performance_metrics.metrics import (
     compute_all_metrics,
     enrich_with_cruise_reference,
 )
+from vfp_analysis.stage4_performance_metrics.narrative_figures import (
+    generate_pitch_requirement_figure,
+    generate_fixed_vs_variable_figure,
+)
 from vfp_analysis.stage4_performance_metrics.plots import (
     generate_all_stage4_figures,
     generate_stage4_figures,
@@ -555,6 +559,10 @@ def step_5_metrics_and_figures(s3: Stage3Result) -> Stage4Result:
             )
 
         console.print(f"    [vpf.ok]→[/vpf.ok]  Publication figures saved to [dim]{figures_dir}[/dim]")
+
+        pitch_map_csv = base_config.get_stage_dir(2) / "pitch_map" / "blade_pitch_map.csv"
+        if pitch_map_csv.exists():
+            generate_pitch_requirement_figure(pitch_map_csv, figures_dir)
 
         summary_text = generate_stage4_summary(stage4_dir, metrics)
         write_stage_summary(4, summary_text, stage4_dir)
