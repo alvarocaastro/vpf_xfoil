@@ -1,93 +1,67 @@
-# Configuration file for Engine Performance Analysis
-# Reference engine: GE9X (Boeing 777X) — BPR≈10, fan diameter 3.40 m
+# Engine and mission parameters for the VPF analysis pipeline
+# Reference engine: GE9X-105B1A (Boeing 777X) — BPR≈10, fan diameter 3.40 m
 
-# Baseline Specific Fuel Consumption at cruise (lb/(lbf·hr))
-# GE9X: ~0.49–0.50 lb/(lbf·hr) — best-in-class for large turbofan
+# ── Baseline engine performance ──────────────────────────────────────────────
+
+# Cruise SFC [lb/(lbf·h)] — GE9X public value ~0.49–0.50
 baseline_sfc: 0.50
 
-# Baseline fan efficiency (dimensionless, 0-1)
-# GE9X: ~0.90–0.92 with 16-blade wide-chord composite fan
+# Baseline fan adiabatic efficiency — GE9X: ~0.90–0.92 (16-blade wide-chord)
 fan_efficiency: 0.90
 
-# Bypass ratio
-# Typical values: 8-12 for modern high-bypass turbofans
+# High-bypass ratio — GE9X: BPR ≈ 10
 bypass_ratio: 10.0
 
-# Reference flight condition for baseline
-reference_condition: cruise
-
-# SFC values for other flight conditions (relative to cruise)
-# These represent typical SFC variations across flight phases
+# ── SFC phase multipliers ────────────────────────────────────────────────────
+# SFC at each flight phase relative to cruise (used by Stage 7 sfc_core.py).
+# Values derived from typical turbofan part-power SFC behaviour (Walsh & Fletcher 2004).
 sfc_multipliers:
-  takeoff: 1.15  # Higher SFC during takeoff
-  climb: 1.05    # Slightly higher during climb
-  cruise: 1.00   # Reference (baseline)
-  descent: 1.10  # Higher SFC during descent (idle thrust is thermally inefficient)
+  takeoff: 1.15   # Full thrust → near-ideal combustion but high fuel flow
+  climb:   1.05   # Reduced thrust, slightly off peak thermal efficiency
+  cruise:  1.00   # Design point — reference
+  descent: 1.10   # Idle/low thrust → poor thermodynamic efficiency
 
-# ---------------------------------------------------------
-# NEW PARAMETERS FOR ADVANCED PHYSICS MODEL
-# ---------------------------------------------------------
-
-# Efficiency transfer coefficient (0.0 to 1.0)
-# Fraction of 2D profile efficiency gain that translates to 3D fan efficiency
-# (Accounts for 3D losses like tip clearance, secondary flows, shockwaves)
+# ── Efficiency transfer coefficient ─────────────────────────────────────────
+# τ: fraction of 2D blade section efficiency gain that propagates to 3D fan η.
+# Accounts for 3D losses (tip clearance, secondary flows, shocks) not captured
+# by isolated-section XFOIL analysis. Typical range: 0.4–0.6.
+# Ref: Cumpsty (2004), Compressor Aerodynamics, ch. 4.
 profile_efficiency_transfer: 0.50
 
-# ---------------------------------------------------------
-# MISSION PROFILE (for total fuel burn integration)
-# ---------------------------------------------------------
-# Reference mission: B777X medium-haul (~8.8 h block time)
-# thrust_fraction: fraction of sea-level static thrust at each phase
-# duration_min: typical phase duration [minutes]
-
+# ── Mission profile ───────────────────────────────────────────────────────────
+# Reference mission: B777X medium-haul (~8.8 h block time, ~13 000 km).
+# thrust_fraction: fraction of design_thrust_kN at each phase.
+# duration_min:    typical phase duration [minutes].
 mission:
   phases:
     takeoff:  {duration_min:   0.5, thrust_fraction: 1.00}
     climb:    {duration_min:  20.0, thrust_fraction: 0.75}
     cruise:   {duration_min: 480.0, thrust_fraction: 0.25}
     descent:  {duration_min:  25.0, thrust_fraction: 0.05}
-  # GE9X-1B sea-level static thrust per engine [kN]
-  # Ref: GE Aviation GE9X product spec (2023)
-  design_thrust_kN: 105.0
-  # Jet-A1 price [USD/kg] — IATA average 2023-2024
-  fuel_price_usd_per_kg: 0.90
+  design_thrust_kN: 105.0        # GE9X-105B1A sea-level static thrust per engine [kN]
+  fuel_price_usd_per_kg: 0.90    # Jet-A1 — IATA average 2023–2024 [USD/kg]
 
-# ---------------------------------------------------------
-# REVERSE THRUST MODEL (Stage 6)
-# ---------------------------------------------------------
-# VPF achieves reverse thrust by rotating blade pitch to negative angles
-# while the fan keeps spinning in the same direction.
-# Unlike cascade reversers, no blocker doors or nacelle cascade ducts are
-# needed — the fan itself generates the braking force.
+# ── Reverse thrust (Stage 6) ──────────────────────────────────────────────────
+# VPF achieves reverse thrust by rotating blade pitch to negative angles while
+# the fan keeps spinning in the same direction. No blocker doors or cascade ducts.
 reverse_thrust:
-  # Fan operating conditions during reverse thrust
-  n1_fraction: 0.65              # Fraction of design N1 (RPM) during reverse
-  va_landing_m_s: 60.0           # Representative axial airspeed during ground roll [m/s]
-                                  # Reversers engaged at ~75 m/s, averaged over roll ~60 m/s
-  rho_sl_kg_m3: 1.225            # ISA sea-level air density [kg/m³]
+  n1_fraction: 0.65          # Fan speed during reverse as fraction of design N1
+  va_landing_m_s: 60.0       # Mean axial airspeed over ground roll [m/s]
+                              # (reversers engaged at ~75 m/s, averaged to ~60 m/s)
 
-  # Blade pitch sweep (delta relative to beta_metal_cruise from Stage 5)
-  delta_beta_min_deg: -25.0      # Most negative pitch offset
-  delta_beta_max_deg: -5.0       # Least negative (near feathering point)
-  delta_beta_steps: 41           # Points in sweep
+  # Pitch sweep range (Δβ relative to β_metal_cruise from Stage 5)
+  delta_beta_min_deg: -25.0  # Most negative offset
+  delta_beta_max_deg:  -5.0  # Least negative (near feathering)
+  delta_beta_steps: 41       # Number of sweep points
 
-  # Validity criteria and target
-  target_thrust_fraction: 0.40   # Target: 40% of forward takeoff thrust in reverse
-  stall_margin_min: 0.0          # Min stall margin fraction (0 = at stall boundary)
+  # Performance criterion
+  target_thrust_fraction: 0.40  # Required: |T_rev| ≥ 40% of forward takeoff thrust
 
-  # Blade geometry — GE9X fan (Z=16 blades, wide-chord composite)
-  n_blades: 16
-  chord_m:
-    root: 0.36
-    mid_span: 0.46
-    tip: 0.46
-
-  # VPF mechanism weight — basis for Stage 7 SFC cruise penalty
-  # The VPF actuator ring + pitch links + blade-root reinforcement weigh ~4% of
-  # engine dry weight, vs ~10% for a conventional cascade reverser
-  # (cascades + blocker doors + nacelle structural reinforcement).
-  # Net weight saving vs conventional: ~6% × dry weight × 2 engines ≈ 950 kg.
-  engine_dry_weight_kg: 7930.0           # GE9X-1B dry weight per engine [kg]
-  mechanism_weight_fraction: 0.04        # VPF actuator mechanism as fraction of dry weight
-  conventional_reverser_fraction: 0.10   # Cascade reverser fraction for comparison
-  aircraft_L_D: 18.0                     # Cruise L/D ratio (B777X)
+  # Mechanism weight — basis for Stage 7 SFC cruise penalty.
+  # VPF actuator (ring + pitch links + reinforced blade root): ~4% of engine dry weight.
+  # Conventional cascade reverser (cascades + blocker doors + nacelle reinforcement): ~10%.
+  # Net saving vs conventional: ~6% × dry weight × 2 engines ≈ 950 kg.
+  engine_dry_weight_kg: 7930.0          # GE9X-1B dry weight per engine [kg]
+  mechanism_weight_fraction: 0.04       # VPF actuator as fraction of engine dry weight
+  conventional_reverser_fraction: 0.10  # Cascade reverser fraction for comparison
+  aircraft_L_D: 18.0                    # B777X cruise lift-to-drag ratio

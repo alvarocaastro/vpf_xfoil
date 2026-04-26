@@ -120,13 +120,13 @@ class PipelineSettings:
     selection_alpha_max: float = 20.0
     selection_alpha_step: float = 0.15
     selection_reynolds: float = 3.0e6
-    selection_ncrit: float = 7.0
+    selection_ncrit: float = 4.0   # turbomachinery Tu~0.5-1% → Ncrit~4
 
     fan: FanGeometry = field(default_factory=lambda: FanGeometry(
-        rpm=4500.0, omega_rad_s=471.24, radii_m={}, axial_velocity_m_s={},
+        rpm=2200.0, omega_rad_s=230.4, radii_m={}, axial_velocity_m_s={},
     ))
     blade: BladeGeometry = field(default_factory=lambda: BladeGeometry(
-        num_blades=18, chord_m={}, theta_camber_deg=8.0,
+        num_blades=16, chord_m={}, theta_camber_deg=8.0,
     ))
     airfoil_geometry: AirfoilGeometry = field(default_factory=lambda: AirfoilGeometry(
         thickness_ratio=0.10, korn_kappa=0.87,

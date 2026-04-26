@@ -1,4 +1,4 @@
-# Configuration file for VFP Aerodynamic Analysis Pipeline
+# Configuration file for VPF Aerodynamic Analysis Pipeline
 # Reference engine: GE9X (Boeing 777X) — BPR≈10, fan diameter 3.40 m
 
 # Reference Mach number for XFOIL simulations (incompressible baseline)
@@ -74,18 +74,11 @@ xfoil:
   max_retries: 3        # Max retries on timeout or non-zero exit code
   retry_wait_s: 1.0     # Wait between retries [s]
 
-# Plot settings
+# Plot settings — figure_size is used by Stage 4 plots (plots.py)
 plotting:
-  dpi: 300
-  format: png
   figure_size:
     width: 6.0
     height: 4.5
-  style:
-    grid: true
-    grid_alpha: 0.7
-    grid_linestyle: ":"
-    linewidth: 1.6
 
 # Flight conditions
 flight_conditions:
