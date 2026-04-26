@@ -1,9 +1,4 @@
-"""settings.py — paths, XFOIL discovery, airfoil catalogue, and settings loader.
-
-Configuration dataclasses live in vpf_analysis.config.domain and are imported
-here for the YAML loader. External code should use get_settings() to obtain
-a configured PipelineSettings instance.
-"""
+"""Paths, XFOIL discovery, airfoil catalogue, and settings loader. Use get_settings() for access."""
 
 from __future__ import annotations
 
@@ -11,7 +6,7 @@ import math
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, Final, List, TypedDict
+from typing import Any, Final, TypedDict
 
 import yaml
 
@@ -24,9 +19,8 @@ from vpf_analysis.config.domain import (  # noqa: F401  (re-exported for backwar
     XfoilSettings,
 )
 
-# ---------------------------------------------------------------------------
-# Path constants (previously in config.py)
-# ---------------------------------------------------------------------------
+
+# Path constants
 
 ROOT_DIR: Final[Path] = Path(__file__).resolve().parents[2]
 AIRFOIL_DATA_DIR: Final[Path] = ROOT_DIR / "data" / "airfoils"
@@ -51,9 +45,8 @@ def get_stage_dir(stage_num: int) -> Path:
         raise ValueError(f"Unknown stage number: {stage_num}") from exc
 
 
-# ---------------------------------------------------------------------------
-# XFOIL executable discovery (previously in config.py)
-# ---------------------------------------------------------------------------
+
+# XFOIL executable discovery
 
 def _normalize_xfoil_candidate(raw_path: str | Path) -> Path:
     candidate = Path(raw_path).expanduser()
@@ -99,9 +92,8 @@ XFOIL_EXECUTABLE: Final[Path] = _resolve_xfoil_executable()
 MACH_DEFAULT: Final[float] = 0.2
 N_CRIT_DEFAULT: Final[float] = 9.0
 
-# ---------------------------------------------------------------------------
-# Airfoil definitions (previously in config.py)
-# ---------------------------------------------------------------------------
+
+# Airfoil definitions
 
 
 class AirfoilSpec(TypedDict):
@@ -155,9 +147,8 @@ AIRFOILS: Final[list[AirfoilSpec]] = [
     },
 ]
 
-# ---------------------------------------------------------------------------
-# Load and cache
-# ---------------------------------------------------------------------------
+
+# Settings cache
 
 _SETTINGS_CACHE: PipelineSettings | None = None
 
@@ -190,10 +181,10 @@ def _load_settings(config_path: Path | None) -> PipelineSettings:
         )
 
     with config_path.open("r", encoding="utf-8") as f:
-        raw: Dict[str, Any] = yaml.safe_load(f)
+        raw: dict[str, Any] = yaml.safe_load(f)
 
-    flight_conditions: List[str] = raw["flight_conditions"]
-    blade_sections: List[str] = raw["blade_sections"]
+    flight_conditions: list[str] = raw["flight_conditions"]
+    blade_sections: list[str] = raw["blade_sections"]
 
     reynolds_table = {
         flight: {section: float(v) for section, v in sections.items()}

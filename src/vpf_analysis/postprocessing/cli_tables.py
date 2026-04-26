@@ -1,18 +1,15 @@
 """Rich table builders for run_analysis CLI output."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Tuple
+from pathlib import Path
 
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 
 def build_convergence_table(
-    conv_log: List[Tuple[str, str, float, int]],
+    conv_log: list[tuple[str, str, float, int]],
 ) -> Table:
     """Return a Rich Table summarising XFOIL convergence for Stage 2."""
     table = Table(
@@ -61,7 +58,7 @@ def build_convergence_table(
 
 
 def build_summary_table(
-    s1, s2, s3, s4, s5, s6, s7, elapsed: float, results_dir: "Path",
+    s1, s2, s3, s4, s5, s6, s7, elapsed: float, results_dir: Path,
 ) -> None:
     """Print the final pipeline summary table and completion panel to the console."""
     from rich.console import Console

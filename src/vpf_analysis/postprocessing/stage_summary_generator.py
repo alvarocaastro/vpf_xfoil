@@ -1,19 +1,10 @@
-"""
-Stage summary generator.
-
-Produces concise finalresults_stageX.txt files containing:
-  - Timestamp and stage objective
-  - Key numerical results (read from the output CSVs)
-  - High-level artifact summaries without local filesystem paths
-
-Deliberately minimal — detailed methodology is documented in the thesis itself.
-"""
+"""Stage summary generator: writes finalresults_stageX.txt with key numerical results."""
 
 from __future__ import annotations
 
 import datetime
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 
 import pandas as pd
 
@@ -61,9 +52,8 @@ def _footer() -> List[str]:
     return ["", "=" * 70]
 
 
-# ---------------------------------------------------------------------------
-# Stage 1 — Airfoil Selection
-# ---------------------------------------------------------------------------
+
+# Stage1 — Airfoil Selection
 
 def generate_stage1_summary(stage_dir: Path, selected_airfoil_name: str) -> str:
     alpha = get_selection_alpha_range()
@@ -82,9 +72,8 @@ def generate_stage1_summary(stage_dir: Path, selected_airfoil_name: str) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Stage 2 — XFOIL Simulations
-# ---------------------------------------------------------------------------
+
+# Stage2 — XFOIL Simulations
 
 def generate_stage2_summary(
     stage_dir: Path,
@@ -142,9 +131,8 @@ def generate_stage2_summary(
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Stage 3 — Compressibility Corrections
-# ---------------------------------------------------------------------------
+
+# Stage3 — Compressibility Corrections
 
 def generate_stage3_summary(stage_dir: Path) -> str:
     flights  = get_flight_conditions()
@@ -184,11 +172,10 @@ def generate_stage3_summary(stage_dir: Path) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Stage 4 — Performance Metrics
-# ---------------------------------------------------------------------------
 
-def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
+# Stage4 — Performance Metrics
+
+def generate_stage4_summary(stage_dir: Path, metrics: list[Any]) -> str:
     tables_dir   = stage_dir / "tables"
     summary_file = tables_dir / "summary_table.csv"
 
@@ -282,9 +269,8 @@ def generate_stage4_summary(stage_dir: Path, metrics: List[Any]) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Stage 5 — Pitch & Kinematics (merged from former Stage 6 + Stage 7)
-# ---------------------------------------------------------------------------
+
+# Stage5 — Pitch & Kinematics (merged from former Stage 6 + Stage 7)
 
 def generate_stage5_summary(stage_dir: Path) -> str:
     tables_dir  = stage_dir / "tables"
@@ -473,9 +459,8 @@ def generate_stage5_summary(stage_dir: Path) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Stage 6 — Reverse Thrust Modeling
-# ---------------------------------------------------------------------------
+
+# Stage6 — Reverse Thrust Modeling
 
 def generate_stage6_summary(stage_dir: Path) -> str:
     tables_dir = stage_dir / "tables"
@@ -543,9 +528,6 @@ def generate_stage7_summary(stage_dir: Path) -> str:
     return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Writer
-# ---------------------------------------------------------------------------
 
 def write_stage_summary(stage_num: int, summary_text: str, stage_dir: Path) -> None:
     """Write stage summary to finalresults_stageX.txt."""

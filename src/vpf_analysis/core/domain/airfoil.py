@@ -11,5 +11,3 @@ class Airfoil:
     name: str
     family: str
     dat_path: Path
-
-

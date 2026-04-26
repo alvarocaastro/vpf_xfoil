@@ -14,21 +14,7 @@ def export_table(
     label: str,
     float_format: str = ":.4f",
 ) -> None:
-    """Write *df* as a LaTeX booktabs table to *output_path*.
-
-    Parameters
-    ----------
-    df:
-        DataFrame whose columns become table columns.
-    output_path:
-        Destination ``.tex`` file (parent directory must exist).
-    caption:
-        LaTeX caption string (no trailing period).
-    label:
-        LaTeX label string (without ``tab:`` prefix — added automatically).
-    float_format:
-        Python format spec (without ``{`` / ``}``) applied to numeric cells.
-    """
+    """Write *df* as a LaTeX booktabs table to *output_path*. ``label`` gets a ``tab:`` prefix."""
     col_spec = "c" * len(df.columns)
     header = " & ".join(str(c) for c in df.columns) + r" \\"
 

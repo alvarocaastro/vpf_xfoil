@@ -1,10 +1,4 @@
-"""xfoil_runner.py — XFOIL subprocess integration: script build, retry logic, convergence detection.
-
-NOTE: This module is intentionally at the package root, not under adapters/.
-It is the core XFOIL implementation consumed by adapters/xfoil/xfoil_runner_adapter.py,
-which adds domain-specific translation (SimulationCondition → XfoilPolarRequest).
-Do not delete: the adapter imports XfoilPolarRequest, XfoilPolarResult, and run_xfoil_polar from here.
-"""
+"""XFOIL subprocess integration: script build, retry logic, convergence detection."""
 
 from __future__ import annotations
 
@@ -13,7 +7,7 @@ import time
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final, List
+from typing import Final
 
 from .settings import (
     AIRFOIL_DATA_DIR,
@@ -49,7 +43,7 @@ class XfoilPolarResult:
     n_retries_used: int = 0
     convergence_failures: int = 0
     convergence_rate: float = 1.0    # fraction of converged points [0–1]
-    failed_alpha_values: List[float] = None  # type: ignore[assignment]
+    failed_alpha_values: list[float] = None  # type: ignore[assignment]
     error_message: str = ""
 
     def __post_init__(self) -> None:
@@ -69,7 +63,7 @@ def _build_command_script(request: XfoilPolarRequest) -> str:
     from vpf_analysis.settings import get_settings
     xfoil_cfg = get_settings().xfoil
 
-    cmds: List[str] = [
+    cmds: list[str] = [
         f"LOAD {request.airfoil_dat.name}",
         "",         # accept default airfoil name
         "PANE",     # standard re-paneling
@@ -232,9 +226,6 @@ def run_xfoil_polar(
     )
 
 
-# ---------------------------------------------------------------------------
-# Smoke test
-# ---------------------------------------------------------------------------
 
 def quick_smoke_test(airfoil_dat: Path) -> bool:
     """Run a minimal polar to verify the XFOIL binary works."""

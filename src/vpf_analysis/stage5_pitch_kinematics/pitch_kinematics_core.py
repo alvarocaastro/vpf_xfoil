@@ -62,6 +62,10 @@ class CascadeResult:
     cl_2d_at_alpha_opt: float
     cl_cascade_at_alpha_opt: float
 
+    @property
+    def c_over_r(self) -> float:
+        return self.chord_m / self.radius_m if self.radius_m > 0 else float("nan")
+
 
 def _weinig_factor(sigma: float) -> float:
     if sigma <= 0.0:

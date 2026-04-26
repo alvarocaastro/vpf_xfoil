@@ -1,13 +1,4 @@
-"""
-Shared aerodynamic utilities used across postprocessing and VPF analysis.
-
-Centralises three pieces of logic that were previously duplicated across
-multiple modules:
-
-  - resolve_efficiency_column  — find the correct CL/CD column in a DataFrame
-  - find_second_peak_row       — locate the optimal operating point (2nd peak)
-  - resolve_polar_file         — find a polar CSV in hierarchical or flat layout
-"""
+"""Shared aerodynamic utilities: efficiency column resolution, peak finding, polar file lookup."""
 
 from __future__ import annotations
 
@@ -27,14 +18,9 @@ _EFFICIENCY_COLUMNS: tuple[str, ...] = (
 
 
 def resolve_efficiency_column(df: pd.DataFrame) -> str:
-    """Return the name of the first available efficiency column in *df*.
+    """Return the first available efficiency column (``ld_corrected`` → ``ld``).
 
-    Looks for ``ld_corrected`` (Stage 3 output) then ``ld`` (Stage 2 output).
-
-    Raises
-    ------
-    KeyError
-        If none of the expected columns is present.
+    Raises ``KeyError`` if none is present.
     """
     for col in _EFFICIENCY_COLUMNS:
         if col in df.columns:
@@ -49,31 +35,11 @@ def find_second_peak_row(
     efficiency_col: str,
     alpha_min: float | None = None,
 ) -> pd.Series:
-    """Return the row at maximum efficiency in the second aerodynamic peak.
+    """Return the row at maximum efficiency above *alpha_min* (second aerodynamic peak).
 
-    The first CL/CD peak predicted by XFOIL at very low alpha (typically < 3°)
-    is associated with laminar separation bubble effects and is not
-    representative of real turbomachinery operation. This function focuses on
-    the second peak (alpha >= *alpha_min*) which corresponds to the actual fan
-    blade operating range.
-
-    Falls back to the full data range if no valid points exist above *alpha_min*,
-    logging a warning in that case.
-
-    Parameters
-    ----------
-    df:
-        Polar data. Must contain columns ``alpha`` and *efficiency_col*.
-    efficiency_col:
-        Name of the efficiency column to maximise.
-    alpha_min:
-        Lower bound for the second-peak search (degrees). Defaults to
-        ``PhysicsConstants.ALPHA_MIN_OPT_DEG`` from settings.
-
-    Raises
-    ------
-    ValueError
-        If *df* contains no valid (non-inf, non-nan) rows.
+    The first XFOIL peak at very low alpha is a laminar-bubble artefact; this
+    function skips it. Falls back to the full range if no points exist above
+    *alpha_min*. Raises ``ValueError`` if *df* has no valid rows.
     """
     if alpha_min is None:
         from vpf_analysis.settings import get_settings
@@ -99,27 +65,9 @@ def find_second_peak_row(
 
 
 def compute_stall_alpha(df: pd.DataFrame, cl_col: str) -> float:
-    """Estimate the stall angle from a polar DataFrame.
+    """Estimate the stall angle: first alpha where CL drops >5 % below CL_max.
 
-    Stall is defined as the angle of attack where CL drops by more than
-    5 % of CL_max after the CL_max point. This threshold is consistent
-    with the soft-stall detection approach used for NACA 6-series profiles
-    (see NACA TN-1135 / Jacobs & Sherman 1937).
-
-    If no clear drop is detected (e.g. polar ends before stall), the last
-    available alpha is returned and a warning is logged.
-
-    Parameters
-    ----------
-    df:
-        Polar data. Must contain ``alpha`` and *cl_col* columns.
-    cl_col:
-        Name of the lift-coefficient column.
-
-    Returns
-    -------
-    float
-        Estimated stall angle in degrees.
+    Returns the last available alpha if no clear stall is detected.
     """
     df_clean = (
         df[["alpha", cl_col]]
@@ -158,25 +106,7 @@ def lookup_efficiency_at_alpha(
     efficiency_col: str,
     alpha_target: float,
 ) -> float:
-    """Return the efficiency value at the polar point closest to *alpha_target*.
-
-    Used to evaluate (CL/CD) at the design reference angle (α_opt_cruise) in
-    non-cruise conditions, quantifying the fixed-pitch efficiency penalty.
-
-    Parameters
-    ----------
-    df:
-        Polar DataFrame. Must contain ``alpha`` and *efficiency_col*.
-    efficiency_col:
-        Name of the efficiency column.
-    alpha_target:
-        Target angle of attack in degrees.
-
-    Returns
-    -------
-    float
-        Efficiency at the nearest available alpha point.
-    """
+    """Return efficiency at the polar point closest to *alpha_target*."""
     df_clean = (
         df[["alpha", efficiency_col]]
         .replace([np.inf, -np.inf], np.nan)
@@ -189,16 +119,7 @@ def lookup_efficiency_at_alpha(
 
 
 def resolve_polar_file(base_dir: Path, condition: str, section: str) -> Path | None:
-    """Locate a polar CSV file supporting two directory layouts and two file names.
-
-    Checks in order:
-
-    1. ``base_dir / condition / section / corrected_polar.csv`` (Stage 3 output)
-    2. ``base_dir / condition / section / polar.csv``           (Stage 2 hierarchical)
-    3. ``base_dir / condition_section.csv``                     (flat layout)
-
-    Returns ``None`` if none of the locations exist.
-    """
+    """Locate a polar CSV: hierarchical Stage-3/Stage-2 layout, then flat fallback."""
     base = base_dir / condition.lower() / section
     for name in ("corrected_polar.csv", "polar.csv"):
         candidate = base / name

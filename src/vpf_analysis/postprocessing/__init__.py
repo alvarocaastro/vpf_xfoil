@@ -1,8 +1,1 @@
-"""
-Postprocessing module for aerodynamic analysis results.
-
-This module provides functionality for:
-- Computing performance metrics
-- Generating summary tables
-- Creating publication-quality plots
-"""
+"""Postprocessing: performance metrics, summary tables, and plots."""

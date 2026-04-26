@@ -9,5 +9,3 @@ class BladeSection:
 
     name: str
     reynolds: float
-
-

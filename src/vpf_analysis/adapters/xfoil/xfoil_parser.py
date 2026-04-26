@@ -1,17 +1,11 @@
-"""xfoil_parser.py — robust parser for XFOIL space-delimited polar files."""
-
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 
-from vpf_analysis.validation.validators import (
-    PolarQualityWarning,
-    validate_polar_quality,
-)
+from vpf_analysis.validation.validators import PolarQualityWarning, validate_polar_quality
 
 LOGGER = logging.getLogger(__name__)
 
@@ -24,73 +18,46 @@ def parse_polar_file(
     """Parse an XFOIL polar file into a DataFrame with columns: alpha, cl, cd, cm, ld."""
     polar_path = Path(polar_path)
     if not polar_path.exists():
-        raise FileNotFoundError(
-            f"Polar file not found [{context}]: {polar_path}"
-        )
+        raise FileNotFoundError(f"Polar file not found [{context}]: {polar_path}")
 
-    rows: List[dict] = []
+    rows: list[dict] = []
     n_skipped = 0
 
     with polar_path.open("r", encoding="utf-8", errors="ignore") as fh:
         for line in fh:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            parts = stripped.split()
-
+            parts = line.split()
             try:
                 alpha = float(parts[0])
             except (ValueError, IndexError):
                 continue
-
-            # Need at least alpha, CL, CD, CDp, CM (5 fields)
-            if len(parts) < 5:
+            if len(parts) < 5:  # need alpha, CL, CD, CDp, CM
                 n_skipped += 1
                 continue
-
             try:
-                cl = float(parts[1])
-                cd = float(parts[2])
-                cm = float(parts[4])
+                # XFOIL columns: alpha[0] CL[1] CD[2] CDp[3] CM[4]
+                cl, cd, cm = float(parts[1]), float(parts[2]), float(parts[4])
             except ValueError:
                 n_skipped += 1
                 continue
+            rows.append({"alpha": alpha, "cl": cl, "cd": cd, "cm": cm, "ld": cl / cd if cd > 1e-10 else float("nan")})
 
-            ld = cl / cd if cd > 0.0 else float("nan")
-            rows.append({"alpha": alpha, "cl": cl, "cd": cd, "cm": cm, "ld": ld})
-
-    if n_skipped > 0:
-        LOGGER.debug(
-            "XFOIL parser [%s]: %d lines skipped (headers or malformed)",
-            context or polar_path.name,
-            n_skipped,
-        )
+    if n_skipped:
+        LOGGER.debug("XFOIL parser [%s]: %d lines skipped", context or polar_path.name, n_skipped)
 
     df = pd.DataFrame(rows)
 
     if df.empty:
-        LOGGER.warning(
-            "Empty XFOIL polar [%s]: %s — no valid numeric data.",
-            context or "?",
-            polar_path,
-        )
+        LOGGER.warning("Empty XFOIL polar [%s]: %s — no valid numeric data.", context or "?", polar_path)
         return df
 
     if run_quality_checks:
-        warnings: List[PolarQualityWarning] = validate_polar_quality(
-            df, context=context or polar_path.stem
-        )
-        for w in warnings:
+        for w in validate_polar_quality(df, context=context or polar_path.stem):
             LOGGER.warning("Polar quality [%s] %s: %s", w.context, w.code, w.message)
 
     LOGGER.debug(
         "XFOIL polar parsed [%s]: %d points, α=[%.1f, %.1f], CL=[%.3f, %.3f]",
-        context or polar_path.stem,
-        len(df),
-        df["alpha"].min(),
-        df["alpha"].max(),
-        df["cl"].min(),
-        df["cl"].max(),
+        context or polar_path.stem, len(df),
+        df["alpha"].min(), df["alpha"].max(),
+        df["cl"].min(), df["cl"].max(),
     )
-
     return df

@@ -1,5 +1,3 @@
-"""Pipeline stage contracts — explicit I/O between stages."""
-
 from vpf_analysis.pipeline.contracts import (
     Stage1Result,
     Stage2Result,

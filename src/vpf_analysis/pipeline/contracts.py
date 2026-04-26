@@ -5,12 +5,9 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
-
-# ---------------------------------------------------------------------------
 # Stage 1 — Airfoil selection
-# ---------------------------------------------------------------------------
 
 @dataclass
 class Stage1Result:
@@ -26,16 +23,15 @@ class Stage1Result:
         require_dir(self.stage_dir, "Stage 1 results dir")
 
 
-# ---------------------------------------------------------------------------
-# Stage 2 — XFOIL simulations (12 polars)
-# ---------------------------------------------------------------------------
+
+# Stage 2 —XFOIL simulations (12 polars)
 
 @dataclass
 class Stage2Result:
     """Output of Stage 2: XFOIL polars per condition and section."""
-    source_polars: Path                              # stage2/simulation_plots/
-    alpha_eff_map: Dict[Tuple[str, str], float]     # (flight, section) → α_opt
-    stall_map: Dict[Tuple[str, str], float]          # (flight, section) → α_stall
+    source_polars: Path                                       # stage2/simulation_plots/
+    alpha_eff_map: dict[tuple[str, str], float]     # (flight, section) → α_opt
+    stall_map: dict[tuple[str, str], float]          # (flight, section) → α_stall
     n_simulations: int
     n_convergence_warnings: int
     stage_dir: Path
@@ -53,9 +49,8 @@ class Stage2Result:
             )
 
 
-# ---------------------------------------------------------------------------
-# Stage 3 — Compressibility corrections
-# ---------------------------------------------------------------------------
+
+# Stage 3 —Compressibility corrections
 
 @dataclass
 class Stage3Result:
@@ -83,14 +78,13 @@ class Stage3Result:
             )
 
 
-# ---------------------------------------------------------------------------
-# Stage 4 — Performance metrics
-# ---------------------------------------------------------------------------
+
+# Stage 4 —Performance metrics
 
 @dataclass
 class Stage4Result:
     """Output of Stage 4: aerodynamic metrics and figures."""
-    metrics: List[Any]    # List[AerodynamicMetrics] (Any to avoid circular import)
+    metrics: list[Any]    # list[AerodynamicMetrics] (Any to avoid circular import)
     tables_dir: Path
     figures_dir: Path
     stage_dir: Path
@@ -103,9 +97,8 @@ class Stage4Result:
             raise ValueError("Stage 4: metrics list is empty")
 
 
-# ---------------------------------------------------------------------------
-# Stage 5 — Pitch & Kinematics
-# ---------------------------------------------------------------------------
+
+# Stage 5 —Pitch & Kinematics
 
 @dataclass
 class Stage5Result:
@@ -128,9 +121,8 @@ class Stage5Result:
             )
 
 
-# ---------------------------------------------------------------------------
-# Stage 6 — Reverse Thrust Modeling
-# ---------------------------------------------------------------------------
+
+# Stage 6 —Reverse Thrust Modeling
 
 @dataclass
 class Stage6Result:
@@ -154,9 +146,8 @@ class Stage6Result:
             raise ValueError("Stage 6: mechanism_weight_kg must be positive")
 
 
-# ---------------------------------------------------------------------------
-# Stage 7 — SFC Analysis
-# ---------------------------------------------------------------------------
+
+# Stage 7 —SFC Analysis
 
 @dataclass
 class Stage7Result:
