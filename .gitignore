@@ -68,3 +68,7 @@ data/airfoils/*_polar.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
