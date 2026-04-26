@@ -158,12 +158,6 @@ export XFOIL_EXE="/opt/xfoil/xfoil"
 # Full pipeline
 python run_analysis.py
 
-# Validate configuration without running any stage
-python run_analysis.py --dry-run
-
-# Run only specific stages (e.g. rerun metrics and SFC)
-python run_analysis.py --stages 4 5 7
-
 # Run individual stage modules directly
 python -m vpf_analysis.stage5_pitch_kinematics.application.run_pitch_kinematics
 python -m vpf_analysis.stage6_reverse_thrust.application.run_reverse_thrust

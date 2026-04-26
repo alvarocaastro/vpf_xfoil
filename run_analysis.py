@@ -731,44 +731,8 @@ def _print_summary(
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
 
-def parse_args() -> "argparse.Namespace":
-    import argparse
-    parser = argparse.ArgumentParser(
-        description="VPF aerodynamic analysis pipeline",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Load and validate configuration files without executing any stage.",
-    )
-    parser.add_argument(
-        "--stages",
-        nargs="+",
-        type=int,
-        metavar="N",
-        help="Run only the specified stage numbers (e.g. --stages 4 7).",
-    )
-    return parser.parse_args()
-
-
 def main() -> None:
     """Run the full pipeline with inter-stage contract validation."""
-    args = parse_args()
-
-    if args.dry_run:
-        console.print("[vpf.ok]Dry-run: loading configuration…[/vpf.ok]")
-        cfg = get_settings()
-        console.print(f"  flight_conditions : {cfg.flight_conditions}")
-        console.print(f"  blade_sections    : {cfg.blade_sections}")
-        console.print(f"  results_dir       : {cfg.results_dir}")
-        console.print("[vpf.ok]Configuration valid — no stages executed.[/vpf.ok]")
-        return
-
-    _active_stages: set[int] | None = set(args.stages) if args.stages else None
-
-    def _should_run(stage_num: int) -> bool:
-        return _active_stages is None or stage_num in _active_stages
     # ── Banner ────────────────────────────────────────────────────────────────
     console.print()
     console.print(Panel(
@@ -799,29 +763,14 @@ def main() -> None:
         pipeline_task = overall.add_task("Running pipeline…", total=_TOTAL_STEPS)
 
         try:
-            if _should_run(1): step_1_clean_results()
-            overall.advance(pipeline_task)
-
-            s1 = step_2_airfoil_selection() if _should_run(2) else None
-            overall.advance(pipeline_task)
-
-            s2 = step_3_xfoil_simulations(s1) if _should_run(3) and s1 is not None else None
-            overall.advance(pipeline_task)
-
-            s3 = step_4_compressibility_correction(s2) if _should_run(4) and s2 is not None else None
-            overall.advance(pipeline_task)
-
-            s4 = step_5_metrics_and_figures(s3) if _should_run(5) and s3 is not None else None
-            overall.advance(pipeline_task)
-
-            s5 = step_6_pitch_kinematics() if _should_run(6) else None
-            overall.advance(pipeline_task)
-
-            s6 = step_7_reverse_thrust() if _should_run(7) else None
-            overall.advance(pipeline_task)
-
-            s7 = step_8_sfc_analysis() if _should_run(8) else None
-            overall.advance(pipeline_task)
+            step_1_clean_results();              overall.advance(pipeline_task)
+            s1 = step_2_airfoil_selection();     overall.advance(pipeline_task)
+            s2 = step_3_xfoil_simulations(s1);  overall.advance(pipeline_task)
+            s3 = step_4_compressibility_correction(s2); overall.advance(pipeline_task)
+            s4 = step_5_metrics_and_figures(s3); overall.advance(pipeline_task)
+            s5 = step_6_pitch_kinematics();      overall.advance(pipeline_task)
+            s6 = step_7_reverse_thrust();        overall.advance(pipeline_task)
+            s7 = step_8_sfc_analysis();          overall.advance(pipeline_task)
 
         except Exception as exc:
             console.print()
@@ -836,8 +785,7 @@ def main() -> None:
             sys.exit(1)
 
     elapsed = time.perf_counter() - t_start
-    if all(x is not None for x in (s1, s2, s3, s4, s5, s6, s7)):
-        _print_summary(s1, s2, s3, s4, s5, s6, s7, elapsed)
+    _print_summary(s1, s2, s3, s4, s5, s6, s7, elapsed)
 
 
 if __name__ == "__main__":
