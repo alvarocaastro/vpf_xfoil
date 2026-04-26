@@ -65,23 +65,19 @@ class KarmanTsienModel:
         m_ref = case.reference_mach
         m_tgt = case.target_mach
 
-        kt_valid = m_tgt <= kt_max
-        if not kt_valid:
+        # KT is still the best subsonic model up to M~0.95; warn but never fall
+        # back to PG, which over-estimates the correction linearly and loses the
+        # non-linear behaviour near sonic.
+        if m_tgt > kt_max:
             LOGGER.warning(
-                "M_target=%.3f exceeds KT validity limit (%.2f). "
-                "Falling back to Prandtl-Glauert for cl_kt.",
+                "M_target=%.3f exceeds KT experimental validation range (%.2f). "
+                "Applying KT regardless — better than PG at this Mach.",
                 m_tgt, kt_max,
             )
 
         # ── CL correction ────────────────────────────────────────────────────
         cl_kt: list[float] = []
-        for i, cl in enumerate(cl_0):
-            if not kt_valid:
-                cl_kt.append(
-                    float(df["cl_pg"].iloc[i]) if "cl_pg" in df.columns
-                    else cl / math.sqrt(max(1.0 - m_tgt * m_tgt, 1e-9))
-                )
-                continue
+        for cl in cl_0:
             denom_tgt = self._kt_denominator(cl, m_tgt)
             denom_ref = self._kt_denominator(cl, m_ref)
             if abs(denom_tgt) < 1e-6 or abs(denom_ref) < 1e-6:
