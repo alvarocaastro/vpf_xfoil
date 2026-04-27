@@ -202,26 +202,11 @@ def compute_all_metrics(
                 df = pd.read_csv(polar_file)
                 reynolds = reynolds_table[flight][section]
                 ncrit = ncrit_table[flight]
-                # For the design condition (cruise) the wave drag eliminates the
-                # conventional second peak. We use a per-section alpha_min to
-                # capture the stabilisation point post-laminar-bubble (CL/CD ≥ 60
-                # at M=0.85). Values tuned per section polar:
-                #   root     2.5° — stabilises later due to thicker profile
-                #   mid_span 2.2° — intermediate stabilisation
-                #   tip      2.0° — thinnest section, earliest stabilisation
-                # For other conditions the second peak (alpha >= 3°) applies.
-                # At cruise (design condition) the corrected polars show a different
-                # peak structure due to wave drag, so we use a lower alpha_min per section.
-                # These values are tuned to the corrected polar shapes observed at M=0.85.
-                _CRUISE_ALPHA_MIN: dict[str, float] = {
-                    "root": 2.5,     # thicker section, stabilises later
-                    "mid_span": 2.2,
-                    "tip": 2.0,      # thinnest section, earliest stabilisation
-                }
                 from vpf_analysis.settings import get_settings as _gs
-                _default_alpha_min = _gs().physics.ALPHA_MIN_OPT_DEG
+                _cfg = _gs()
+                _default_alpha_min = _cfg.physics.ALPHA_MIN_OPT_DEG
                 if flight == design_condition:
-                    alpha_min = _CRUISE_ALPHA_MIN.get(section, _default_alpha_min)
+                    alpha_min = _cfg.cruise_alpha_min.get(section, _default_alpha_min)
                 else:
                     alpha_min = _default_alpha_min
                 metrics = compute_metrics_from_polar(

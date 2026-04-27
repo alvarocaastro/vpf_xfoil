@@ -64,8 +64,11 @@ class TestAirfoilSelection:
         score_a = score_airfoil(df_a)
         score_b = score_airfoil(df_b)
 
-        assert score_a.stall_alpha == pytest.approx(10.0, abs=1e-6)
-        assert score_b.stall_alpha == pytest.approx(8.0, abs=1e-6)
+        # df_a: CL_max=1.20 @ 10°; CL=1.15 @ 12° — 1.15 > (1.20−0.06=1.14), no 5% drop detected
+        #        → falls back to last alpha = 12.0
+        # df_b: CL_max=1.05 @ 8°; CL=0.95 @ 10° — 0.95 < (1.05−0.0525=0.9975) → stall at 10.0
+        assert score_a.stall_alpha == pytest.approx(12.0, abs=1e-6)
+        assert score_b.stall_alpha == pytest.approx(10.0, abs=1e-6)
         assert score_a.stability_margin > score_b.stability_margin
         assert score_a.total_score > score_b.total_score
 
@@ -216,8 +219,11 @@ class TestAirfoilSelection:
 
         assert score.max_ld == pytest.approx(85.94, abs=1e-2)
         assert score.alpha_opt == pytest.approx(7.0, abs=1e-6)
-        assert score.stall_alpha == pytest.approx(7.0, abs=1e-6)
-        assert score.stability_margin == pytest.approx(0.0, abs=1e-6)
+        # CL_max=1.1 @ 7°; CL=1.0 @ 9° — 1.0 < (1.1−0.055=1.045) → stall detected at 9°
+        assert score.stall_alpha == pytest.approx(9.0, abs=1e-6)
+        assert score.stability_margin == pytest.approx(2.0, abs=1e-6)
 
-        window = [83.33, 85.94]
+        # FWHM window: max_ld/2 = 42.97; points with ld >= 42.97: alpha=4,5,6,7,9
+        # alpha range = [4, 9] → half_fwhm = 2.5; window [4.5, 9.5] → alpha=5,6,7,9
+        window = [70.83, 83.33, 85.94, 58.82]
         assert score.robustness_ld == pytest.approx(sum(window) / len(window), abs=1e-2)

@@ -40,7 +40,7 @@ _PHI_MAX_DESIGN = _physics.PHI_DESIGN_MAX
 _PSI_MIN_DESIGN = _physics.PSI_DESIGN_MIN
 _PSI_MAX_DESIGN = _physics.PSI_DESIGN_MAX
 
-_DU_SELIG_A: float = 1.6
+_DU_SELIG_A: float = _physics.DU_SELIG_A
 
 LOGGER = logging.getLogger(__name__)
 
@@ -205,14 +205,13 @@ def _apply_snel(df: pd.DataFrame, c_over_r: float, cl_col: str) -> pd.DataFrame:
 
 
 def _find_second_peak_3d(df: pd.DataFrame) -> tuple[float, float]:
-    sub = df[df["alpha"] >= _ALPHA_MIN_OPT].copy()
-    if sub.empty:
+    try:
+        row = find_second_peak_row(
+            df, "ld_3d", alpha_min=_ALPHA_MIN_OPT, cl_min=_CL_MIN_VIABLE, cl_col="cl_3d",
+        )
+        return float(row["alpha"]), float(row["ld_3d"])
+    except (ValueError, KeyError):
         return float("nan"), float("nan")
-    sub = sub[sub["cl_3d"] >= _CL_MIN_VIABLE]
-    if sub.empty:
-        return float("nan"), float("nan")
-    idx = sub["ld_3d"].idxmax()
-    return float(sub.loc[idx, "alpha"]), float(sub.loc[idx, "ld_3d"])
 
 
 def compute_rotational_corrections(
@@ -306,14 +305,13 @@ def _apply_du_selig(
 
 
 def _find_second_peak_du_selig(df: pd.DataFrame) -> tuple[float, float]:
-    sub = df[df["alpha"] >= _ALPHA_MIN_OPT].copy()
-    if sub.empty:
+    try:
+        row = find_second_peak_row(
+            df, "ld_3d_ds", alpha_min=_ALPHA_MIN_OPT, cl_min=_CL_MIN_VIABLE, cl_col="cl_3d_ds",
+        )
+        return float(row["alpha"]), float(row["ld_3d_ds"])
+    except (ValueError, KeyError):
         return float("nan"), float("nan")
-    sub = sub[sub["cl_3d_ds"] >= _CL_MIN_VIABLE]
-    if sub.empty:
-        return float("nan"), float("nan")
-    idx = sub["ld_3d_ds"].idxmax()
-    return float(sub.loc[idx, "alpha"]), float(sub.loc[idx, "ld_3d_ds"])
 
 
 def compute_rotational_corrections_du_selig(

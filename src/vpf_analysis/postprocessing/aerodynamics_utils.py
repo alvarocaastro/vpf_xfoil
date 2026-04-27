@@ -34,12 +34,18 @@ def find_second_peak_row(
     df: pd.DataFrame,
     efficiency_col: str,
     alpha_min: float | None = None,
+    cl_min: float | None = None,
+    cl_col: str = "cl",
 ) -> pd.Series:
     """Return the row at maximum efficiency above *alpha_min* (second aerodynamic peak).
 
     The first XFOIL peak at very low alpha is a laminar-bubble artefact; this
-    function skips it. Falls back to the full range if no points exist above
-    *alpha_min*. Raises ``ValueError`` if *df* has no valid rows.
+    function skips it by requiring alpha >= alpha_min AND (optionally) cl >= cl_min.
+    The CL filter is the more robust guard: it excludes the laminar-bubble regardless
+    of whether convergence at high alpha was achieved.
+
+    Falls back to the CL-only filter if the combined filter is empty, then raises
+    ``ValueError`` if *df* has no valid rows at all.
     """
     if alpha_min is None:
         from vpf_analysis.settings import get_settings
@@ -54,8 +60,30 @@ def find_second_peak_row(
             f"(efficiency column: '{efficiency_col}')."
         )
 
-    df_peak = df_clean[df_clean["alpha"] >= alpha_min]
+    alpha_mask = df_clean["alpha"] >= alpha_min
+    if cl_min is not None and cl_col in df_clean.columns:
+        cl_mask = df_clean[cl_col] >= cl_min
+        df_peak = df_clean[alpha_mask & cl_mask]
+        # Relax alpha but keep CL filter to exclude laminar bubble
+        if df_peak.empty:
+            df_peak = df_clean[cl_mask]
+            if not df_peak.empty:
+                LOGGER.warning(
+                    "No data at alpha >= %.1f° with CL >= %.2f. "
+                    "Relaxing alpha constraint (CL filter kept).",
+                    alpha_min, cl_min,
+                )
+    else:
+        df_peak = df_clean[alpha_mask]
+
     if df_peak.empty:
+        if cl_min is not None:
+            # When a CL filter was requested and still no data found, do NOT fall
+            # back to the full range — that would select the laminar bubble.
+            raise ValueError(
+                f"No data with CL >= {cl_min} (column '{cl_col}') in polar. "
+                "Cannot determine second aerodynamic peak."
+            )
         LOGGER.warning(
             "No data at alpha >= %.1f°. Falling back to full data range.", alpha_min
         )

@@ -152,15 +152,32 @@ class FinalAnalysisService:
         from vpf_analysis.settings import get_settings
         alpha_min_opt = get_settings().physics.ALPHA_MIN_OPT_DEG
 
+        from vpf_analysis.config.domain import PhysicsConstants
+        _ph = PhysicsConstants()
+
         df_eff = df.replace([float("inf"), float("-inf")], pd.NA).dropna(subset=["ld"])
         if df_eff.empty:
             alpha_eff = float("nan")
         else:
-            df_second_peak = df_eff[df_eff["alpha"] >= alpha_min_opt]
+            # First try: alpha >= ALPHA_MIN_OPT AND CL >= CL_MIN_3D to exclude laminar bubble.
+            # The CL filter is critical for cruise conditions where XFOIL may only converge
+            # at low alpha, causing the fallback to erroneously select the laminar-bubble peak.
+            df_second_peak = df_eff[
+                (df_eff["alpha"] >= alpha_min_opt) & (df_eff["cl"] >= _ph.CL_MIN_3D)
+            ]
+            # Second try: relax alpha constraint but keep CL filter
             if df_second_peak.empty:
-                df_second_peak = df_eff
-            idx_max = df_second_peak["ld"].idxmax()
-            alpha_eff = float(df_second_peak.loc[idx_max, "alpha"])
+                df_second_peak = df_eff[df_eff["cl"] >= _ph.CL_MIN_3D]
+            # If still empty, return NaN — do not fabricate an operating point
+            if df_second_peak.empty:
+                LOGGER.warning(
+                    "No valid second peak (CL >= %.2f) for %s/%s — alpha_opt=NaN.",
+                    _ph.CL_MIN_3D, cfg.flight_name, cfg.section.name,
+                )
+                alpha_eff = float("nan")
+            else:
+                idx_max = df_second_peak["ld"].idxmax()
+                alpha_eff = float(df_second_peak.loc[idx_max, "alpha"])
 
         # Stall detection: CL peak (only for alpha > 0 to avoid pre-stall artefacts)
         df_pos = df[df["alpha"] > 0.0].copy()

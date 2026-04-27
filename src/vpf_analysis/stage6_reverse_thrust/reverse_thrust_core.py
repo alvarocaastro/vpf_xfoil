@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import List, Tuple
+
+LOGGER = logging.getLogger(__name__)
 
 import numpy as np
 import pandas as pd
@@ -91,6 +94,13 @@ def _get_aero_coeffs(
         cd = float(np.interp(alpha_deg, df["alpha"], df["cd_corrected"]))
         return cl, cd, True
 
+    delta = alpha_deg - alpha_min
+    LOGGER.warning(
+        "alpha=%.1f° outside polar range [%.1f°, %.1f°] by %.1f° — "
+        "extrapolation unreliable; in_range flag set to False.",
+        alpha_deg, alpha_min, alpha_max, abs(delta),
+    )
+
     n_pts = min(5, len(df))
     alpha_low = df["alpha"].iloc[:n_pts].values
     cl_low = df["cl_kt"].iloc[:n_pts].values
@@ -99,7 +109,6 @@ def _get_aero_coeffs(
     cl_at_min = float(np.interp(alpha_min, df["alpha"], df["cl_kt"]))
     cd_at_min = float(np.interp(alpha_min, df["alpha"], df["cd_corrected"]))
 
-    delta = alpha_deg - alpha_min
     cl_extrap = float(np.clip(cl_at_min + dcl_dalpha * delta, -2.0, 2.0))
     cd_extrap = float(np.clip(cd_at_min + 0.015 * delta**2, cd_at_min, 2.5))
 
@@ -113,7 +122,11 @@ def _stall_margin(alpha_rev_deg: float, polar_df: pd.DataFrame) -> float:
     if len(neg_part) >= 3:
         cls = neg_part["cl_kt"].values
         alphas = neg_part["alpha"].values
-        grads = np.diff(cls) / np.diff(alphas)
+        # Smooth before differentiating to suppress XFOIL polar noise that
+        # creates spurious sign changes in the gradient.
+        from scipy.ndimage import uniform_filter1d
+        cls_smooth = uniform_filter1d(cls, size=3) if len(cls) >= 5 else cls
+        grads = np.diff(cls_smooth) / np.diff(alphas)
         sign_changes = np.where(np.diff(np.sign(grads)))[0]
         if len(sign_changes) > 0:
             alpha_stall_neg = float(alphas[sign_changes[-1] + 1])

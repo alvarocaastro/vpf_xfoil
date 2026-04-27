@@ -128,3 +128,15 @@ blade_geometry:
     tip:      0.69
   theta_camber_deg: 8.0   # Camber angle θ [°] — NACA 65-410
                           # (Carter's rule: m=0.23 for NACA 6-series, a/c=0.5)
+
+# Minimum alpha for second-peak search at cruise (design condition).
+# At cruise (M=0.93), wave drag suppresses the conventional second peak and shifts
+# the polar shape. Lower alpha_min than the global 3.0° is needed per section.
+# Tuned to the corrected polar shapes at M=0.93 for NACA 65-410:
+#   root:     thicker section (t/c=0.10), stabilises at alpha~2.5°
+#   mid_span: intermediate section, stabilises at alpha~2.2°
+#   tip:      thinnest effective section, earliest stabilisation at alpha~2.0°
+cruise_alpha_min:
+  root: 2.5
+  mid_span: 2.2
+  tip: 2.0

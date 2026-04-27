@@ -38,11 +38,25 @@ class PhysicsConstants:
     WEINIG_SIGMA_MAX: float = 2.50
     """Maximum solidity for Weinig factor validity."""
 
-    # 3D rotational corrections (Snel et al.)
+    # 3D rotational corrections
     SNEL_A: float = 3.0
-    """Empirical coefficient a in Snel's rotational correction for attached flow."""
+    """Empirical coefficient *a* in Snel et al. (1994) rotational correction: ΔCL = a·(c/r)²·CL_2D.
+    Originally derived for wind turbine rotors (attached flow, low Re). Applied here as an
+    approximation for turbofan fan blades — no published validation for cascade conditions exists.
+    Ref: Snel, H. et al. (1994), ECN-C-94-107. Sensitivity to a ∈ [2, 4] should be checked.
+    """
+
+    DU_SELIG_A: float = 1.6
+    """Leading coefficient in Du & Selig (1998) rotational correction: ΔCL = 1.6·f(λ_r)·(c/r)^1.6.
+    Alternative to Snel et al.; includes a tip-speed-ratio function f(λ_r) = λ_r²/(λ_r²+1).
+    Also derived for wind turbines; applied here as a second independent estimate.
+    Ref: Du, Z. & Selig, M. (1998), AIAA-1998-0021.
+    """
 
     # Efficient fan design zone (φ-ψ diagram)
+    # NOTE: Bounds from Dixon & Hall (2013) apply to low-speed fans at mid-span.
+    # Hub/root sections (r=0.53 m) routinely show φ > 1.0 in cruise — this is expected
+    # and does not indicate a design error. Use these limits as reference guides only.
     PHI_DESIGN_MIN: float = 0.35
     PHI_DESIGN_MAX: float = 0.55
     PSI_DESIGN_MIN: float = 0.25
@@ -143,5 +157,12 @@ class PipelineSettings:
     airfoil_geometry: AirfoilGeometry = field(default_factory=lambda: AirfoilGeometry(
         thickness_ratio=0.10, korn_kappa=0.87,
     ))
+
+    # Per-section minimum alpha for peak search at the cruise (design) condition.
+    # Wave drag at M=0.93 shifts the polar peak structure; a lower alpha_min than
+    # the global ALPHA_MIN_OPT_DEG is needed to capture the stabilised operating point.
+    cruise_alpha_min: Dict[str, float] = field(default_factory=lambda: {
+        "root": 2.5, "mid_span": 2.2, "tip": 2.0,
+    })
 
     results_dir: Path = field(default_factory=lambda: Path("results"))

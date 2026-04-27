@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 import math
 
+import numpy as np
 import pandas as pd
 
 from vpf_analysis.stage3_compressibility_correction.compressibility_case import (
@@ -109,22 +110,31 @@ class KarmanTsienModel:
 
         cd_corrected: list[float] = []
         for cl, cd in zip(cl_0, df["cd"].values):
-            mdd = estimate_mdd(max(cl, 0.0), self._tc, self._kappa)
+            # Do not clamp CL to 0: Korn's equation handles negative CL correctly,
+            # and clamping creates an asymmetric drag correction at negative pitch angles.
+            mdd = estimate_mdd(cl, self._tc, self._kappa)
             cd_corrected.append(cd + wave_drag_increment(m_tgt, mdd))
 
         df_out["cd_corrected"] = cd_corrected
         df_out["cd_wave_extrapolated"] = m_tgt > _MACH_WAVE_DRAG_VALID_MAX
 
         # ── Efficiencies ─────────────────────────────────────────────────────
-        df_out["ld_kt"] = [
-            cl / cd if (cd > 0 and cl == cl) else float("nan")
-            for cl, cd in zip(df_out["cl_kt"], df_out["cd_corrected"])
-        ]
+        _cd_arr = np.array(df_out["cd_corrected"], dtype=float)
+        _cl_kt_arr = np.array(df_out["cl_kt"], dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            df_out["ld_kt"] = np.where(
+                (_cd_arr > 1e-9) & np.isfinite(_cl_kt_arr),
+                _cl_kt_arr / _cd_arr,
+                np.nan,
+            )
 
         if "cl_pg" in df_out.columns:
-            df_out["ld_pg"] = [
-                cl / cd if (cd > 0 and cl == cl) else float("nan")
-                for cl, cd in zip(df_out["cl_pg"], df_out["cd_corrected"])
-            ]
+            _cl_pg_arr = np.array(df_out["cl_pg"], dtype=float)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                df_out["ld_pg"] = np.where(
+                    (_cd_arr > 1e-9) & np.isfinite(_cl_pg_arr),
+                    _cl_pg_arr / _cd_arr,
+                    np.nan,
+                )
 
         return df_out
