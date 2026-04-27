@@ -95,8 +95,8 @@ class XfoilSettings:
 @dataclass
 class FanGeometry:
     """Variable-pitch fan geometry."""
-    rpm: float
-    omega_rad_s: float
+    rpm: Dict[str, float]          # RPM per flight condition
+    omega_rad_s: Dict[str, float]  # ω [rad/s] per flight condition
     radii_m: Dict[str, float]
     axial_velocity_m_s: Dict[str, float]
 
@@ -167,7 +167,7 @@ class PipelineSettings:
     selection_conditions: List[ResolvedSelectionCondition] = field(default_factory=list)
 
     fan: FanGeometry = field(default_factory=lambda: FanGeometry(
-        rpm=2200.0, omega_rad_s=230.4, radii_m={}, axial_velocity_m_s={},
+        rpm={}, omega_rad_s={}, radii_m={}, axial_velocity_m_s={},
     ))
     blade: BladeGeometry = field(default_factory=lambda: BladeGeometry(
         num_blades=16, solidity={}, theta_camber_deg=8.0,

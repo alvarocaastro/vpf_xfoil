@@ -84,8 +84,8 @@ def get_korn_kappa() -> float:
     return float(load_config()["airfoil_geometry"]["korn_kappa"])
 
 
-def get_fan_rpm() -> float:
-    return float(load_config()["fan_geometry"]["rpm"])
+def get_fan_rpm() -> dict[str, float]:
+    return {k: float(v) for k, v in load_config()["fan_geometry"]["rpm"].items()}
 
 
 def get_blade_radii() -> dict[str, float]:

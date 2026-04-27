@@ -183,17 +183,18 @@ def compute_sfc_analysis(
         from vpf_analysis.config_loader import get_axial_velocities, get_blade_radii, get_fan_rpm
         _va = get_axial_velocities()
         _radii = get_blade_radii()
-        _rpm = get_fan_rpm()
-        _omega = _rpm * (2.0 * _math.pi / 60.0)
+        _rpm_map = get_fan_rpm()
+        _omega_cruise = _rpm_map.get("cruise", next(iter(_rpm_map.values()))) * (2.0 * _math.pi / 60.0)
         _use_map = True
         _va_cruise = _va.get("cruise", 150.0)
-        _phi_design: dict = {sec: _va_cruise / (_omega * r) for sec, r in _radii.items()}
+        _phi_design: dict = {sec: _va_cruise / (_omega_cruise * r) for sec, r in _radii.items()}
     except Exception as exc:
         LOGGER.warning("Could not load kinematic data for map mechanism: %s — profile only.", exc)
         _use_map = False
         _va = {}
         _radii = {}
-        _omega = 0.0
+        _rpm_map = {}
+        _omega_cruise = 0.0
         _phi_design = {}
 
     _s5: Optional[Dict] = None
@@ -230,8 +231,9 @@ def compute_sfc_analysis(
                 phi_des = _phi_design.get(section, float("nan"))
                 phi_cond = phi_des
                 delta_eta_map = 0.0
-            elif _use_map and section in _radii and _omega > 0:
-                u_sec = _omega * _radii[section]
+            elif _use_map and section in _radii and _omega_cruise > 0:
+                _omega_cond = _rpm_map.get(condition, next(iter(_rpm_map.values()), 0.0)) * (2.0 * _math.pi / 60.0) if _rpm_map else _omega_cruise
+                u_sec = _omega_cond * _radii[section]
                 phi_cond = _va_cond / u_sec if u_sec > 0 else float("nan")
                 phi_des = _phi_design.get(section, float("nan"))
                 delta_eta_map = (

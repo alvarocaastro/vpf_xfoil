@@ -1038,8 +1038,9 @@ def run_pitch_kinematics() -> None:
     blade_geom   = get_blade_geometry()
     radii        = get_blade_radii()
     axial_vels   = get_axial_velocities()
-    rpm          = get_fan_rpm()
-    omega        = rpm * (2.0 * math.pi / 60.0)
+    rpm_map      = get_fan_rpm()
+    omega_map    = {cond: r * (2.0 * math.pi / 60.0) for cond, r in rpm_map.items()}
+    omega_cruise = omega_map.get("cruise", next(iter(omega_map.values())))
 
     # ── 3. [A] Cascade corrections ───────────────────────────────────────────
     LOGGER.info("[A] Computing cascade corrections (Weinig + Carter)...")
@@ -1130,21 +1131,21 @@ def run_pitch_kinematics() -> None:
     }
     va_cruise = axial_vels.get("cruise", 250.0)
 
-    twist_results = compute_blade_twist(alpha_opt_3d_cruise, va_cruise, omega, radii)
+    twist_results = compute_blade_twist(alpha_opt_3d_cruise, va_cruise, omega_cruise, radii)
     off_design_results = compute_off_design_incidence(
         twist_results,
         alpha_opt_3d_map,
         cl_cd_max_3d_map,
         polar_3d_map,
         axial_vels,
-        omega,
+        omega_map,
         radii,
     )
     LOGGER.info("Twist + off-design: %d cases", len(off_design_results))
 
     # ── 9. [D] Stage loading ─────────────────────────────────────────────────
     LOGGER.info("[D] Computing stage loading (Euler: φ, ψ, W_spec)...")
-    loading_results = compute_stage_loading(alpha_opt_3d_map, axial_vels, omega, radii)
+    loading_results = compute_stage_loading(alpha_opt_3d_map, axial_vels, omega_map, radii)
     in_zone_ideal = sum(1 for r in loading_results if r.in_design_zone)
     LOGGER.info("Stage loading [ideal — free pitch]: %d cases, %d in design zone",
                 len(loading_results), in_zone_ideal)
@@ -1156,7 +1157,7 @@ def run_pitch_kinematics() -> None:
         if not math.isnan(r.alpha_actual_deg)
     }
     loading_actual_results = compute_stage_loading(
-        alpha_actual_map, axial_vels, omega, radii,
+        alpha_actual_map, axial_vels, omega_map, radii,
     )
     in_zone_actual = sum(1 for r in loading_actual_results if r.in_design_zone)
     LOGGER.info("Stage loading [real — single actuator]: %d cases, %d in design zone",

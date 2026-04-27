@@ -83,7 +83,7 @@ def _compute_sensitivity_row(
     tau: float,
 ) -> float:
     """Return mean ΔSFC% for a given (rpm_delta, tau) combination."""
-    omega_ref = cfg.fan.rpm * (2.0 * math.pi / 60.0)
+    omega_ref = cfg.fan.rpm.get("cruise", next(iter(cfg.fan.rpm.values()))) * (2.0 * math.pi / 60.0)
     omega_new = omega_ref * (1.0 + rpm_delta_pct / 100.0)
 
     # Cruise reference: compute β_cruise per section from summary (alpha_opt at cruise + φ_cruise)

@@ -30,7 +30,7 @@ from vpf_analysis.shared.plot_style import (
 
 def compute_pitch_map(
     alpha_eff_map: Dict[Tuple[str, str], float],
-    rpm: float,
+    rpm: Dict[str, float],
     radii: Dict[str, float],
     axial_velocities: Dict[str, float],
 ) -> Tuple[pd.DataFrame, Dict[str, float]]:
@@ -40,7 +40,7 @@ def compute_pitch_map(
     Parameters
     ----------
     alpha_eff_map : dict mapping (flight_name, section_name) -> alpha_opt [deg]
-    rpm : fan rotational speed [RPM]
+    rpm : fan rotational speed [RPM] per flight condition
     radii : dict section_name -> radius [m]
     axial_velocities : dict flight_name -> axial velocity Va [m/s]
 
@@ -49,8 +49,6 @@ def compute_pitch_map(
     df : DataFrame with columns [flight, section, re, alpha_opt, phi_deg, beta_deg]
     delta_beta : dict section_name -> pitch range across flight conditions [deg]
     """
-    omega = 2.0 * math.pi * rpm / 60.0  # rad/s
-
     rows: List[dict] = []
     for (flight, section), alpha_opt in alpha_eff_map.items():
         if math.isnan(alpha_opt):
@@ -59,6 +57,7 @@ def compute_pitch_map(
         va = axial_velocities.get(flight)
         if r is None or va is None:
             continue
+        omega = 2.0 * math.pi * rpm.get(flight, next(iter(rpm.values()))) / 60.0
         u = omega * r                            # blade speed [m/s]
         phi_rad = math.atan2(va, u)              # flow angle [rad]
         phi_deg = math.degrees(phi_rad)          # flow angle [deg]

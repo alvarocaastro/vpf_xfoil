@@ -225,7 +225,7 @@ def enrich_with_cruise_reference(
     design_condition: str = "cruise",
     axial_velocities: Dict[str, float] | None = None,
     blade_radii: Dict[str, float] | None = None,
-    fan_rpm: float | None = None,
+    fan_rpm: Dict[str, float] | None = None,
 ) -> List[AerodynamicMetrics]:
     """Enrich metrics with design-reference fields relative to the cruise condition.
 
@@ -283,12 +283,13 @@ def enrich_with_cruise_reference(
     )
     phi: Dict[tuple[str, str], float] = {}   # (condition, section) → φ [deg]
     if use_triangles:
-        omega = fan_rpm * (2.0 * math.pi / 60.0)
+        _rpm_fallback = next(iter(fan_rpm.values())) if fan_rpm else 0.0
         for cond, va in axial_velocities.items():
+            omega = fan_rpm.get(cond, _rpm_fallback) * (2.0 * math.pi / 60.0)
             for sec, r in blade_radii.items():
                 u = omega * r
                 phi[(cond, sec)] = math.degrees(math.atan2(va, u))
-        LOGGER.info("Velocity-triangle enrichment active (RPM=%.0f)", fan_rpm)
+        LOGGER.info("Velocity-triangle enrichment active (RPM per condition)")
     else:
         LOGGER.warning(
             "Velocity-triangle data not provided — falling back to simplified "

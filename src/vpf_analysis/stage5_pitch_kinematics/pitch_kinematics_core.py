@@ -327,8 +327,7 @@ def compute_rotational_corrections_du_selig(
     solidities: Dict[str, float] = blade_geometry["solidity"]
     radii = get_blade_radii()
     va_map = get_axial_velocities()
-    rpm = get_fan_rpm()
-    omega = rpm * (2.0 * math.pi / 60.0)
+    rpm_map = get_fan_rpm()
 
     if "cl_cascade" in df_polars.columns:
         cl_col = "cl_cascade"
@@ -343,6 +342,7 @@ def compute_rotational_corrections_du_selig(
 
     for condition in conditions:
         va = va_map.get(condition, 150.0)
+        omega = rpm_map.get(condition, next(iter(rpm_map.values()))) * (2.0 * math.pi / 60.0)
         for section in sections:
             r = radii.get(section, float("nan"))
             sigma = solidities.get(section, 1.0)
@@ -632,22 +632,24 @@ def compute_off_design_incidence(
     cl_cd_max_3d_map: Dict[Tuple[str, str], float],
     polar_3d_map: Dict[Tuple[str, str], pd.DataFrame],
     axial_velocities: Dict[str, float],
-    omega: float,
+    omega: Dict[str, float],
     radii: Dict[str, float],
     reference_condition: str = "cruise",
     hub_section: str = "mid_span",
 ) -> List[OffDesignIncidenceResult]:
     """Compute actual incidence and efficiency loss in off-design conditions."""
     beta_metal: Dict[str, float] = {r.section: r.beta_metal_deg for r in twist_results}
+    _omega_fallback = next(iter(omega.values())) if omega else 0.0
 
     results: List[OffDesignIncidenceResult] = []
     conditions = sorted(set(cond for cond, _ in alpha_opt_3d_map.keys()))
 
     for condition in conditions:
         va = axial_velocities.get(condition, float("nan"))
+        omega_cond = omega.get(condition, _omega_fallback)
 
         r_hub = radii.get(hub_section, float("nan"))
-        u_hub = omega * r_hub
+        u_hub = omega_cond * r_hub
         phi_hub = math.degrees(math.atan2(va, u_hub)) if u_hub > 0 else 0.0
         alpha_hub_target = alpha_opt_3d_map.get((condition, hub_section), float("nan"))
         beta_metal_hub = beta_metal.get(hub_section, float("nan"))
@@ -661,7 +663,7 @@ def compute_off_design_incidence(
             delta_beta_hub = 0.0
 
         for section, r in radii.items():
-            u = omega * r
+            u = omega_cond * r
             phi = math.degrees(math.atan2(va, u)) if u > 0 else 0.0
             bm = beta_metal.get(section, float("nan"))
 
@@ -760,10 +762,11 @@ def _in_design_zone(phi: float, psi: float) -> bool:
 def compute_stage_loading(
     alpha_map_deg: Dict[Tuple[str, str], float],
     axial_velocities: Dict[str, float],
-    omega: float,
+    omega: Dict[str, float],
     radii: Dict[str, float],
 ) -> List[StageLoadingResult]:
     """Compute stage loading (φ, ψ, W_spec) for each (condition, section)."""
+    _omega_fallback = next(iter(omega.values())) if omega else 0.0
     results: List[StageLoadingResult] = []
 
     for (condition, section), alpha_deg in alpha_map_deg.items():
@@ -773,7 +776,7 @@ def compute_stage_loading(
         if any(math.isnan(x) for x in [va, r, alpha_deg]):
             continue
 
-        u = omega * r
+        u = omega.get(condition, _omega_fallback) * r
         if u <= 0:
             continue
         phi_flow = math.degrees(math.atan2(va, u))
@@ -825,10 +828,9 @@ def compute_kinematics(
     reference_condition: str = "cruise",
 ) -> List[KinematicsResult]:
     """Compute velocity triangles and mechanical pitch angle for each case."""
-    rpm = get_fan_rpm()
+    rpm_map = get_fan_rpm()
     radii = get_blade_radii()
     va_dict = get_axial_velocities()
-    omega = rpm * (2.0 * math.pi / 60.0)
 
     results: List[KinematicsResult] = []
     reference_beta: Dict[str, float] = {}
@@ -836,6 +838,7 @@ def compute_kinematics(
     for adj in pitch_adjustments:
         va = va_dict.get(adj.condition, float("nan"))
         r = radii.get(adj.section, float("nan"))
+        omega = rpm_map.get(adj.condition, next(iter(rpm_map.values()))) * (2.0 * math.pi / 60.0)
         u = omega * r if not math.isnan(r) else float("nan")
         phi = math.degrees(math.atan2(va, u)) if (u > 0 and not math.isnan(va)) else 0.0
         beta = adj.alpha_opt + phi

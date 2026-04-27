@@ -7,33 +7,34 @@ reference_mach: 0.2
 # Target Mach numbers for compressibility correction (per flight condition)
 # Values represent M_rel at mid-span section (W_rel/a), the physically correct
 # Mach for 2D airfoil compressibility corrections on a rotating fan blade.
-# Mid-span: r=1.00 m, U=230.4 m/s, ω=230.4 rad/s (RPM=2200)
+# Per-condition RPM: takeoff=2355, climb=2200, cruise=2050, descent=2000 (see fan_geometry)
 target_mach:
-  takeoff: 0.85   # W_mid/a = 294/340 = 0.86 (ISA sea level, Va=180 m/s)
-  climb:   0.85   # W_mid/a = 277/320 = 0.86 (FL150, Va=155 m/s)
-  cruise:  0.93   # W_mid/a = 274/295 = 0.93 (FL350, Va=150 m/s) — wave drag active
-  descent: 0.80   # W_mid/a = 262/328 = 0.80 (FL100, Va=125 m/s)
+  takeoff: 0.90   # W_mid/a = 305/340 = 0.90 (ISA sea level, Va=180 m/s, RPM=2355)
+  climb:   0.86   # W_mid/a = 278/322 = 0.86 (FL150, Va=155 m/s, RPM=2200)
+  cruise:  0.89   # W_mid/a = 262/295 = 0.89 (FL350, Va=150 m/s, RPM=2050)
+  descent: 0.74   # W_mid/a = 244/328 = 0.74 (FL100, Va=125 m/s, RPM=2000)
 
 # Reynolds numbers for each flight condition and blade section
 # Physically derived: Re = rho * W_rel * c / mu (ISA atmosphere per condition)
 # GE9X geometry: r_root=0.53 m, r_mid=1.00 m, r_tip=1.70 m; c: 0.36/0.46/0.46 m
+# Per-condition RPM: takeoff=2355, climb=2200, cruise=2050, descent=2000
 reynolds:
-  takeoff:           # ISA sea level: rho=1.225 kg/m3, mu=1.81e-5 Pa·s, Va=180 m/s
-    root: 5.3e6      # W_rel=218 m/s, c=0.36 m
-    mid_span: 9.1e6  # W_rel=294 m/s, c=0.46 m
-    tip: 13.5e6      # W_rel=433 m/s, c=0.46 m
-  climb:             # FL150 (4575 m): rho=0.769 kg/m3, mu=1.63e-5 Pa·s, Va=155 m/s
-    root: 3.4e6      # W_rel=197 m/s, c=0.36 m
-    mid_span: 6.0e6  # W_rel=277 m/s, c=0.46 m
-    tip: 9.1e6       # W_rel=421 m/s, c=0.46 m
-  cruise:            # FL350 (10668 m): rho=0.364 kg/m3, mu=1.42e-5 Pa·s, Va=150 m/s
-    root: 1.8e6      # W_rel=194 m/s, c=0.36 m
-    mid_span: 3.2e6  # W_rel=274 m/s, c=0.46 m
-    tip: 5.0e6       # W_rel=421 m/s, c=0.46 m
-  descent:           # FL100 (3048 m): rho=0.909 kg/m3, mu=1.68e-5 Pa·s, Va=125 m/s
-    root: 3.4e6      # W_rel=175 m/s, c=0.36 m
-    mid_span: 6.5e6  # W_rel=262 m/s, c=0.46 m
-    tip: 10.2e6      # W_rel=411 m/s, c=0.46 m
+  takeoff:           # ISA sea level: rho=1.225 kg/m3, mu=1.81e-5 Pa·s, Va=180 m/s, RPM=2355
+    root: 5.4e6      # U=130.7 m/s, W_rel=222 m/s, c=0.36 m
+    mid_span: 9.5e6  # U=246.7 m/s, W_rel=305 m/s, c=0.46 m
+    tip: 14.2e6      # U=419.4 m/s, W_rel=456 m/s, c=0.46 m
+  climb:             # FL150 (4575 m): rho=0.769 kg/m3, mu=1.63e-5 Pa·s, Va=155 m/s, RPM=2200
+    root: 3.4e6      # U=122.1 m/s, W_rel=197 m/s, c=0.36 m
+    mid_span: 6.0e6  # U=230.4 m/s, W_rel=278 m/s, c=0.46 m
+    tip: 9.1e6       # U=391.7 m/s, W_rel=421 m/s, c=0.46 m
+  cruise:            # FL350 (10668 m): rho=0.364 kg/m3, mu=1.42e-5 Pa·s, Va=150 m/s, RPM=2050
+    root: 1.7e6      # U=113.8 m/s, W_rel=188 m/s, c=0.36 m
+    mid_span: 3.1e6  # U=214.7 m/s, W_rel=262 m/s, c=0.46 m
+    tip: 4.7e6       # U=365.0 m/s, W_rel=395 m/s, c=0.46 m
+  descent:           # FL100 (3048 m): rho=0.909 kg/m3, mu=1.68e-5 Pa·s, Va=125 m/s, RPM=2000
+    root: 3.3e6      # U=110.9 m/s, W_rel=167 m/s, c=0.36 m
+    mid_span: 6.1e6  # U=209.4 m/s, W_rel=244 m/s, c=0.46 m
+    tip: 9.4e6       # U=356.0 m/s, W_rel=377 m/s, c=0.46 m
 
 # Ncrit (transition parameter) for each flight condition
 # Turbofan fan inlet turbulence intensity ~0.5-1 % → Ncrit ~ 3-4
@@ -116,9 +117,14 @@ airfoil_geometry:
   korn_kappa: 0.87        # Korn's equation factor for NACA 6-series conventional airfoils
 
 # Fan geometry — GE9X class (Boeing 777X)
-# Fan diameter: 3.40 m, RPM: 2200, 16 wide-chord composite blades
+# Fan diameter: 3.40 m, 16 wide-chord composite blades
+# RPM per flight condition derived from GE9X N1 schedule (max N1 = 2355 RPM)
 fan_geometry:
-  rpm: 2200               # Design rotational speed [RPM] — GE9X: ~2100–2300
+  rpm:
+    takeoff: 2355         # ~100% N1 — maximum thrust
+    climb:   2200         # ~93% N1
+    cruise:  2050         # ~87% N1 — design/aerodynamic point
+    descent: 2000         # ~85% N1 — flight idle approach
   radius:
     root: 0.53            # Blade radius at root section [m] — hub-to-tip ratio = 0.31
     mid_span: 1.00        # Blade radius at mid-span section [m]

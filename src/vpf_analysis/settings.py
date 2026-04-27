@@ -169,10 +169,10 @@ def _load_settings(config_path: Path | None) -> PipelineSettings:
     }
 
     fg = raw["fan_geometry"]
-    rpm = float(fg["rpm"])
+    rpm_map = {k: float(v) for k, v in fg["rpm"].items()}
     fan = FanGeometry(
-        rpm=rpm,
-        omega_rad_s=rpm * 2.0 * math.pi / 60.0,
+        rpm=rpm_map,
+        omega_rad_s={k: v * 2.0 * math.pi / 60.0 for k, v in rpm_map.items()},
         radii_m={k: float(v) for k, v in fg["radius"].items()},
         axial_velocity_m_s={k: float(v) for k, v in fg["axial_velocity"].items()},
     )
