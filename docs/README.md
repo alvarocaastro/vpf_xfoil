@@ -38,6 +38,7 @@ A fixed-pitch fan is designed around a reference operating point, typically crui
 | `technical_architecture.md` | Technical architecture, modules, data flow, and dependencies. |
 | `data_documentation.md` | Input data, intermediate data, output data, formats, and assumptions. |
 | `results.md` | Detailed documentation of generated results, tables, and figures. |
+| `stages_docs/` | Stage-by-stage README files with detailed purpose, outputs, figures, key values, and model limitations. |
 | `code_reference.md` | Reference for scripts, modules, functions, classes, and side effects. |
 | `maintenance.md` | Maintenance guidance, extension points, risks, and future improvements. |
 | `glossary.md` | Domain terms, variables, metrics, and abbreviations. |
@@ -53,13 +54,13 @@ For a new maintainer:
 4. `technical_architecture.md`
 5. `data_documentation.md`
 6. `results.md`
-7. `code_reference.md`
-8. `maintenance.md`
-9. `glossary.md`
+7. `stages_docs/stage1_airfoil_selection_README.md` through `stages_docs/stage7_sfc_analysis_README.md`
+8. `code_reference.md`
+9. `maintenance.md`
+10. `glossary.md`
 
-For output interpretation, start with `results.md`.
+For output interpretation, start with `results.md`, then read the matching stage document under `stages_docs/`.
 
 ## Scope Notes
 
 This documentation is based on the code, configuration files, tests, and generated outputs currently present in the repository. Any ambiguous or incomplete item is marked as **pending confirmation** rather than inferred beyond the local evidence. Source code was not modified while creating this documentation.
-

@@ -31,6 +31,14 @@ vpf/
     maintenance.md
     glossary.md
     design_decisions.md
+    stages_docs/
+      stage1_airfoil_selection_README.md
+      stage2_xfoil_simulations_README.md
+      stage3_compressibility_correction_README.md
+      stage4_performance_metrics_README.md
+      stage5_pitch_kinematics_README.md
+      stage6_reverse_thrust_README.md
+      stage7_sfc_analysis_README.md
   references/
     *.pdf
     esquema.txt
@@ -72,7 +80,7 @@ vpf/
 |---|---|
 | `config/` | Physical, aerodynamic, engine, mission, and airfoil configuration. |
 | `data/airfoils/` | Airfoil coordinate files used by XFOIL. |
-| `docs/` | Technical documentation in Markdown only. |
+| `docs/` | Technical documentation in Markdown only, including stage-specific READMEs under `docs/stages_docs/`. |
 | `references/` | External reference documents moved outside `docs` so `docs` remains Markdown-only. |
 | `src/vpf_analysis/` | Source code for the pipeline. |
 | `tests/` | Unit and contract tests. |
@@ -128,4 +136,3 @@ The current `results/` directory contains generated artifacts including 58 CSV f
 | `config/README.md` | Useful configuration reference outside `docs`. It remains separate from the requested documentation set. |
 | `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`, `.venv/` | Local caches or environment artifacts. |
 | `results/stage7_sfc_analysis/tables/ge9x_sfc_improvement.tex` | Generated LaTeX output in `results/`, not `docs`. |
-

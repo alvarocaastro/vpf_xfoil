@@ -18,6 +18,7 @@ Recommended starting points:
 | [`docs/technical_architecture.md`](docs/technical_architecture.md) | Architecture, modules, data flow, and dependencies. |
 | [`docs/data_documentation.md`](docs/data_documentation.md) | Input data, intermediate data, outputs, and assumptions. |
 | [`docs/results.md`](docs/results.md) | Detailed explanation of generated tables, figures, and results. |
+| [`docs/stages_docs/`](docs/stages_docs/) | Stage-by-stage README files with purpose, outputs, figures, key values, and model limitations. |
 | [`docs/code_reference.md`](docs/code_reference.md) | Reference for scripts, modules, functions, and classes. |
 | [`docs/maintenance.md`](docs/maintenance.md) | Maintenance guidance and extension points. |
 | [`docs/glossary.md`](docs/glossary.md) | Domain terms, variables, and metrics. |
