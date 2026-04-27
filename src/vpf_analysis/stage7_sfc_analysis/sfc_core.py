@@ -184,7 +184,7 @@ def compute_sfc_analysis(
         _va = get_axial_velocities()
         _radii = get_blade_radii()
         _rpm = get_fan_rpm()
-        _omega = _rpm * (2.0 * 3.141592653589793 / 60.0)
+        _omega = _rpm * (2.0 * _math.pi / 60.0)
         _use_map = True
         _va_cruise = _va.get("cruise", 150.0)
         _phi_design: dict = {sec: _va_cruise / (_omega * r) for sec, r in _radii.items()}
@@ -530,7 +530,7 @@ def _annular_weights(radii: Dict[str, float]) -> Dict[str, float]:
 
 
 def _load_config(config_path: Path | None) -> Tuple[float, dict]:
-    tau = 0.65
+    tau = 0.50
     sfc_multipliers: dict = {}
     if config_path and config_path.exists():
         try:
@@ -797,7 +797,7 @@ def generate_sfc_summary(
     lines.append(f"  Mean SFC reduction    : {avg_reduction:.2f}%")
     lines.append(f"  Maximum SFC reduction : {max_reduction:.2f}%  ({max_cond})")
     lines.append("")
-    lines.append("  Literature range for VPF (Cumpsty 2004 p.280): 2–5%")
+    lines.append("  Literature range for VPF (Cumpsty 2004 p.280): 1–6%")
     lines.append(
         f"  → Result within range: {'YES' if 1.0 <= avg_reduction <= 6.0 else 'CHECK'}"
     )

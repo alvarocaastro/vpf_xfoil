@@ -165,4 +165,8 @@ class PipelineSettings:
         "root": 2.5, "mid_span": 2.2, "tip": 2.0,
     })
 
+    # When True, XFOIL runs are skipped if a cached polar with the same
+    # (airfoil, Re, M, Ncrit, alpha range) key exists in results/.polar_cache/.
+    xfoil_cache: bool = False
+
     results_dir: Path = field(default_factory=lambda: Path("results"))

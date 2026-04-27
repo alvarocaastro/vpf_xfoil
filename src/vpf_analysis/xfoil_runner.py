@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import shutil
 import time
 import subprocess
 from dataclasses import dataclass
@@ -94,6 +96,25 @@ def _build_command_script(request: XfoilPolarRequest) -> str:
     return "\n".join(cmds) + "\n"
 
 
+def _polar_cache_key(request: XfoilPolarRequest) -> str:
+    """Compute a 12-character SHA-256 hex digest for the polar request parameters."""
+    key_parts = repr(sorted({
+        "airfoil": request.airfoil_dat.name,
+        "re":          round(request.re, 0),
+        "alpha_start": round(request.alpha_start, 3),
+        "alpha_end":   round(request.alpha_end, 3),
+        "alpha_step":  round(request.alpha_step, 4),
+        "mach":        round(request.mach, 4),
+        "n_crit":      round(request.n_crit, 2),
+    }.items()))
+    return hashlib.sha256(key_parts.encode()).hexdigest()[:12]
+
+
+def _polar_cache_dir() -> Path:
+    from vpf_analysis import settings as _s
+    return _s.RESULTS_DIR / ".polar_cache"
+
+
 def run_xfoil_polar(
     request: XfoilPolarRequest,
     timeout: float = 60.0,
@@ -101,9 +122,35 @@ def run_xfoil_polar(
 ) -> XfoilPolarResult:
     """Run XFOIL to compute a polar with automatic retries.
 
+    When ``xfoil_cache: true`` is set in analysis_config.yaml, polars with
+    identical (airfoil, Re, M, Ncrit, alpha range) parameters are served from
+    ``results/.polar_cache/<hash>.csv`` without invoking XFOIL.  The cache is
+    populated automatically after each successful run.  Delete the
+    ``results/.polar_cache/`` directory to force a full re-computation.
+
     Always returns; raises XfoilError only if the executable or .dat file is
     missing, or all retries are exhausted. Check ``result.success`` for status.
     """
+    # ── Cache check ───────────────────────────────────────────────────────────
+    from vpf_analysis.settings import get_settings as _gs
+    _use_cache = _gs().xfoil_cache
+    _cache_hit_file: Path | None = None
+    if _use_cache and request.output_file is not None:
+        cache_key = _polar_cache_key(request)
+        cache_file = _polar_cache_dir() / f"{cache_key}.csv"
+        if cache_file.is_file():
+            request.output_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(cache_file, request.output_file)
+            LOGGER.info("XFOIL cache hit [%s] → %s", cache_key, cache_file.name)
+            return XfoilPolarResult(
+                success=True,
+                output_file=request.output_file,
+                n_retries_used=0,
+                convergence_failures=0,
+                convergence_rate=1.0,
+            )
+        _cache_hit_file = cache_file
+
     if not XFOIL_EXECUTABLE.is_file():
         checked = "\n".join(f"  - {p}" for p in XFOIL_SEARCH_PATHS)
         raise XfoilError(
@@ -210,6 +257,16 @@ def run_xfoil_polar(
             attempt,
             conv_info.n_convergence_failures,
         )
+
+        # ── Cache write ───────────────────────────────────────────────────────
+        if _use_cache and _cache_hit_file is not None and request.output_file is not None:
+            if request.output_file.is_file():
+                try:
+                    _cache_hit_file.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(request.output_file, _cache_hit_file)
+                    LOGGER.debug("XFOIL cache stored → %s", _cache_hit_file.name)
+                except Exception as _exc:
+                    LOGGER.warning("Could not write XFOIL cache: %s", _exc)
 
         return XfoilPolarResult(
             success=True,

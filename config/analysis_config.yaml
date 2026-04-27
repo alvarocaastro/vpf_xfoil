@@ -140,3 +140,9 @@ cruise_alpha_min:
   root: 2.5
   mid_span: 2.2
   tip: 2.0
+
+# XFOIL polar cache (default: false to avoid surprising behaviour on first run)
+# When true, polars with identical (airfoil, Re, M, Ncrit, alpha range) are
+# read from results/.polar_cache/ instead of re-running XFOIL.
+# Delete results/.polar_cache/ to force a full re-computation.
+xfoil_cache: false

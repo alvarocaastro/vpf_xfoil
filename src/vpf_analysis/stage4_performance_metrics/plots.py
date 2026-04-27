@@ -355,6 +355,101 @@ def generate_section_polar_comparison(
         plt.close(fig)
 
 
+def plot_efficiency_map(
+    polars_dir: Path,
+    figures_dir: Path,
+    flight_conditions: List[str],
+    blade_sections: List[str],
+    mach_map: Optional[Dict[str, float]] = None,
+    metrics: Optional[List[AerodynamicMetrics]] = None,
+) -> None:
+    """Generate 2-D CL/CD contour maps in (α, Mach) space for each blade section.
+
+    Each figure shows the aerodynamic envelope of the fan blade as a filled
+    contour of CL/CD evaluated across all available flight conditions (Mach
+    numbers) and angles of attack.  The four operating points — one per
+    flight condition — are overlaid as scatter markers using the standard
+    COLORS palette so the reader can immediately see where in the envelope
+    the VPF operates.
+
+    Output: ``figures_dir/efficiency_map_{section}.png`` (one per section).
+    """
+    alpha_grid = np.linspace(_ALPHA_MIN, _ALPHA_MAX, 120)
+    flights_ordered = [f for f in _FLIGHT_ORDER if f in flight_conditions]
+
+    for section in blade_sections:
+        mach_vals: list[float] = []
+        eff_rows: list[np.ndarray] = []
+
+        for flight in flights_ordered:
+            result = _load_efficiency_curve(polars_dir, flight, section)
+            if result is None:
+                continue
+            alphas_raw, effs_raw = result
+            if len(alphas_raw) < 2:
+                continue
+            eff_interp = np.interp(alpha_grid, alphas_raw, effs_raw,
+                                    left=np.nan, right=np.nan)
+            mach_val = mach_map.get(flight, float("nan")) if mach_map else float("nan")
+            mach_vals.append(mach_val)
+            eff_rows.append(eff_interp)
+
+        if len(eff_rows) < 2:
+            LOGGER.warning("Insufficient polars for efficiency map of section '%s' — skipping.", section)
+            continue
+
+        Z = np.array(eff_rows)        # shape (n_conditions, n_alpha)
+        Y = np.array(mach_vals)       # Mach axis
+        X = alpha_grid                # alpha axis
+
+        vmin = float(np.nanpercentile(Z, 5))
+        vmax = float(np.nanpercentile(Z, 95))
+        levels = np.linspace(vmin, vmax, 14)
+
+        with apply_style():
+            fig, ax = plt.subplots(figsize=(8.0, 5.5))
+
+            cf = ax.contourf(X, Y, Z, levels=levels, cmap="viridis", extend="both")
+            ax.contour(X, Y, Z, levels=levels[::2], colors="black",
+                       linewidths=0.5, alpha=0.4)
+
+            cbar = fig.colorbar(cf, ax=ax, pad=0.02)
+            cbar.set_label("CL/CD", fontsize=10)
+
+            # Overlay operating points from metrics
+            if metrics is not None:
+                for m in metrics:
+                    if m.blade_section != section or m.flight_condition not in flights_ordered:
+                        continue
+                    if mach_map is None or m.flight_condition not in mach_map:
+                        continue
+                    mach_op = mach_map[m.flight_condition]
+                    label = FLIGHT_LABELS.get(m.flight_condition, m.flight_condition)
+                    color = COLORS.get(m.flight_condition, "#555555")
+                    ax.scatter(
+                        m.alpha_opt, mach_op,
+                        color=color, s=80, zorder=6,
+                        edgecolors="white", linewidths=0.8, label=label,
+                    )
+
+            ax.set_xlabel("Angle of attack α (°)")
+            ax.set_ylabel("Mach number")
+            ax.set_title(
+                f"Aerodynamic efficiency map — {SECTION_LABELS.get(section, section)}",
+                fontweight="bold",
+            )
+            handles, labels = ax.get_legend_handles_labels()
+            if handles:
+                ax.legend(handles, labels, bbox_to_anchor=(1.18, 1), loc="upper left",
+                          fontsize=9, frameon=True)
+
+            figures_dir.mkdir(parents=True, exist_ok=True)
+            fig.savefig(figures_dir / f"efficiency_map_{section}.png",
+                        bbox_inches="tight")
+            plt.close(fig)
+            LOGGER.info("Saved efficiency_map_%s.png", section)
+
+
 def generate_all_stage4_figures(
     metrics: List[AerodynamicMetrics],
     figures_dir: Path,
@@ -362,13 +457,15 @@ def generate_all_stage4_figures(
     flight_conditions: Optional[List[str]] = None,
     blade_sections: Optional[List[str]] = None,
     stage3_dir: Optional[Path] = None,
+    mach_map: Optional[Dict[str, float]] = None,
     **_kwargs,
 ) -> None:
-    """Generate the three essential Stage 4 figures.
+    """Generate the essential Stage 4 figures.
 
     1. compressibility_comparison.png — fixed-pitch penalty overview (mid_span section)
     2. polar_efficiency_{flight}_{section}.png — CL/CD vs α per condition and section
     3. lift_drag_curves_{flight}.png — two-panel CL/CD + CL vs α, all sections per condition
+    4. efficiency_map_{section}.png — 2-D CL/CD contour map in (α, Mach) space
     """
     figures_dir.mkdir(parents=True, exist_ok=True)
 
@@ -384,4 +481,10 @@ def generate_all_stage4_figures(
     if stage3_dir is not None and stage3_dir.is_dir() and flight_conditions:
         generate_section_polar_comparison(
             stage3_dir, figures_dir, flight_conditions, blade_sections
+        )
+
+    if polars_dir is not None and flight_conditions and blade_sections:
+        plot_efficiency_map(
+            polars_dir, figures_dir, flight_conditions, blade_sections,
+            mach_map=mach_map, metrics=metrics,
         )

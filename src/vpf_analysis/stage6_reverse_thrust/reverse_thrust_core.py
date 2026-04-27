@@ -81,6 +81,64 @@ def compute_reverse_kinematics(
 # ---------------------------------------------------------------------------
 
 
+def _viterna_extrapolate(
+    alpha_deg: float,
+    cl_stall: float,
+    cd_stall: float,
+    alpha_stall_deg: float,
+) -> Tuple[float, float]:
+    """Viterna-Corrigan (1982) post-stall model for deep-stall / reverse-pitch.
+
+    Valid for |α| > α_stall.  Based on:
+      Viterna, L.A. & Corrigan, R.D. (1982). "Fixed Pitch Rotor Performance of
+      Large Horizontal Axis Wind Turbines." DOE/NASA Workshop on Large Horizontal
+      Axis Wind Turbines, NASA CP-2230.
+
+    The model anchors to the last known polar point (cl_stall, cd_stall at
+    alpha_stall) and extends with sinusoidal relations derived from the aspect-
+    ratio-limited maximum drag coefficient cd_max ≈ 1.11 + 0.018·AR_eff.
+    AR_eff is solved by one fixed-point iteration from cd_max·AR_eff = 2.
+    """
+    alpha_rad = math.radians(alpha_deg)
+    alpha_s = math.radians(alpha_stall_deg)
+
+    # Aspect-ratio-limited max drag (one fixed-point iteration from AR_eff=2/cd_max)
+    cd_max = min(1.11 + 0.018 * (2.0 / max(cd_stall, 0.01)), 2.0)
+
+    sin_s = math.sin(alpha_s)
+    cos_s = math.cos(alpha_s)
+
+    # Viterna coefficients
+    A1 = cd_max / 2.0
+    # Guard division by cos²(α_s) when α_stall ≈ ±90°
+    if abs(cos_s) < 1e-6:
+        A2 = 0.0
+    else:
+        A2 = (cl_stall - cd_max * sin_s * cos_s) * sin_s / (cos_s ** 2)
+
+    B1 = cd_max
+    if abs(cos_s) < 1e-6:
+        B2 = 0.0
+    else:
+        B2 = (cd_stall - cd_max * sin_s ** 2) / cos_s
+
+    sin_a = math.sin(alpha_rad)
+    cos_a = math.cos(alpha_rad)
+
+    # Guard CL formula division by sin α (zero at α = 0°)
+    if abs(sin_a) < 1e-6:
+        cl = A1 * math.sin(2.0 * alpha_rad)
+    else:
+        cl = 0.5 * A1 * math.sin(2.0 * alpha_rad) + A2 * cos_a ** 2 / sin_a
+
+    cd = B1 * sin_a ** 2 + B2 * cos_a
+
+    # Physical bounds: CL ∈ [−2, 2], CD ∈ [0, cd_max]
+    cl = float(np.clip(cl, -2.0, 2.0))
+    cd = float(np.clip(cd, 0.0, cd_max))
+    return cl, cd
+
+
 def _get_aero_coeffs(
     polar_df: pd.DataFrame,
     alpha_deg: float,
@@ -94,25 +152,19 @@ def _get_aero_coeffs(
         cd = float(np.interp(alpha_deg, df["alpha"], df["cd_corrected"]))
         return cl, cd, True
 
-    delta = alpha_deg - alpha_min
     LOGGER.warning(
         "alpha=%.1f° outside polar range [%.1f°, %.1f°] by %.1f° — "
-        "extrapolation unreliable; in_range flag set to False.",
-        alpha_deg, alpha_min, alpha_max, abs(delta),
+        "using Viterna-Corrigan extrapolation; in_range flag set to False.",
+        alpha_deg, alpha_min, alpha_max, abs(alpha_deg - alpha_min),
     )
 
-    n_pts = min(5, len(df))
-    alpha_low = df["alpha"].iloc[:n_pts].values
-    cl_low = df["cl_kt"].iloc[:n_pts].values
+    # Anchor Viterna model to the negative-alpha end of the polar (closest side
+    # for reverse-thrust operation where α < alpha_min ≈ −5°).
+    cl_stall = float(df["cl_kt"].iloc[0])
+    cd_stall = float(df["cd_corrected"].iloc[0])
+    cl, cd = _viterna_extrapolate(alpha_deg, cl_stall, cd_stall, alpha_min)
 
-    dcl_dalpha = float(np.polyfit(alpha_low, cl_low, 1)[0])
-    cl_at_min = float(np.interp(alpha_min, df["alpha"], df["cl_kt"]))
-    cd_at_min = float(np.interp(alpha_min, df["alpha"], df["cd_corrected"]))
-
-    cl_extrap = float(np.clip(cl_at_min + dcl_dalpha * delta, -2.0, 2.0))
-    cd_extrap = float(np.clip(cd_at_min + 0.015 * delta**2, cd_at_min, 2.5))
-
-    return cl_extrap, cd_extrap, False
+    return cl, cd, False
 
 
 def _stall_margin(alpha_rev_deg: float, polar_df: pd.DataFrame) -> float:

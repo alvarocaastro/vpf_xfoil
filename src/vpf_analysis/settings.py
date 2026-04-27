@@ -202,6 +202,8 @@ def _load_settings(config_path: Path | None) -> PipelineSettings:
     cruise_alpha_min_raw = raw.get("cruise_alpha_min", {})
     cruise_alpha_min = {k: float(v) for k, v in cruise_alpha_min_raw.items()}
 
+    xfoil_cache = bool(raw.get("xfoil_cache", False))
+
     return PipelineSettings(
         physics=PhysicsConstants(),
         xfoil=xfoil_settings,
@@ -223,5 +225,6 @@ def _load_settings(config_path: Path | None) -> PipelineSettings:
         blade=blade,
         airfoil_geometry=airfoil_geom,
         cruise_alpha_min=cruise_alpha_min,
+        xfoil_cache=xfoil_cache,
         results_dir=RESULTS_DIR,
     )

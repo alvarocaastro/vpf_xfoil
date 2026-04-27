@@ -552,6 +552,7 @@ def step_5_metrics_and_figures(s3: Stage3Result) -> Stage4Result:
                 blade_sections=cfg.blade_sections,
                 stage3_dir=s3.corrected_dir,
                 reynolds_table=cfg.reynolds_table,
+                mach_map=cfg.target_mach,
             )
 
         console.print(f"    [vpf.ok]→[/vpf.ok]  Publication figures saved to [dim]{figures_dir}[/dim]")
@@ -728,17 +729,198 @@ def _print_summary(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Disk loaders — reconstruct stage results from previously saved CSV files
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _load_s1_from_disk() -> Stage1Result:
+    stage1_dir = base_config.get_stage_dir(1)
+    dat = stage1_dir / "airfoil_selection" / "selected_airfoil.dat"
+    if not dat.exists():
+        raise FileNotFoundError(
+            f"Stage 1 result not found: {dat}\n"
+            "Run from stage 1 first: python run_analysis.py"
+        )
+    return Stage1Result(
+        selected_airfoil_name=dat.stem.replace("_", " ").title(),
+        selected_airfoil_dat=dat,
+        stage_dir=stage1_dir,
+        selection_dir=stage1_dir / "airfoil_selection",
+    )
+
+
+def _load_s2_from_disk() -> Stage2Result:
+    stage2_dir = base_config.get_stage_dir(2)
+    source_polars = stage2_dir / "simulation_plots"
+    pitch_map_csv = stage2_dir / "pitch_map" / "blade_pitch_map.csv"
+    if not pitch_map_csv.exists():
+        raise FileNotFoundError(
+            f"Stage 2 result not found: {pitch_map_csv}\n"
+            "Run from stage 2 first: python run_analysis.py --from-stage 2"
+        )
+    df = pd.read_csv(pitch_map_csv)
+    alpha_eff_map: dict[tuple[str, str], float] = {
+        (str(row["flight"]), str(row["section"])): float(row["alpha_opt"])
+        for _, row in df.iterrows()
+    }
+    n_polars = len(list((stage2_dir / "polars").glob("*.csv"))) if (stage2_dir / "polars").exists() else len(alpha_eff_map)
+    return Stage2Result(
+        source_polars=source_polars,
+        alpha_eff_map=alpha_eff_map,
+        stall_map={},
+        n_simulations=n_polars,
+        n_convergence_warnings=0,
+        stage_dir=stage2_dir,
+    )
+
+
+def _load_s3_from_disk() -> Stage3Result:
+    stage3_dir = base_config.get_stage_dir(3)
+    corrected = list(stage3_dir.rglob("corrected_polar.csv"))
+    if not corrected:
+        raise FileNotFoundError(
+            f"Stage 3 results not found in {stage3_dir}\n"
+            "Run from stage 3 first: python run_analysis.py --from-stage 3"
+        )
+    return Stage3Result(
+        corrected_dir=stage3_dir,
+        n_cases_corrected=len(corrected),
+        n_cases_failed=0,
+        stage_dir=stage3_dir,
+    )
+
+
+def _load_s4_from_disk() -> Stage4Result:
+    stage4_dir = base_config.get_stage_dir(4)
+    tables_dir = stage4_dir / "tables"
+    summary_csv = tables_dir / "summary_table.csv"
+    if not summary_csv.exists():
+        raise FileNotFoundError(
+            f"Stage 4 results not found: {summary_csv}\n"
+            "Run from stage 4 first: python run_analysis.py --from-stage 4"
+        )
+    df = pd.read_csv(summary_csv)
+    # Reconstruct minimal AerodynamicMetrics-like objects for summary display
+    return Stage4Result(
+        metrics=list(range(len(df))),  # use length as proxy for count display
+        tables_dir=tables_dir,
+        figures_dir=stage4_dir / "figures",
+        stage_dir=stage4_dir,
+    )
+
+
+def _load_s5_from_disk() -> Stage5Result:
+    stage5_dir = base_config.get_stage_dir(5)
+    tables_dir = stage5_dir / "tables"
+    figures_dir = stage5_dir / "figures"
+    twist_total = float("nan")
+    max_loss = float("nan")
+    twist_file = tables_dir / "blade_twist_design.csv"
+    if twist_file.exists():
+        df_tw = pd.read_csv(twist_file)
+        if "beta_metal_deg" in df_tw.columns and "section" in df_tw.columns:
+            bm_root = df_tw.loc[df_tw["section"] == "root", "beta_metal_deg"]
+            bm_tip  = df_tw.loc[df_tw["section"] == "tip",  "beta_metal_deg"]
+            if not bm_root.empty and not bm_tip.empty:
+                twist_total = float(bm_root.iloc[0]) - float(bm_tip.iloc[0])
+    offdesign_file = tables_dir / "off_design_incidence.csv"
+    if offdesign_file.exists():
+        df_od = pd.read_csv(offdesign_file)
+        if "efficiency_loss_pct" in df_od.columns:
+            max_loss = float(df_od["efficiency_loss_pct"].max(skipna=True))
+    return Stage5Result(
+        tables_dir=tables_dir,
+        figures_dir=figures_dir,
+        n_tables=len(list(tables_dir.glob("*.csv"))) if tables_dir.exists() else 0,
+        n_figures=len(list(figures_dir.glob("*.png"))) if figures_dir.exists() else 0,
+        twist_total_deg=twist_total,
+        max_off_design_loss_pct=max_loss,
+        stage_dir=stage5_dir,
+    )
+
+
+def _load_s6_from_disk() -> Stage6Result:
+    stage6_dir = base_config.get_stage_dir(6)
+    tables_dir = stage6_dir / "tables"
+    mech_weight = float("nan")
+    sfc_penalty = float("nan")
+    mw_file = tables_dir / "mechanism_weight.csv"
+    if mw_file.exists():
+        df_mw = pd.read_csv(mw_file).set_index("metric")["value"]
+        mech_weight = float(df_mw.get("mechanism_weight_kg", float("nan")))
+        sfc_penalty = float(df_mw.get("sfc_cruise_penalty_pct", float("nan")))
+    return Stage6Result(
+        tables_dir=tables_dir,
+        figures_dir=stage6_dir / "figures",
+        n_tables=len(list(tables_dir.glob("*.csv"))) if tables_dir.exists() else 0,
+        n_figures=len(list((stage6_dir / "figures").glob("*.png"))) if (stage6_dir / "figures").exists() else 0,
+        mechanism_weight_kg=mech_weight,
+        sfc_cruise_penalty_pct=sfc_penalty,
+        stage_dir=stage6_dir,
+    )
+
+
+def _load_s7_from_disk() -> Stage7Result:
+    stage7_dir = base_config.get_stage_dir(7)
+    tables_dir = stage7_dir / "tables"
+    mean_sfc = float("nan")
+    ge9x_saving = float("nan")
+    sfc_file = tables_dir / "sfc_analysis.csv"
+    if sfc_file.exists():
+        df_sfc = pd.read_csv(sfc_file)
+        col = next((c for c in df_sfc.columns if "sfc_reduction" in c.lower()), None)
+        if col:
+            mean_sfc = float(df_sfc[col].mean(skipna=True))
+    ge9x_file = tables_dir / "ge9x_sfc_improvement.csv"
+    if ge9x_file.exists():
+        df_ge9x = pd.read_csv(ge9x_file)
+        if "fuel_saving_pct" in df_ge9x.columns and not df_ge9x.empty:
+            idx_120 = (df_ge9x["ClCd_new"] - 120.0).abs().idxmin()
+            ge9x_saving = float(df_ge9x.loc[idx_120, "fuel_saving_pct"])
+    return Stage7Result(
+        tables_dir=tables_dir,
+        figures_dir=stage7_dir / "figures",
+        mean_sfc_reduction_pct=mean_sfc,
+        stage_dir=stage7_dir,
+        ge9x_fuel_saving_pct=ge9x_saving,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     """Run the full pipeline with inter-stage contract validation."""
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="VPF Aerodynamic Analysis Pipeline",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "--from-stage", type=int, default=1, choices=range(1, 9), metavar="N",
+        help="Start from stage N (1–8). Requires previous stages to have run already.\n"
+             "Example: --from-stage 7  (re-runs only SFC analysis)",
+    )
+    parser.add_argument(
+        "--to-stage", type=int, default=8, choices=range(1, 9), metavar="N",
+        help="Stop after stage N (1–8).\n"
+             "Example: --to-stage 4  (stops after performance metrics)",
+    )
+    args = parser.parse_args()
+    from_stage: int = args.from_stage
+    to_stage:   int = args.to_stage
+
+    if from_stage > to_stage:
+        console.print(f"[bold red]Error:[/bold red] --from-stage ({from_stage}) > --to-stage ({to_stage})")
+        sys.exit(1)
+
     # ── Banner ────────────────────────────────────────────────────────────────
     console.print()
+    stage_range = f"stages {from_stage}–{to_stage}" if from_stage != to_stage else f"stage {from_stage}"
     console.print(Panel(
         Text.assemble(
             ("  [VPF]  VPF Pipeline — Complete Aerodynamic Analysis  [VPF]  \n", "bold bright_cyan"),
-            ("  Variable Pitch Fan · Aerodynamic Performance Simulation", "dim white"),
+            (f"  Variable Pitch Fan · Running {stage_range}", "dim white"),
         ),
         border_style="cyan",
         box=box.DOUBLE_EDGE,
@@ -746,6 +928,7 @@ def main() -> None:
     ))
 
     # ── Overall progress bar ──────────────────────────────────────────────────
+    n_steps = to_stage - from_stage + 1
     overall = Progress(
         SpinnerColumn(spinner_name="earth", style="bright_cyan"),
         TextColumn("[bold bright_white]Overall progress"),
@@ -760,17 +943,43 @@ def main() -> None:
     t_start = time.perf_counter()
 
     with overall:
-        pipeline_task = overall.add_task("Running pipeline…", total=_TOTAL_STEPS)
+        pipeline_task = overall.add_task("Running pipeline…", total=n_steps)
 
         try:
-            step_1_clean_results();              overall.advance(pipeline_task)
-            s1 = step_2_airfoil_selection();     overall.advance(pipeline_task)
-            s2 = step_3_xfoil_simulations(s1);  overall.advance(pipeline_task)
-            s3 = step_4_compressibility_correction(s2); overall.advance(pipeline_task)
-            s4 = step_5_metrics_and_figures(s3); overall.advance(pipeline_task)
-            s5 = step_6_pitch_kinematics();      overall.advance(pipeline_task)
-            s6 = step_7_reverse_thrust();        overall.advance(pipeline_task)
-            s7 = step_8_sfc_analysis();          overall.advance(pipeline_task)
+            # Load predecessor results from disk when skipping early stages
+            s1 = s2 = s3 = s4 = s5 = s6 = s7 = None
+
+            if from_stage > 1:
+                s1 = _load_s1_from_disk()
+            if from_stage > 2:
+                s2 = _load_s2_from_disk()
+            if from_stage > 3:
+                s3 = _load_s3_from_disk()
+            if from_stage > 4:
+                s4 = _load_s4_from_disk()
+            if from_stage > 5:
+                s5 = _load_s5_from_disk()
+            if from_stage > 6:
+                s6 = _load_s6_from_disk()
+            if from_stage > 7:
+                s7 = _load_s7_from_disk()
+
+            if from_stage <= 1 <= to_stage:
+                step_1_clean_results(); overall.advance(pipeline_task)
+            if from_stage <= 2 <= to_stage:
+                s1 = step_2_airfoil_selection(); overall.advance(pipeline_task)
+            if from_stage <= 3 <= to_stage:
+                s2 = step_3_xfoil_simulations(s1); overall.advance(pipeline_task)
+            if from_stage <= 4 <= to_stage:
+                s3 = step_4_compressibility_correction(s2); overall.advance(pipeline_task)
+            if from_stage <= 5 <= to_stage:
+                s4 = step_5_metrics_and_figures(s3); overall.advance(pipeline_task)
+            if from_stage <= 6 <= to_stage:
+                s5 = step_6_pitch_kinematics(); overall.advance(pipeline_task)
+            if from_stage <= 7 <= to_stage:
+                s6 = step_7_reverse_thrust(); overall.advance(pipeline_task)
+            if from_stage <= 8 <= to_stage:
+                s7 = step_8_sfc_analysis(); overall.advance(pipeline_task)
 
         except Exception as exc:
             console.print()
@@ -785,6 +994,16 @@ def main() -> None:
             sys.exit(1)
 
     elapsed = time.perf_counter() - t_start
+
+    # Load any missing stage results from disk for the summary table
+    if s1 is None: s1 = _load_s1_from_disk()
+    if s2 is None: s2 = _load_s2_from_disk()
+    if s3 is None: s3 = _load_s3_from_disk()
+    if s4 is None: s4 = _load_s4_from_disk()
+    if s5 is None: s5 = _load_s5_from_disk()
+    if s6 is None: s6 = _load_s6_from_disk()
+    if s7 is None: s7 = _load_s7_from_disk()
+
     _print_summary(s1, s2, s3, s4, s5, s6, s7, elapsed)
 
 
