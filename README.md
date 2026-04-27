@@ -9,16 +9,25 @@ blade kinematics with cascade effects, reverse thrust, and SFC reduction estimat
 ## Reference engine
 
 All geometric and operating parameters replicate a **GE9X-105B1A (Boeing 777X)**:
-BPR ≈ 10, 3.40 m fan, 16 wide-chord composite blades, design RPM 2200.
+BPR ≈ 10, 3.40 m fan, 16 wide-chord composite blades.
+
+Fan RPM follows the GE9X N1 schedule (max N1 = 2355 RPM):
+
+| Condition | N1 [RPM] | % N1  |
+|-----------|---------|-------|
+| Takeoff   | 2355    | 100%  |
+| Climb     | 2200    | 93%   |
+| Cruise    | 2050    | 87%   |
+| Descent   | 2000    | 85%   |
 
 ### Flight conditions
 
-| Condition | M_rel @ mid-span | Va [m/s] | Ncrit |
-|-----------|-----------------|----------|-------|
-| Takeoff   | 0.85            | 180      | 4.0   |
-| Climb     | 0.85            | 155      | 4.0   |
-| Cruise    | 0.93            | 150      | 4.0   |
-| Descent   | 0.80            | 125      | 4.0   |
+| Condition | RPM  | M_rel @ mid-span | Va [m/s] | Ncrit |
+|-----------|------|-----------------|----------|-------|
+| Takeoff   | 2355 | 0.90            | 180      | 4.0   |
+| Climb     | 2200 | 0.86            | 155      | 4.0   |
+| Cruise    | 2050 | 0.89            | 150      | 4.0   |
+| Descent   | 2000 | 0.74            | 125      | 4.0   |
 
 Va is the axial velocity at the fan face. M_rel is evaluated at mid-span using the
 relative velocity W = √(Va² + U²), which is the physically relevant Mach number for
@@ -26,11 +35,13 @@ relative velocity W = √(Va² + U²), which is the physically relevant Mach num
 
 ### Blade sections
 
-| Section  | Radius [m] | U [m/s] @ 2200 rpm | c [m] | σ    |
-|----------|------------|--------------------|-------|------|
-| Root     | 0.53       | 122.1              | 0.36  | 1.73 |
-| Mid-span | 1.00       | 230.4              | 0.46  | 1.17 |
-| Tip      | 1.70       | 391.7              | 0.46  | 0.69 |
+Chord is fixed geometry (GE9X wide-chord blades). U is the blade tangential speed per condition.
+
+| Section  | Radius [m] | c [m] | σ    | U takeoff [m/s] | U cruise [m/s] |
+|----------|------------|-------|------|-----------------|----------------|
+| Root     | 0.53       | 0.36  | 1.73 | 130.7           | 113.8          |
+| Mid-span | 1.00       | 0.46  | 1.16 | 246.7           | 214.7          |
+| Tip      | 1.70       | 0.46  | 0.69 | 419.4           | 365.0          |
 
 ---
 
@@ -176,28 +187,30 @@ pytest tests/test_sfc_model.py -v
 
 ```yaml
 fan_geometry:
-  rpm: 2200
+  rpm:              { takeoff: 2355, climb: 2200, cruise: 2050, descent: 2000 }
   radius:           { root: 0.53, mid_span: 1.00, tip: 1.70 }   # [m]
   axial_velocity:   { takeoff: 180.0, climb: 155.0, cruise: 150.0, descent: 125.0 }
 
 blade_geometry:
   num_blades: 16
-  chord:            { root: 0.36, mid_span: 0.46, tip: 0.46 }   # [m]
+  solidity:         { root: 1.73, mid_span: 1.16, tip: 0.69 }
   theta_camber_deg: 8.0
 
-target_mach:        { takeoff: 0.85, climb: 0.85, cruise: 0.93, descent: 0.80 }
+target_mach:        { takeoff: 0.90, climb: 0.86, cruise: 0.89, descent: 0.74 }
 ncrit:              { takeoff: 4.0, climb: 4.0, cruise: 4.0, descent: 4.0 }
 
 reynolds:
-  cruise:   { root: 1.8e6, mid_span: 3.2e6, tip: 5.0e6 }
-  takeoff:  { root: 5.3e6, mid_span: 9.1e6, tip: 13.5e6 }
+  cruise:   { root: 1.7e6, mid_span: 3.1e6, tip: 4.7e6 }
+  takeoff:  { root: 5.4e6, mid_span: 9.5e6, tip: 14.2e6 }
   climb:    { root: 3.4e6, mid_span: 6.0e6, tip: 9.1e6 }
-  descent:  { root: 3.4e6, mid_span: 6.5e6, tip: 10.2e6 }
+  descent:  { root: 3.3e6, mid_span: 6.1e6, tip: 9.4e6 }
 
 alpha: { min: -5.0, max: 23.0, step: 0.15 }
 airfoil_geometry:   { thickness_ratio: 0.10, korn_kappa: 0.87 }
 xfoil:              { iter: 200, timeout_final_s: 180.0, max_retries: 3 }
 ```
+
+See [`config/README.md`](config/README.md) for detailed derivation of each parameter.
 
 ### `config/engine_parameters.yaml`
 
