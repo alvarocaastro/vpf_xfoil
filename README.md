@@ -1,328 +1,110 @@
-# Variable Pitch Fan — Aerodynamic Analysis Pipeline
+# Variable Pitch Fan Aerodynamic Analysis Pipeline
 
-Python pipeline for the complete aerodynamic analysis of a variable-pitch fan (VPF).
-Covers NACA aerofoil selection, XFOIL simulations, compressibility corrections,
-blade kinematics with cascade effects, reverse thrust, and SFC reduction estimation.
+Python pipeline for the aerodynamic and propulsion analysis of a variable-pitch fan (VPF). The project covers airfoil selection, XFOIL simulations, compressibility corrections, pitch kinematics with cascade and rotational effects, reverse-thrust mechanism weight, and specific fuel consumption (SFC) impact estimation.
 
----
+The reference configuration is a GE9X-class high-bypass turbofan fan: 3.40 m fan diameter, 16 wide-chord blades, and operating points for takeoff, climb, cruise, and descent.
 
-## Reference engine
+## Documentation
 
-All geometric and operating parameters replicate a **GE9X-105B1A (Boeing 777X)**:
-BPR ≈ 10, 3.40 m fan, 16 wide-chord composite blades.
+The complete technical documentation is in [`docs/`](docs/README.md).
 
-Fan RPM follows the GE9X N1 schedule (max N1 = 2355 RPM):
+Recommended starting points:
 
-| Condition | N1 [RPM] | % N1  |
-|-----------|---------|-------|
-| Takeoff   | 2355    | 100%  |
-| Climb     | 2200    | 93%   |
-| Cruise    | 2050    | 87%   |
-| Descent   | 2000    | 85%   |
+| Document | Purpose |
+|---|---|
+| [`docs/overview.md`](docs/overview.md) | Functional overview of the project. |
+| [`docs/setup_and_execution.md`](docs/setup_and_execution.md) | Installation, configuration, and execution steps. |
+| [`docs/project_structure.md`](docs/project_structure.md) | Repository structure and file responsibilities. |
+| [`docs/technical_architecture.md`](docs/technical_architecture.md) | Architecture, modules, data flow, and dependencies. |
+| [`docs/data_documentation.md`](docs/data_documentation.md) | Input data, intermediate data, outputs, and assumptions. |
+| [`docs/results.md`](docs/results.md) | Detailed explanation of generated tables, figures, and results. |
+| [`docs/code_reference.md`](docs/code_reference.md) | Reference for scripts, modules, functions, and classes. |
+| [`docs/maintenance.md`](docs/maintenance.md) | Maintenance guidance and extension points. |
+| [`docs/glossary.md`](docs/glossary.md) | Domain terms, variables, and metrics. |
+| [`docs/design_decisions.md`](docs/design_decisions.md) | Non-obvious technical decisions and rationale. |
 
-### Flight conditions
+## Quick Start
 
-| Condition | RPM  | M_rel @ mid-span | Va [m/s] | Ncrit |
-|-----------|------|-----------------|----------|-------|
-| Takeoff   | 2355 | 0.90            | 180      | 4.0   |
-| Climb     | 2200 | 0.86            | 155      | 4.0   |
-| Cruise    | 2050 | 0.89            | 150      | 4.0   |
-| Descent   | 2000 | 0.74            | 125      | 4.0   |
+Requirements:
 
-Va is the axial velocity at the fan face. M_rel is evaluated at mid-span using the
-relative velocity W = √(Va² + U²), which is the physically relevant Mach number for
-2D compressibility corrections.
+- Python 3.10 or newer.
+- XFOIL available through `PATH`, `XFOIL_EXE`, or `XFOIL_EXECUTABLE`.
 
-### Blade sections
+Install dependencies:
 
-Chord is fixed geometry (GE9X wide-chord blades). U is the blade tangential speed per condition.
-
-| Section  | Radius [m] | c [m] | σ    | U takeoff [m/s] | U cruise [m/s] |
-|----------|------------|-------|------|-----------------|----------------|
-| Root     | 0.53       | 0.36  | 1.73 | 130.7           | 113.8          |
-| Mid-span | 1.00       | 0.46  | 1.16 | 246.7           | 214.7          |
-| Tip      | 1.70       | 0.46  | 0.69 | 419.4           | 365.0          |
-
----
-
-## Pipeline architecture
-
-```
-run_analysis.py
-│
-├── Stage 1 — Aerofoil selection
-│   └── XFOIL @ Re_cruise, M_cruise → CL/CD ranking → NACA 65-410
-│
-├── Stage 2 — Final XFOIL simulations
-│   └── 12 polars (4 conditions × 3 sections); auto-retry, convergence detection
-│
-├── Stage 3 — Compressibility corrections
-│   ├── Prandtl–Glauert: CL_PG = CL / √(1 − M²)
-│   ├── Karman–Tsien:    full iterative correction; output column → ld_corrected
-│   └── Korn (wave):     CD_wave ∝ (M − M_dd)⁴ for M > M_dd
-│
-├── Stage 4 — Performance metrics
-│   └── CL/CD_max, α_opt, CL_max, stall margin, Δα VPF vs fixed pitch
-│
-├── Stage 5 — Pitch kinematics (3D fan analysis)
-│   ├── [A] Cascade: Weinig (K_weinig) + Carter (δ_carter)
-│   ├── [B] 3D rotational correction: Snel (ΔCL ∝ (c/r)² · CL_2D)
-│   ├── [C] Design twist + off-design penalty with single actuator
-│   └── [D] Stage loading: ideal (α_opt_3D) vs real (single actuator) scenario
-│
-├── Stage 6 — Reverse thrust
-│   ├── Negative pitch sweep Δβ ∈ [−25°, −5°] at N1 = 65%
-│   └── VPF mechanism weight vs conventional cascade reverser
-│
-└── Stage 7 — SFC and mission analysis
-    ├── ε(r, cond) = (CL/CD)_vpf / (CL/CD)_fixed_ref
-    ├── Δη_fan = τ · (ε̄ − 1) · η_fan,base
-    ├── SFC_new = SFC_base / (1 + Δη/η_base)
-    ├── Mission fuel burn per phase, sensitivity to τ
-    └── GE9X thermodynamic cycle validation + parametric Cl/Cd sweep
-```
-
----
-
-## Directory structure
-
-```
-vpf/
-├── run_analysis.py                       # Pipeline entry point (--dry-run, --stages)
-├── config/
-│   ├── analysis_config.yaml              # Fan geometry, conditions, Re, Ncrit, XFOIL
-│   └── engine_parameters.yaml           # η_fan, SFC baseline, τ, mission, reverse thrust
-├── data/airfoils/                        # NACA .dat files
-├── results/                              # Generated by the pipeline (gitignored)
-│   ├── stage1_airfoil_selection/
-│   ├── stage2_xfoil_simulations/
-│   ├── stage3_compressibility_correction/
-│   ├── stage4_performance_metrics/
-│   ├── stage5_pitch_kinematics/
-│   ├── stage6_reverse_thrust/
-│   └── stage7_sfc_analysis/
-├── src/vpf_analysis/
-│   ├── settings.py                       # Path constants, XFOIL discovery, get_settings()
-│   ├── config/
-│   │   └── domain.py                     # Typed config dataclasses (PipelineSettings, …)
-│   ├── config_loader.py                  # YAML reading → typed structures
-│   ├── xfoil_runner.py                   # XFOIL subprocess logic (used by adapter)
-│   ├── pipeline/contracts.py             # Stage1Result … Stage7Result with validate()
-│   ├── core/domain/                      # Airfoil, BladeSection, SimulationCondition
-│   ├── shared/plot_style.py              # apply_style(), Paul Tol colours
-│   ├── validation/validators.py          # File, dir, polar, physical-range checks
-│   ├── adapters/xfoil/                   # XfoilRunnerAdapter, parser, port
-│   ├── postprocessing/
-│   │   ├── aerodynamics_utils.py         # resolve_efficiency_column, find_second_peak_row
-│   │   ├── latex_exporter.py             # Centralised export_table() for .tex output
-│   │   ├── cli_tables.py                 # Rich console tables
-│   │   └── stage_summary_generator.py   # .txt summaries per stage
-│   ├── stage1_airfoil_selection/
-│   ├── stage2_xfoil_simulations/
-│   ├── stage3_compressibility_correction/
-│   ├── stage4_performance_metrics/
-│   ├── stage5_pitch_kinematics/
-│   ├── stage6_reverse_thrust/
-│   └── stage7_sfc_analysis/
-│       ├── application/run_sfc_analysis.py
-│       ├── sfc_core.py
-│       ├── core/domain/sfc_parameters.py
-│       └── engine/
-│           ├── engine_data.py            # GE9X_PARAMS, sfc_lbh_to_si, sfc_si_to_lbh
-│           ├── turbofan_cycle.py         # Two-stream thermodynamic cycle
-│           ├── sfc_model.py              # compute_sfc_improvement()
-│           └── ge9x_analysis.py          # Parametric Cl/Cd sweep + fuel saving figures
-└── tests/
-    ├── test_sfc_model.py                 # 6 unit tests for compute_sfc_improvement
-    └── …
-```
-
----
-
-## Installation
-
-**Python 3.10+** and **XFOIL** accessible on the `PATH`.
-
-```bash
+```powershell
 python -m venv .venv
-# Windows:  .venv\Scripts\activate
-# Linux:    source .venv/bin/activate
-
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-If XFOIL is not on the `PATH`:
+Run the full pipeline:
 
-```bash
-# Windows
-$env:XFOIL_EXE = "C:\path\to\xfoil.exe"
-
-# Linux/macOS
-export XFOIL_EXE="/opt/xfoil/xfoil"
-```
-
----
-
-## Running the pipeline
-
-```bash
-# Full pipeline
+```powershell
 python run_analysis.py
+```
 
-# Run individual stage modules directly
-python -m vpf_analysis.stage5_pitch_kinematics.application.run_pitch_kinematics
-python -m vpf_analysis.stage6_reverse_thrust.application.run_reverse_thrust
-python -m vpf_analysis.stage7_sfc_analysis.application.run_sfc_analysis
+Run a stage range:
 
-# Tests
+```powershell
+python run_analysis.py --from-stage 5 --to-stage 8
+```
+
+Run the sensitivity analysis after the main results exist:
+
+```powershell
+python run_sensitivity.py
+```
+
+Run tests:
+
+```powershell
 pytest
-pytest tests/test_sfc_model.py -v
 ```
 
----
+## Main Workflow
 
-## Configuration
+The pipeline writes results under `results/`:
 
-### `config/analysis_config.yaml`
-
-```yaml
-fan_geometry:
-  rpm:              { takeoff: 2355, climb: 2200, cruise: 2050, descent: 2000 }
-  radius:           { root: 0.53, mid_span: 1.00, tip: 1.70 }   # [m]
-  axial_velocity:   { takeoff: 180.0, climb: 155.0, cruise: 150.0, descent: 125.0 }
-
-blade_geometry:
-  num_blades: 16
-  solidity:         { root: 1.73, mid_span: 1.16, tip: 0.69 }
-  theta_camber_deg: 8.0
-
-target_mach:        { takeoff: 0.90, climb: 0.86, cruise: 0.89, descent: 0.74 }
-ncrit:              { takeoff: 4.0, climb: 4.0, cruise: 4.0, descent: 4.0 }
-
-reynolds:
-  cruise:   { root: 1.7e6, mid_span: 3.1e6, tip: 4.7e6 }
-  takeoff:  { root: 5.4e6, mid_span: 9.5e6, tip: 14.2e6 }
-  climb:    { root: 3.4e6, mid_span: 6.0e6, tip: 9.1e6 }
-  descent:  { root: 3.3e6, mid_span: 6.1e6, tip: 9.4e6 }
-
-alpha: { min: -5.0, max: 23.0, step: 0.15 }
-airfoil_geometry:   { thickness_ratio: 0.10, korn_kappa: 0.87 }
-xfoil:              { iter: 200, timeout_final_s: 180.0, max_retries: 3 }
+```text
+results/
+  stage1_airfoil_selection/
+  stage2_xfoil_simulations/
+  stage3_compressibility_correction/
+  stage4_performance_metrics/
+  stage5_pitch_kinematics/
+  stage6_reverse_thrust/
+  stage7_sfc_analysis/
+  sensitivity/
 ```
 
-See [`config/README.md`](config/README.md) for detailed derivation of each parameter.
+High-level stages:
 
-### `config/engine_parameters.yaml`
+1. Select a candidate NACA airfoil using XFOIL and mission-weighted scoring.
+2. Generate final XFOIL polars for four flight conditions and three blade sections.
+3. Apply compressibility corrections and write corrected polars.
+4. Compute aerodynamic metrics and fixed-pitch penalties.
+5. Analyze pitch kinematics, cascade effects, 3D rotational corrections, blade twist, and stage loading.
+6. Estimate reverse-thrust mechanism weight versus a conventional cascade reverser.
+7. Estimate SFC reduction, mission fuel burn, and GE9X parametric behavior.
 
-```yaml
-baseline_sfc:   0.50            # lb/(lbf·h)
-fan_efficiency: 0.90
-bypass_ratio:   10.0
-profile_efficiency_transfer: 0.50   # τ
+## Key Inputs
 
-mission:
-  phases:
-    takeoff: { duration_min:   0.5, thrust_fraction: 1.00 }
-    climb:   { duration_min:  20.0, thrust_fraction: 0.75 }
-    cruise:  { duration_min: 480.0, thrust_fraction: 0.25 }
-    descent: { duration_min:  25.0, thrust_fraction: 0.05 }
-  design_thrust_kN: 105.0
-  fuel_price_usd_per_kg: 0.90
-```
+| Path | Purpose |
+|---|---|
+| `config/analysis_config.yaml` | Aerodynamic setup, fan geometry, Reynolds, Mach, Ncrit, XFOIL settings. |
+| `config/engine_parameters.yaml` | Engine baseline, SFC model, mission profile, reverse-thrust assumptions. |
+| `config/airfoils.yaml` | Candidate airfoil catalog. |
+| `data/airfoils/*.dat` | Airfoil coordinate files consumed by XFOIL. |
 
-### Physical constants (`src/vpf_analysis/config/domain.py`)
+## Important Notes
 
-Accessed via `get_settings().physics.*` or `get_settings().xfoil.*`:
+- `results/` is generated output and is ignored by Git except for `.gitkeep`.
+- `docs/` intentionally contains Markdown files only.
+- External reference PDFs and auxiliary reference material are stored in `references/`.
+- Stage numbering in `run_analysis.py` includes an initial cleanup step, so the CLI goes up to stage 8 while result folders go up to `stage7_sfc_analysis`.
+- The reverse-thrust stage currently documents a mechanism-weight and SFC trade study; full aerodynamic reverse-thrust validation is pending higher-fidelity data.
 
-```python
-from vpf_analysis.settings import get_settings
-s = get_settings()
+## License
 
-s.physics.CARTER_M_NACA6      # 0.23  — Carter cascade deviation (NACA 6-series)
-s.physics.SNEL_A               # 3.0   — rotational correction empirical factor
-s.physics.ALPHA_MIN_OPT_DEG    # 1.0   — minimum α for second CL/CD peak search
-s.physics.CL_MIN_3D            # 0.30  — minimum CL for 3D polar viability
-s.xfoil.MAX_RETRIES            # 3
-s.xfoil.TIMEOUT_FINAL_S        # 180.0
-```
-
----
-
-## Stage outputs summary
-
-| Stage | Tables | Figures | Notes |
-|-------|--------|---------|-------|
-| 1 | ranking.csv, best_airfoil.csv | polar_best.png | NACA 65-410 selected |
-| 2 | polar.csv × 12 | efficiency/polar per case | Auto-retry; convergence logged |
-| 3 | corrected_polar.csv × 12 | comparison × 12 | Output col: `ld_corrected` |
-| 4 | summary_table.csv, clcd_max_table.csv | polar_efficiency, lift_drag_curves, compressibility_comparison | 3 figures total |
-| 5 | 10 CSV (cascade, rotational, kinematics, stage_loading × 2, …) | ~20 figures | Two stage_loading scenarios: ideal vs single actuator |
-| 6 | reverse_thrust_sweep, _optimal, _kinematics, mechanism_weight | 4 figures | VPF vs conventional reverser weight |
-| 7 | sfc_analysis, sfc_section_breakdown, sfc_sensitivity, mission_fuel_burn + GE9X CSVs | sfc_improvement_by_condition, fuel_saving_vs_clcd, sfc_sensitivity_k_throttle | 3 figures; GE9X LaTeX table written via `latex_exporter.export_table()` |
-
----
-
-## Module dependency rules
-
-No stage imports directly from another stage. Communication is exclusively through
-files in `results/` and the `StageNResult` contracts in `pipeline/contracts.py`.
-
-```
-config/domain.py    ← settings.py (constructs dataclasses from YAML)
-settings.py         ← all code (path constants, get_settings())
-validation/         ← adapters, postprocessing, run_analysis.py
-pipeline/contracts  ← run_analysis.py (inter-stage contract validation)
-postprocessing/     ← run_analysis.py, stage orchestrators
-```
-
----
-
-## Key equations
-
-### Stage 3 — Compressibility corrections
-
-| Correction | Equation |
-|------------|----------|
-| Prandtl–Glauert | `CL_PG = CL / √(1 − M²)` |
-| Karman–Tsien | `CL_KT = CL_PG / [β + (M²/2β) · CL_PG/2]` |
-| Korn wave drag | `M_dd ≈ κ/cos(Λ) − (t/c)/cos²(Λ) − CL/(10cos³(Λ))` → `ΔCD ∝ (M − M_dd)⁴` |
-
-### Stage 5 — Cascade & rotational corrections
-
-```
-σ(r)        = c(r) / s(r)            s(r) = 2πr / Z
-K_weinig(σ) = (π/2·σ) / arctan(π·σ/2)
-δ_carter(r) = m · θ / √σ(r)          m = 0.23 (NACA 6-series)
-ΔCL_snel(r) = a · (c/r)² · CL_2D     a = 3.0
-```
-
-### Stage 7 — SFC model
-
-```
-ε(r, cond)   = (CL/CD)_vpf / (CL/CD)_fixed_ref
-Δη_fan       = τ · (ε̄ − 1) · η_fan,base
-SFC_new      = SFC_base / (1 + Δη_fan / η_fan,base)
-```
-
-`τ ≈ 0.5` damps the ideal 2D gain to reflect 3D losses not captured in isolated-section analysis.
-
----
-
-## Physical constants and references
-
-| Symbol | Value | Reference |
-|--------|-------|-----------|
-| m (Carter) | 0.23 | Carter (1950), NACA TN-2273 |
-| a (Snel) | 3.0 | Snel et al. (1994) |
-| φ_design | [0.35, 0.55] | Dixon & Hall (2013) ch. 5 |
-| ψ_design | [0.25, 0.50] | Dixon & Hall (2013) ch. 5 |
-
-**Bibliography:**
-- Dixon & Hall (2013): *Fluid Mechanics and Thermodynamics of Turbomachinery*, 7th ed.
-- Cumpsty (2004): *Compressor Aerodynamics*
-- Saravanamuttoo et al. (2017): *Gas Turbine Theory*, 6th ed.
-- Carter (1950): *The Low Speed Performance of Related Aerofoils in Cascade*, NACA TN-2273
-- Snel, Houwink & Bosschers (1994): *Sectional Prediction of Lift Coefficients on Rotating Wind Turbine Blades*
-- Du & Selig (1998): *A 3-D Stall-Delay Model for HAWT Performance Prediction*, AIAA 98-0021
-- Drela (1989): XFOIL — MIT, http://web.mit.edu/drela/Public/web/xfoil/
-- Walsh & Fletcher (2004): *Gas Turbine Performance*, Blackwell
+See [`LICENSE`](LICENSE).
