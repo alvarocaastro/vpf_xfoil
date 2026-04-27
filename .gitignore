@@ -72,3 +72,19 @@ Thumbs.db
 # Tool caches
 .pytest_cache/
 .ruff_cache/
+
+# Test / coverage reports
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Type checker / notebook caches
+.mypy_cache/
+.pyright/
+.ipynb_checkpoints/
+
+# XFOIL / Fortran-style scratch files
+fort.*
+*.ps
+*.plt
