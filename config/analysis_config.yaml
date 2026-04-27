@@ -79,7 +79,7 @@ selection:
       section:          root
       weight:           0.10
   alpha_min:  -2.0    # realistic fan-blade incidence range (rel. to chord)
-  alpha_max:  15.0    # stall occurs well before 20°; no need to sweep higher
+  alpha_max:  18.0    # NACA 6-series stall at ~15-17° at these Re; 18° captures it
   alpha_step:  0.15
 
 # XFOIL solver settings
