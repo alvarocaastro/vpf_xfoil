@@ -40,7 +40,9 @@ from vpf_analysis.stage7_sfc_analysis.sfc_core import (
 
 # ── Parameter grids ───────────────────────────────────────────────────────────
 
-TAU_VALUES      = [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80]
+# Extended tau range includes sub-threshold values (< ~0.07) where the
+# ETA_FAN_DELTA_CAP is not binding and sensitivity is non-trivial.
+TAU_VALUES      = [0.02, 0.04, 0.05, 0.06, 0.07, 0.08, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50]
 RPM_DELTA_PCT   = [-10.0, -7.5, -5.0, -2.5, 0.0, 2.5, 5.0, 7.5, 10.0]
 
 # Engine baseline (from engine_parameters.yaml defaults)
@@ -214,12 +216,25 @@ def main() -> None:
         print(f"Saved: {out_dir / 'sensitivity_heatmap.png'}")
 
     # ── Summary ───────────────────────────────────────────────────────────────
+    from vpf_analysis.stage7_sfc_analysis.core.domain.sfc_parameters import ETA_FAN_DELTA_CAP
     baseline_row = df_out[(df_out["rpm_delta_pct"] == 0.0) & (df_out["tau"] == 0.50)]
     if not baseline_row.empty:
         baseline_val = float(baseline_row["sfc_reduction_pct"].iloc[0])
         print(f"\nBaseline (τ=0.50, ΔRPM=0%): ΔSFC = {baseline_val:.2f}%")
-    print(f"Range across all parameters:   ΔSFC ∈ [{df_out['sfc_reduction_pct'].min():.2f}%, "
-          f"{df_out['sfc_reduction_pct'].max():.2f}%]")
+    sfc_min = df_out["sfc_reduction_pct"].min()
+    sfc_max = df_out["sfc_reduction_pct"].max()
+    print(f"Range across all parameters:   ΔSFC ∈ [{sfc_min:.2f}%, {sfc_max:.2f}%]")
+
+    # Warn if the physical cap is always binding (no sensitivity visible)
+    tau_threshold = ETA_FAN_DELTA_CAP / (df_out.groupby("rpm_delta_pct")["sfc_reduction_pct"].std().mean() + 1e-9)
+    cap_binding_rows = df_out[df_out["tau"] >= 0.08]
+    if cap_binding_rows["sfc_reduction_pct"].std() < 0.01:
+        print(
+            f"\n⚠  ETA_FAN_DELTA_CAP = {ETA_FAN_DELTA_CAP:.2f} is binding for τ ≥ ~0.07:\n"
+            f"   the aerodynamic gain (ε ≈ 1.3–2.8) is large enough that the\n"
+            f"   Cumpsty (2004) physical cap is the active constraint, not τ or RPM.\n"
+            f"   Meaningful sensitivity only exists for τ < 0.07 (sub-threshold region)."
+        )
 
 
 if __name__ == "__main__":
