@@ -180,7 +180,7 @@ def main() -> None:
     pivot = df_out.pivot(index="tau", columns="rpm_delta_pct", values="sfc_reduction_pct")
 
     with apply_style():
-        fig, ax = plt.subplots(figsize=(10.0, 5.5))
+        fig, ax = plt.subplots(figsize=(13.0, 7.0))
 
         Z = pivot.values
         vmin, vmax = float(Z.min()), float(Z.max())
@@ -192,16 +192,19 @@ def main() -> None:
         )
 
         ax.set_xticks(range(len(pivot.columns)))
-        ax.set_xticklabels([f"{v:+.1f}%" for v in pivot.columns], fontsize=9)
+        ax.set_xticklabels([f"{v:+.1f}%" for v in pivot.columns], fontsize=11)
         ax.set_yticks(range(len(pivot.index)))
-        ax.set_yticklabels([f"{v:.2f}" for v in pivot.index], fontsize=9)
-        ax.set_xlabel("RPM deviation from design point")
-        ax.set_ylabel("Profile efficiency transfer coefficient τ")
-        ax.set_title("VPF SFC reduction sensitivity — ΔSFC% = f(τ, ΔRPM)",
-                     fontweight="bold")
+        ax.set_yticklabels([f"{v:.2f}" for v in pivot.index], fontsize=11)
+        ax.set_xlabel("RPM deviation from design point", fontsize=13)
+        ax.set_ylabel("Profile efficiency transfer coefficient τ", fontsize=13)
+        ax.set_title(
+            "VPF SFC Reduction Sensitivity — ΔSFC (%) = f(τ, ΔRPM)",
+            fontsize=15, fontweight="bold",
+        )
 
         cbar = fig.colorbar(im, ax=ax, pad=0.02)
-        cbar.set_label("ΔSFC (%)", fontsize=10)
+        cbar.set_label("ΔSFC (%)", fontsize=12)
+        cbar.ax.tick_params(labelsize=11)
 
         # Annotate cells
         for i in range(Z.shape[0]):
@@ -209,9 +212,10 @@ def main() -> None:
                 val = Z[i, j]
                 text_color = "white" if val < (vmin + 0.4 * (vmax - vmin)) else "black"
                 ax.text(j, i, f"{val:.2f}", ha="center", va="center",
-                        fontsize=7, color=text_color)
+                        fontsize=9, color=text_color)
 
-        fig.savefig(out_dir / "sensitivity_heatmap.png", bbox_inches="tight")
+        fig.tight_layout()
+        fig.savefig(out_dir / "sensitivity_heatmap.png")
         plt.close(fig)
         print(f"Saved: {out_dir / 'sensitivity_heatmap.png'}")
 

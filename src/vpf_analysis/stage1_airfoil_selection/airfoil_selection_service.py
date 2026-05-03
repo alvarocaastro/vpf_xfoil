@@ -86,7 +86,9 @@ class AirfoilSelectionService:
                 if progress_callback is not None:
                     progress_callback(f"{airfoil.name} [{cond.label}]")
 
-                out_file = out_dir / f"{airfoil.name.replace(' ', '_')}_{cond.label}_polar.txt"
+                raw_polars_dir = out_dir / "raw_polars"
+                raw_polars_dir.mkdir(parents=True, exist_ok=True)
+                out_file = raw_polars_dir / f"{airfoil.name.replace(' ', '_')}_{cond.label}_polar.txt"
 
                 try:
                     self._xfoil.run_polar(airfoil.dat_path, sim_cond, out_file)
@@ -165,18 +167,25 @@ class AirfoilSelectionService:
         from vpf_analysis.shared.plot_style import apply_style
 
         with apply_style():
-            fig, ax = plt.subplots(figsize=(7, 4))
+            fig, ax = plt.subplots(figsize=(11, 6))
             for i, score in enumerate(scores):
                 color = _TOLS[i % len(_TOLS)]
                 sub = polars[polars["airfoil"] == score.airfoil].sort_values("alpha")
                 if sub.empty:
                     continue
                 ax.plot(sub["alpha"], sub["ld"], color=color, label=score.airfoil)
-                ax.axvline(score.alpha_opt, color=color, linestyle="--", linewidth=0.9)
-            ax.set_xlabel("α (°)")
-            ax.set_ylabel("CL / CD")
-            ax.set_title(f"Airfoil selection — {primary_label} polar")
-            ax.legend(loc="upper left", bbox_to_anchor=(1.0, 1.0), title="Airfoil")
+                ax.axvline(score.alpha_opt, color=color, linestyle="--", linewidth=1.0)
+            ax.set_xlabel("α (°)", fontsize=13)
+            ax.set_ylabel("CL / CD", fontsize=13)
+            ax.set_title(
+                f"Airfoil Selection — {primary_label.replace('_', ' ').title()} Condition",
+                fontsize=15, fontweight="bold",
+            )
+            ax.legend(
+                loc="upper left", bbox_to_anchor=(1.02, 1.0),
+                title="Airfoil", fontsize=11, title_fontsize=12,
+            )
+            fig.tight_layout()
             fig.savefig(out_dir / "polar_comparison.png")
             plt.close(fig)
 

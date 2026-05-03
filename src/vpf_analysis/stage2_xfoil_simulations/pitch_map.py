@@ -106,7 +106,7 @@ def plot_pitch_map(df: pd.DataFrame, delta_beta: Dict[str, float], out_dir: Path
     x = list(range(len(flights_present)))
 
     with apply_style():
-        fig, ax = plt.subplots(figsize=(7.0, 5.0))
+        fig, ax = plt.subplots(figsize=(12.0, 7.0))
 
         for i, section in enumerate(sections_present):
             sub = df[df["section"] == section].set_index("flight")
@@ -127,29 +127,32 @@ def plot_pitch_map(df: pd.DataFrame, delta_beta: Dict[str, float], out_dir: Path
                         bar.get_x() + bar.get_width() / 2.0,
                         bar.get_height() + 0.3,
                         f"{val:.1f}°",
-                        ha="center", va="bottom", fontsize=7.5,
+                        ha="center", va="bottom", fontsize=10,
                     )
 
         ax.set_xticks(x)
-        ax.set_xticklabels([FLIGHT_LABELS[f] for f in flights_present])
-        ax.set_ylabel(r"Required blade pitch angle $\beta$ [°]")
-        ax.set_title(r"Required blade pitch angle $\beta$ by flight phase")
+        ax.set_xticklabels([FLIGHT_LABELS[f] for f in flights_present], fontsize=13)
+        ax.set_ylabel(r"Required blade pitch angle $\beta$ [°]", fontsize=13)
+        ax.set_title(
+            r"Required Blade Pitch Angle $\beta$ by Flight Phase",
+            fontsize=15, fontweight="bold",
+        )
         ax.legend(
             title="Section",
             bbox_to_anchor=(1.02, 1), loc="upper left",
-            borderaxespad=0,
+            borderaxespad=0, fontsize=11, title_fontsize=12,
         )
 
         if delta_beta:
             delta_mech = max(delta_beta.values())
             section_max = max(delta_beta, key=delta_beta.__getitem__)
             ax.text(
-                0.02, 0.97,
+                0.02, 0.04,
                 f"VPF mechanism range: $\\Delta\\beta_{{\\max}}$ = {delta_mech:.1f}°  "
                 f"({SECTION_LABELS[section_max]})",
                 transform=ax.transAxes,
-                va="top", ha="left",
-                fontsize=9,
+                va="bottom", ha="left",
+                fontsize=11,
                 bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
                           edgecolor="gray", alpha=0.85),
             )
@@ -171,13 +174,13 @@ def plot_pitch_map(df: pd.DataFrame, delta_beta: Dict[str, float], out_dir: Path
                 xy=(x_brace, b_min), xytext=(x_brace, b_max),
                 arrowprops=dict(
                     arrowstyle="<->", color=COLORS[section],
-                    lw=1.4,
+                    lw=1.6,
                 ),
             )
             ax.text(
                 x_brace + 0.08, (b_min + b_max) / 2.0,
                 f"{delta_beta.get(section, 0):.1f}°",
-                va="center", ha="left", fontsize=7.5, color=COLORS[section],
+                va="center", ha="left", fontsize=10, color=COLORS[section],
             )
 
         fig.tight_layout()
@@ -204,7 +207,7 @@ def plot_alpha_opt_evolution(
     x = list(range(len(flight_order)))
 
     with apply_style():
-        fig, ax = plt.subplots(figsize=(6.5, 4.5))
+        fig, ax = plt.subplots(figsize=(11.0, 6.5))
         any_plotted = False
 
         for section in section_order:
@@ -216,14 +219,16 @@ def plot_alpha_opt_evolution(
                 marker=markers[section],
                 color=COLORS[section],
                 label=SECTION_LABELS[section],
+                linewidth=2.0,
+                markersize=8,
             )
             for xi, val in zip(x, alpha_vals):
                 if not math.isnan(val):
                     ax.annotate(
                         f"{val:.1f}°",
-                        xy=(xi, val), xytext=(0, 9),
+                        xy=(xi, val), xytext=(0, 12),
                         textcoords="offset points",
-                        ha="center", fontsize=8, color=COLORS[section],
+                        ha="center", fontsize=11, color=COLORS[section],
                     )
             any_plotted = True
 
@@ -232,15 +237,18 @@ def plot_alpha_opt_evolution(
             return
 
         ax.set_xticks(x)
-        ax.set_xticklabels([FLIGHT_LABELS[f] for f in flight_order])
-        ax.set_ylabel(r"$\alpha_{opt}$ [°]")
-        ax.set_title(r"$\alpha_{opt}$ evolution by flight phase")
+        ax.set_xticklabels([FLIGHT_LABELS[f] for f in flight_order], fontsize=13)
+        ax.set_ylabel(r"$\alpha_{opt}$ [°]", fontsize=13)
+        ax.set_title(
+            r"Optimal Angle of Attack $\alpha_{opt}$ Evolution by Flight Phase",
+            fontsize=15, fontweight="bold",
+        )
         ax.legend(
             title="Section",
             bbox_to_anchor=(1.02, 1), loc="upper left",
-            borderaxespad=0,
+            borderaxespad=0, fontsize=11, title_fontsize=12,
         )
-        ax.set_ylim(bottom=ax.get_ylim()[0] - 0.4)
+        ax.set_ylim(bottom=ax.get_ylim()[0] - 0.5, top=ax.get_ylim()[1] + 0.5)
         fig.tight_layout()
         fig.savefig(out_dir / "alpha_opt_evolution.png")
         plt.close(fig)
