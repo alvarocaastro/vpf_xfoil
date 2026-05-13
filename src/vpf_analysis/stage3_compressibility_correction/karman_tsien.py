@@ -49,6 +49,13 @@ class KarmanTsienModel:
 
     @staticmethod
     def _kt_denominator(cl: float, mach: float) -> float:
+        # Kármán-Tsien denominator for the CL-based correction (thin-airfoil form).
+        # For a thin airfoil: Cp_0 ≈ −CL/n (n a geometry factor absorbed into calibration).
+        # The correction applied point-wise to CL gives:
+        #   CL_KT / CL_0 = denom(M_ref, CL_0) / denom(M_tgt, CL_0)
+        # where denom(M, CL) = β + M²/(2(1+β)) × CL,  β = √(1−M²).
+        # Source: von Kármán (1941) J. Aeronautical Sciences 8(9) 337-356,
+        #         Anderson (2017) Fundamentals of Aerodynamics eq. 11.60.
         beta = math.sqrt(1.0 - mach * mach)
         return beta + (mach * mach / (2.0 * (1.0 + beta))) * cl
 

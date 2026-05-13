@@ -482,14 +482,35 @@ def step_4_compressibility_correction(s2: Stage2Result) -> Stage3Result:
         ) as prg:
             task = prg.add_task("Applying corrections…", total=total_cases)
             for flight in cfg.flight_conditions:
-                mach = cfg.target_mach[flight]
-                case = CompressibilityCase(
-                    flight_condition=flight,
-                    target_mach=mach,
-                    reference_mach=cfg.reference_mach,
-                )
                 for section in cfg.blade_sections:
-                    prg.update(task, description=f"[bold]{flight}[/bold]/{section} (M={mach:.2f})")
+                    # Use per-section M_rel if available; fall back to condition-level Mach.
+                    if cfg.target_mach_per_section and flight in cfg.target_mach_per_section:
+                        mach = cfg.target_mach_per_section[flight].get(
+                            section, cfg.target_mach[flight]
+                        )
+                    else:
+                        mach = cfg.target_mach[flight]
+
+                    prg.update(task, description=f"[bold]{flight}[/bold]/{section} (M={mach:.3f})")
+
+                    # Tip sections are supersonic (M_rel > 1.0). XFOIL polars were
+                    # computed at M_ref=0.2 (valid). KT is applied clamped at M=0.95
+                    # (best subsonic approximation). Output is flagged as extrapolated.
+                    _mach_clamped = False
+                    if mach >= 1.0:
+                        console.print(
+                            f"      [vpf.warn]⚠[/vpf.warn] {flight}/{section}: "
+                            f"M_rel={mach:.3f} supersonic — KT applied clamped at M=0.95 "
+                            f"[extrapolated]."
+                        )
+                        mach = 0.95
+                        _mach_clamped = True
+
+                    case = CompressibilityCase(
+                        flight_condition=flight,
+                        target_mach=mach,
+                        reference_mach=cfg.reference_mach,
+                    )
                     polar_path = s2.source_polars / flight.lower() / section / "polar.csv"
                     if not polar_path.exists():
                         console.print(f"      [vpf.warn]⚠[/vpf.warn] Polar not found: {polar_path.name}")

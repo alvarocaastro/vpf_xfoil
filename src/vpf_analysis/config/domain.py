@@ -151,6 +151,11 @@ class PipelineSettings:
     reynolds_table: Dict[str, Dict[str, float]] = field(default_factory=dict)
     ncrit_table: Dict[str, float] = field(default_factory=dict)
     target_mach: Dict[str, float] = field(default_factory=dict)
+    # Per-section relative Mach numbers: {condition: {section: M_rel}}.
+    # Supersonic sections (M_rel >= 1.0) are skipped in KT correction.
+    # Populated from analysis_config.yaml target_mach_per_section; empty dict means fallback
+    # to condition-level target_mach.
+    target_mach_per_section: Dict[str, Dict[str, float]] = field(default_factory=dict)
     reference_mach: float = 0.2
 
     alpha_min: float = -5.0

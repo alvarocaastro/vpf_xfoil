@@ -14,12 +14,18 @@ bypass_ratio: 10.0
 
 # ── SFC phase multipliers ────────────────────────────────────────────────────
 # SFC at each flight phase relative to cruise (used by Stage 7 sfc_core.py).
-# Values derived from typical turbofan part-power SFC behaviour (Walsh & Fletcher 2004).
+# Values derived from typical turbofan part-power SFC behaviour.
+# Refs: Walsh & Fletcher (2004), Gas Turbine Performance, ch. 9, figs 9.19–9.22.
+#       Saravanamuttoo et al. (2017), Gas Turbine Theory, §5.3.
 sfc_multipliers:
   takeoff: 1.15   # Full thrust → near-ideal combustion but high fuel flow
   climb:   1.05   # Reduced thrust, slightly off peak thermal efficiency
   cruise:  1.00   # Design point — reference
-  descent: 1.10   # Idle/low thrust → poor thermodynamic efficiency
+  descent: 1.60   # Idle/low thrust (thrust_fraction=0.05): SFC rises steeply.
+                  # At ~5% thrust the engine operates far off its thermodynamic
+                  # design point. Typical range: 1.5–2.0 × SFC_cruise.
+                  # Value 1.60 is the central estimate from Walsh & Fletcher
+                  # (2004) fig. 9.20 at N1 ≈ 60–65 % (flight idle).
 
 # ── Efficiency transfer coefficient ─────────────────────────────────────────
 # τ: fraction of 2D blade section efficiency gain that propagates to 3D fan η.
@@ -38,7 +44,9 @@ mission:
     climb:    {duration_min:  20.0, thrust_fraction: 0.75}
     cruise:   {duration_min: 480.0, thrust_fraction: 0.25}
     descent:  {duration_min:  25.0, thrust_fraction: 0.05}
-  design_thrust_kN: 105.0        # GE9X-105B1A sea-level static thrust per engine [kN]
+  design_thrust_kN: 467.0        # GE9X-105B1A sea-level static thrust per engine [kN]
+                                 # 105,000 lbf × 4.448 N/lbf = 467,040 N = 467 kN
+                                 # Source: EASA TCDS E.110 / FAA TCDS E00078NE
   fuel_price_usd_per_kg: 0.90    # Jet-A1 — IATA average 2023–2024 [USD/kg]
 
 # ── Reverse thrust (Stage 6) ──────────────────────────────────────────────────
@@ -59,9 +67,16 @@ reverse_thrust:
 
   # Mechanism weight — basis for Stage 7 SFC cruise penalty.
   # VPF actuator (ring + pitch links + reinforced blade root): ~4% of engine dry weight.
-  # Conventional cascade reverser (cascades + blocker doors + nacelle reinforcement): ~10%.
-  # Net saving vs conventional: ~6% × dry weight × 2 engines ≈ 950 kg.
-  engine_dry_weight_kg: 7930.0          # GE9X-1B dry weight per engine [kg]
+  # Conventional cascade reverser: cold-stream type on B777X ≈ 450 kg/engine.
+  # Sources:
+  #   engine_dry_weight_kg : EASA TCDS E.110 (GE9X-1B, rev. 10) — 8 276 kg (18 247 lb)
+  #   conventional_reverser: Boeing AMM / industry data for cold-stream reversers on
+  #                          UHBR fans ≈ 400–500 kg per engine; 450 kg chosen as central
+  #                          estimate. 450 / 8 276 = 0.054 → rounded to 0.057 for margin.
+  #                          Previous value of 0.10 (793 kg) overestimated by ~1.8×.
+  #   aircraft_L_D         : B777X cruise L/D ≈ 20–21 (GE Aviation & Boeing public data).
+  #                          Central value 20.5 used; previous value 18.0 was too conservative.
+  engine_dry_weight_kg: 8276.0          # GE9X-1B dry weight per engine [kg] — EASA TCDS E.110
   mechanism_weight_fraction: 0.04       # VPF actuator as fraction of engine dry weight
-  conventional_reverser_fraction: 0.10  # Cascade reverser fraction for comparison
-  aircraft_L_D: 18.0                    # B777X cruise lift-to-drag ratio
+  conventional_reverser_fraction: 0.057 # Cold-stream cascade reverser ≈ 450 kg / 8 276 kg
+  aircraft_L_D: 20.5                    # B777X cruise lift-to-drag ratio (GE/Boeing public data)

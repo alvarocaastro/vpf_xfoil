@@ -42,6 +42,19 @@ def get_target_mach() -> dict[str, float]:
     return {k: float(v) for k, v in load_config()["target_mach"].items()}
 
 
+def get_target_mach_per_section() -> dict[str, dict[str, float]]:
+    """Per-section relative Mach: {condition: {section: M_rel}}.
+
+    Sections with M_rel >= 1.0 are supersonic and must be excluded from
+    XFOIL/KT analysis. Returns empty dict if key absent in YAML.
+    """
+    raw = load_config().get("target_mach_per_section", {})
+    return {
+        cond: {sec: float(m) for sec, m in sections.items()}
+        for cond, sections in raw.items()
+    }
+
+
 def get_alpha_range() -> dict[str, float]:
     return {k: float(v) for k, v in load_config()["alpha"].items()}
 

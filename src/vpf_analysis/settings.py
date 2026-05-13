@@ -159,6 +159,10 @@ def _load_settings(config_path: Path | None) -> PipelineSettings:
     }
     ncrit_table = {k: float(v) for k, v in raw["ncrit"].items()}
     target_mach = {k: float(v) for k, v in raw["target_mach"].items()}
+    target_mach_per_section: dict[str, dict[str, float]] = {
+        cond: {sec: float(m) for sec, m in sections.items()}
+        for cond, sections in raw.get("target_mach_per_section", {}).items()
+    }
 
     alpha_cfg = raw["alpha"]
     sel = raw.get("selection", {})
@@ -240,6 +244,7 @@ def _load_settings(config_path: Path | None) -> PipelineSettings:
         reynolds_table=reynolds_table,
         ncrit_table=ncrit_table,
         target_mach=target_mach,
+        target_mach_per_section=target_mach_per_section,
         reference_mach=float(raw.get("reference_mach", 0.2)),
         alpha_min=float(alpha_cfg["min"]),
         alpha_max=float(alpha_cfg["max"]),

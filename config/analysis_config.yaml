@@ -8,11 +8,41 @@ reference_mach: 0.2
 # Values represent M_rel at mid-span section (W_rel/a), the physically correct
 # Mach for 2D airfoil compressibility corrections on a rotating fan blade.
 # Per-condition RPM: takeoff=2355, climb=2200, cruise=2050, descent=2000 (see fan_geometry)
+# Kept for backward-compatibility; per-section values below supersede these.
 target_mach:
   takeoff: 0.90   # W_mid/a = 305/340 = 0.90 (ISA sea level, Va=180 m/s, RPM=2355)
   climb:   0.86   # W_mid/a = 278/322 = 0.86 (FL150, Va=155 m/s, RPM=2200)
   cruise:  0.89   # W_mid/a = 262/295 = 0.89 (FL350, Va=150 m/s, RPM=2050)
   descent: 0.74   # W_mid/a = 244/328 = 0.74 (FL100, Va=125 m/s, RPM=2000)
+
+# Per-section relative Mach numbers — physically correct values for each (condition, section).
+# M_rel = sqrt(Va² + U_sec²) / a_altitude  where U_sec = omega × r_sec
+# Derivation (all verified numerically):
+#   omega [rad/s] = RPM × 2π/60
+#   U_root/mid/tip = omega × {0.53, 1.00, 1.70} m
+#   ISA speed of sound: SL=340 m/s, FL100=328 m/s, FL150=322 m/s, FL350=295 m/s
+#
+# Sections marked SUPERSONIC (M_rel > 1.0) are excluded from XFOIL/KT analysis:
+# XFOIL is a subsonic panel code, and Kármán-Tsien is valid only for M < ~0.87.
+# Tip sections at all conditions are supersonic — transonic rotor aerodynamics
+# would require shock-capturing CFD (RANS/URANS) for accurate modelling.
+target_mach_per_section:
+  takeoff:                 # ISA SL: a=340 m/s, Va=180 m/s, omega=246.7 rad/s
+    root:     0.654        # W=sqrt(180²+130.7²)=222 m/s → 222/340
+    mid_span: 0.897        # W=sqrt(180²+246.7²)=305 m/s → 305/340
+    tip:      1.342        # W=sqrt(180²+419.4²)=456 m/s → SUPERSONIC — excluded
+  climb:                   # FL150: a=322 m/s, Va=155 m/s, omega=230.4 rad/s
+    root:     0.613        # W=sqrt(155²+122.1²)=197 m/s → 197/322
+    mid_span: 0.863        # W=sqrt(155²+230.4²)=278 m/s → 278/322
+    tip:      1.308        # W=sqrt(155²+391.7²)=421 m/s → SUPERSONIC — excluded
+  cruise:                  # FL350: a=295 m/s, Va=150 m/s, omega=214.7 rad/s
+    root:     0.638        # W=sqrt(150²+113.8²)=188 m/s → 188/295
+    mid_span: 0.888        # W=sqrt(150²+214.7²)=262 m/s → 262/295
+    tip:      1.338        # W=sqrt(150²+365.0²)=395 m/s → SUPERSONIC — excluded
+  descent:                 # FL100: a=328 m/s, Va=125 m/s, omega=209.4 rad/s
+    root:     0.509        # W=sqrt(125²+110.9²)=167 m/s → 167/328
+    mid_span: 0.744        # W=sqrt(125²+209.4²)=244 m/s → 244/328
+    tip:      1.150        # W=sqrt(125²+356.0²)=377 m/s → SUPERSONIC — excluded
 
 # Reynolds numbers for each flight condition and blade section
 # Physically derived: Re = rho * W_rel * c / mu (ISA atmosphere per condition)

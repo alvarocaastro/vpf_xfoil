@@ -18,6 +18,10 @@ Lock, R.C. (1955). The velocity distribution on the upper surface of a symmetric
 
 from __future__ import annotations
 
+import logging
+
+LOGGER = logging.getLogger(__name__)
+
 _LOCK_COEFFICIENT: float = 20.0
 """Lock's 4th-power law coefficient for NACA 6-series conventional airfoils.
 Valid range: M - Mdd < 0.10. Larger exceedances should use SBLi-capable methods.
@@ -27,6 +31,9 @@ _WAVE_DRAG_CAP: float = 0.025
 """Maximum wave drag increment (250 drag counts). Prevents physically unrealistic
 values when operating well above Mdd, where the 2-D inviscid model is invalid.
 """
+
+_LOCK_VALID_MARGIN: float = 0.10
+"""Maximum M − Mdd for which Lock's law is empirically validated."""
 
 
 def estimate_mdd(cl_operating: float, thickness_ratio: float, korn_kappa: float) -> float:
@@ -59,7 +66,21 @@ def wave_drag_increment(mach: float, mdd: float) -> float:
         ΔCDw = K × (M − Mdd)^4   if M > Mdd, else 0
 
     where K = 20.0 (Lock 1955, NACA 6-series). Capped at 250 drag counts.
+
+    Emits a WARNING when M − Mdd > 0.10 (beyond Lock's validated range).
+    The cap of 0.025 still limits the value physically, but the result is
+    a saturated estimate rather than a physical prediction — the true wave
+    drag in this regime requires shock-capturing CFD.
     """
     if mach <= mdd:
         return 0.0
-    return min(_LOCK_COEFFICIENT * (mach - mdd) ** 4, _WAVE_DRAG_CAP)
+    delta_m = mach - mdd
+    if delta_m > _LOCK_VALID_MARGIN:
+        LOGGER.warning(
+            "Lock's law outside validated range: M−Mdd = %.3f > %.2f. "
+            "Wave drag result (%.4f cd) is a saturated cap estimate, not a physical prediction. "
+            "Use shock-capturing CFD (RANS) for M−Mdd > 0.10.",
+            delta_m, _LOCK_VALID_MARGIN,
+            min(_LOCK_COEFFICIENT * delta_m ** 4, _WAVE_DRAG_CAP),
+        )
+    return min(_LOCK_COEFFICIENT * delta_m ** 4, _WAVE_DRAG_CAP)

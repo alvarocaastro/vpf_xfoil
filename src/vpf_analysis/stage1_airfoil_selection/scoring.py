@@ -11,9 +11,17 @@ from vpf_analysis.postprocessing.aerodynamics_utils import (
     find_second_peak_row,
 )
 
-WEIGHT_MAX_LD = 1.20
-WEIGHT_ROBUSTNESS_LD = 0.35
-WEIGHT_STABILITY_MARGIN = 0.80
+# Weights for VPF fan airfoil scoring (post-normalisation, applied to [0,1] metrics).
+# VPF rationale: blades pitch across a wide incidence range (takeoff → descent),
+# so robustness to angle-of-attack variation and stall margin are more critical
+# than peak L/D alone (which is the design-point cruise metric for fixed-pitch blades).
+# Weight breakdown (sum=2.55):
+#   WEIGHT_MAX_LD        0.75  — 29%: peak efficiency still matters but is not dominant
+#   WEIGHT_STABILITY_MARGIN 1.00 — 39%: large stall margin needed for reverse-pitch authority
+#   WEIGHT_ROBUSTNESS_LD 0.80  — 31%: wide L/D plateau across the operating incidence range
+WEIGHT_MAX_LD = 0.75
+WEIGHT_ROBUSTNESS_LD = 0.80
+WEIGHT_STABILITY_MARGIN = 1.00
 
 
 @dataclass(frozen=True)

@@ -68,13 +68,24 @@ class CascadeResult:
 
 
 def _weinig_factor(sigma: float) -> float:
+    """Weinig (1935) cascade correction: quadratic fit to Cumpsty (2004) Fig. 3.11.
+
+    k = 1 − 0.130σ − 0.020σ²  (γ≈0° stagger, thin airfoil; validated σ∈[0.5, 2.5]).
+    Fitted to tabulated values: σ=0.5→k=0.93, σ=1.0→k=0.85, σ=1.5→k=0.74, σ=2.0→k=0.63.
+    The prior linear formula k=1−0.12σ over-estimated k by ≈10% at σ=1.73 (root).
+    """
     if sigma <= 0.0:
         return 1.0
-    k = 1.0 - 0.12 * sigma
-    return max(min(k, 0.99), 0.78)
+    k = 1.0 - 0.130 * sigma - 0.020 * sigma ** 2
+    return max(min(k, 0.99), 0.55)
 
 
 def _carter_deviation(theta_deg: float, sigma: float, m: float = _CARTER_M_NACA6) -> float:
+    # Carter's rule for cascade deviation angle δ [°]:
+    #   δ = m × θ / √σ
+    # where θ = blade camber angle [°], σ = chord/pitch = solidity, m = 0.23 for NACA 6-series
+    # (tabulated m for a/c=0.5 mean-line location from Dixon & Hall 2013, Table 3.2).
+    # Source: Carter (1950), ARC R&M 2479; Dixon & Hall (2013) §3.5.
     if sigma <= 0.0:
         return 0.0
     return m * theta_deg / math.sqrt(sigma)
@@ -201,6 +212,16 @@ def _apply_snel(df: pd.DataFrame, c_over_r: float, cl_col: str) -> pd.DataFrame:
     df["delta_cl_snel"] = snel_factor * df[cl_col]
     df["cl_3d"] = df[cl_col] + df["delta_cl_snel"]
     df["ld_3d"] = df["cl_3d"] / df[cd_col].replace(0.0, float("nan"))
+    # Snel (1994) was validated for wind turbines at tip-speed ratios λ_r > 3.
+    # For turbofan fans λ_r ≈ 0.75–1.5 and c/r is large at the root → corrections
+    # are unrealistically large. Use Du-Selig (1998) as the primary model.
+    if c_over_r > 0.5:
+        LOGGER.warning(
+            "Snel correction: c/r=%.3f exceeds validation domain (wind-turbines, c/r≤0.3). "
+            "Snel factor=%.2f → +%.0f%% ΔCL — physically unrealistic for fans. "
+            "Du-Selig is the primary 3D model; Snel shown for comparison only.",
+            c_over_r, snel_factor, snel_factor * 100.0,
+        )
     return df
 
 
@@ -294,6 +315,12 @@ def _apply_du_selig(
     lambda_r: float,
     cl_col: str,
 ) -> pd.DataFrame:
+    """Du-Selig (1998) 3D rotational correction — primary model for fan blades.
+
+    Includes tip-speed-ratio dependence (f_lambda) absent from Snel (1994), making it
+    valid for low-λ_r turbomachinery applications unlike the wind-turbine-derived Snel model.
+    Du-Selig, Z. & Selig, M.S. (1998), J. Sol. Energy Eng. 120(2), 97-106.
+    """
     df = df.copy()
     cd_col = "cd_corrected" if "cd_corrected" in df.columns else "cd"
     f_lambda = lambda_r ** 2 / (lambda_r ** 2 + 1.0) if lambda_r >= 0 else 0.0
@@ -301,6 +328,9 @@ def _apply_du_selig(
     df["delta_cl_du_selig"] = du_selig_factor * df[cl_col]
     df["cl_3d_ds"] = df[cl_col] + df["delta_cl_du_selig"]
     df["ld_3d_ds"] = df["cl_3d_ds"] / df[cd_col].replace(0.0, float("nan"))
+    # Aliases used by downstream functions (ld_3d, cl_3d) that previously consumed Snel output
+    df["cl_3d"] = df["cl_3d_ds"]
+    df["ld_3d"] = df["ld_3d_ds"]
     return df
 
 
@@ -402,10 +432,17 @@ def build_3d_polar_map(
     df_polars: pd.DataFrame,
     blade_geometry: dict,
 ) -> Dict[tuple, pd.DataFrame]:
-    """Build a map of Snel-corrected 3D polars: {(condition, section): DataFrame}."""
+    """Build a map of Du-Selig-corrected 3D polars: {(condition, section): DataFrame}.
+
+    Du-Selig (1998) is the primary 3D rotational correction for fan blades.
+    Snel (1994) is computed in parallel for reference only (see compute_rotational_corrections).
+    """
     Z = blade_geometry["num_blades"]
     solidities = blade_geometry["solidity"]
     radii = get_blade_radii()
+    va_map = get_axial_velocities()
+    rpm_map = get_fan_rpm()
+
     if "cl_cascade" in df_polars.columns:
         cl_col = "cl_cascade"
     elif "cl_corrected" in df_polars.columns:
@@ -415,14 +452,18 @@ def build_3d_polar_map(
 
     polar_map: Dict[tuple, pd.DataFrame] = {}
     for condition in df_polars["condition"].unique():
+        va = va_map.get(condition, 150.0)
+        omega_cond = rpm_map.get(condition, next(iter(rpm_map.values()))) * (2.0 * math.pi / 60.0)
         for section, r in radii.items():
             sigma = solidities.get(section, 1.0)
             c_over_r = sigma * 2.0 * math.pi / Z if Z > 0 else 0.0
+            u = omega_cond * r
+            lambda_r = u / va if va > 0 else 0.0
             mask = (df_polars["condition"] == condition) & (df_polars["section"] == section)
             df_sub = df_polars[mask].sort_values("alpha").reset_index(drop=True)
             if df_sub.empty:
                 continue
-            df_3d = _apply_snel(df_sub, c_over_r, cl_col)
+            df_3d = _apply_du_selig(df_sub, c_over_r, lambda_r, cl_col)
             polar_map[(condition, section)] = df_3d
 
     return polar_map

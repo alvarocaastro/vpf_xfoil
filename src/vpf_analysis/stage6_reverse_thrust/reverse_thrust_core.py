@@ -176,8 +176,9 @@ def _stall_margin(alpha_rev_deg: float, polar_df: pd.DataFrame) -> float:
         alphas = neg_part["alpha"].values
         # Smooth before differentiating to suppress XFOIL polar noise that
         # creates spurious sign changes in the gradient.
-        from scipy.ndimage import uniform_filter1d
-        cls_smooth = uniform_filter1d(cls, size=3) if len(cls) >= 5 else cls
+        cls_smooth = (
+            np.convolve(cls, np.ones(3) / 3.0, mode="same") if len(cls) >= 5 else cls
+        )
         grads = np.diff(cls_smooth) / np.diff(alphas)
         sign_changes = np.where(np.diff(np.sign(grads)))[0]
         if len(sign_changes) > 0:
