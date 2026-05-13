@@ -284,7 +284,7 @@ def _fig_snel_correction_spanwise(
     ax.set_xlabel(r"$(c/r)^2$ [—]")
     ax.set_ylabel(r"$\Delta C_L$ Snel [—]")
     ax.set_title(r"$C_L$ increment from rotation — Snel correction", pad=8)
-    ax.legend(fontsize=8)
+    ax.legend(fontsize=8, bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
 
     # Panel 2: percentage gain per section and condition
     ax2 = axes[1]
@@ -303,10 +303,10 @@ def _fig_snel_correction_spanwise(
     ax2.set_xticklabels([s.replace("_", " ").title() for s in all_sections])
     ax2.set_ylabel(r"$C_L$ gain [%]")
     ax2.set_title(r"$C_L$ gain (Snel) per section and condition", pad=8)
-    ax2.legend(fontsize=8)
+    ax2.legend(fontsize=8, bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
 
     fig.tight_layout()
-    fig.savefig(figures_dir / "snel_correction_spanwise.png")
+    fig.savefig(figures_dir / "snel_correction_spanwise.png", bbox_inches="tight")
     plt.close(fig)
 
 
@@ -347,9 +347,9 @@ def _fig_blade_twist_profile(
         f"Total twist = {twist_total:.1f}°  (root − tip)",
         pad=8,
     )
-    ax.legend(loc="upper right")
+    ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
     fig.tight_layout()
-    fig.savefig(figures_dir / "blade_twist_profile.png")
+    fig.savefig(figures_dir / "blade_twist_profile.png", bbox_inches="tight")
     plt.close(fig)
 
 
