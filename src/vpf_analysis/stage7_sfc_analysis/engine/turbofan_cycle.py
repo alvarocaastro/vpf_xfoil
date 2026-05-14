@@ -38,7 +38,7 @@ def compute_turbofan_sfc(
     phase : str
         "cruise" or "takeoff".
     FPR : float, optional
-        Fan Pressure Ratio override; defaults to params.get("FPR", 1.5).
+        Fan Pressure Ratio override; defaults to params.get("FPR", 1.30).
 
     Returns
     -------
@@ -65,7 +65,7 @@ def compute_turbofan_sfc(
     gamma_t      = float(params["gamma_t"])
     T4_key       = "T4_cruise" if phase == "cruise" else "T4_takeoff"
     T4           = float(params[T4_key])
-    FPR          = float(FPR if FPR is not None else params.get("FPR", 1.5))
+    FPR          = float(FPR if FPR is not None else params.get("FPR", 1.30))
 
     if phase == "cruise":
         altitude_ft = float(params.get("altitude_cruise_ft", 35000.0))

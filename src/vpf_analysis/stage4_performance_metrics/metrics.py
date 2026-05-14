@@ -226,6 +226,7 @@ def enrich_with_cruise_reference(
     axial_velocities: Dict[str, float] | None = None,
     blade_radii: Dict[str, float] | None = None,
     fan_rpm: Dict[str, float] | None = None,
+    gear_ratio: float = 1.0,
 ) -> List[AerodynamicMetrics]:
     """Enrich metrics with design-reference fields relative to the cruise condition.
 
@@ -285,7 +286,7 @@ def enrich_with_cruise_reference(
     if use_triangles:
         _rpm_fallback = next(iter(fan_rpm.values())) if fan_rpm else 0.0
         for cond, va in axial_velocities.items():
-            omega = fan_rpm.get(cond, _rpm_fallback) * (2.0 * math.pi / 60.0)
+            omega = fan_rpm.get(cond, _rpm_fallback) * (2.0 * math.pi / 60.0) / gear_ratio
             for sec, r in blade_radii.items():
                 u = omega * r
                 phi[(cond, sec)] = math.degrees(math.atan2(va, u))

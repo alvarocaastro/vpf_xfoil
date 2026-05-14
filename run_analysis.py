@@ -570,6 +570,7 @@ def step_5_metrics_and_figures(s3: Stage3Result) -> Stage4Result:
                 axial_velocities=cfg.fan.axial_velocity_m_s,
                 blade_radii=cfg.fan.radii_m,
                 fan_rpm=cfg.fan.rpm,
+                gear_ratio=get_gear_ratio(),
             )
 
         console.print(f"    [vpf.ok]→[/vpf.ok]  {len(metrics)} metric cases computed")

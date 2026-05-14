@@ -16,6 +16,7 @@ from vpf_analysis.config_loader import (
     get_axial_velocities,
     get_blade_radii,
     get_fan_rpm,
+    get_gear_ratio,
     get_reference_mach,
     get_reynolds_table,
     get_target_mach,
@@ -352,7 +353,6 @@ def compute_rotational_corrections_du_selig(
     gear_ratio: float = 1.0,
 ) -> List[DuSeligCorrectionResult]:
     """Compute Du-Selig 3D corrections for each (condition, section)."""
-    from vpf_analysis.config_loader import get_axial_velocities, get_blade_radii, get_fan_rpm
 
     Z = blade_geometry["num_blades"]
     solidities: Dict[str, float] = blade_geometry["solidity"]
@@ -444,6 +444,7 @@ def build_3d_polar_map(
     radii = get_blade_radii()
     va_map = get_axial_velocities()
     rpm_map = get_fan_rpm()
+    _gear_ratio = get_gear_ratio()
 
     if "cl_cascade" in df_polars.columns:
         cl_col = "cl_cascade"
@@ -455,7 +456,7 @@ def build_3d_polar_map(
     polar_map: Dict[tuple, pd.DataFrame] = {}
     for condition in df_polars["condition"].unique():
         va = va_map.get(condition, 150.0)
-        omega_cond = rpm_map.get(condition, next(iter(rpm_map.values()))) * (2.0 * math.pi / 60.0)
+        omega_cond = rpm_map.get(condition, next(iter(rpm_map.values()))) * (2.0 * math.pi / 60.0) / _gear_ratio
         for section, r in radii.items():
             sigma = solidities.get(section, 1.0)
             c_over_r = sigma * 2.0 * math.pi / Z if Z > 0 else 0.0
