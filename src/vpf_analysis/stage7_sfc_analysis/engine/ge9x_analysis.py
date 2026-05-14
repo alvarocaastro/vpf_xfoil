@@ -151,7 +151,6 @@ def run_ge9x_analysis(
     LOGGER.info("LaTeX table written: ge9x_sfc_improvement.tex")
 
     # ── Figures ───────────────────────────────────────────────────────────
-    _plot_fuel_saving(df_sweep, ClCd_ref, clcd_opt, figures_dir)
     _plot_sensitivity(ClCd_ref, figures_dir)
 
     takeoff_clcd = clcd_opt.get("takeoff", None)
@@ -164,38 +163,6 @@ def run_ge9x_analysis(
         return float(res["fuel_saving_pct"])
     return None
 
-
-def _plot_fuel_saving(
-    df_sweep: pd.DataFrame,
-    ClCd_ref: float,
-    clcd_opt: dict[str, float],
-    figures_dir: Path,
-) -> None:
-    with apply_style():
-        fig, ax = plt.subplots(figsize=(8, 5))
-        ax.plot(df_sweep["ClCd_new"], df_sweep["fuel_saving_pct"],
-                color="#4477AA", linewidth=2.2, label="Fuel saving (k_throttle=0.08)")
-        ax.fill_between(df_sweep["ClCd_new"], df_sweep["fuel_saving_pct"],
-                        alpha=0.12, color="#4477AA")
-        ax.axvline(ClCd_ref, color="#888888", linestyle="--", linewidth=1.2,
-                   label=f"Fixed-pitch reference (Cl/Cd = {ClCd_ref:.0f})")
-        for cond in _CONDITION_ORDER:
-            if cond in clcd_opt and cond != "cruise":
-                val = clcd_opt[cond]
-                res = compute_sfc_improvement(ClCd_ref, val,
-                                              sfc_lbh_to_si(GE9X_PARAMS["SFC_ref_cruise"]))
-                ax.scatter(val, res["fuel_saving_pct"],
-                           color=_COND_COLORS.get(cond, "#999999"), s=60, zorder=5,
-                           label=f"{_CONDITION_LABELS.get(cond, cond)} α_opt ({val:.0f})")
-        ax.axhline(0, color="black", linewidth=0.8, linestyle=":")
-        ax.set_xlabel(r"$C_L / C_D$ [-]")
-        ax.set_ylabel("Fuel saving [%]")
-        ax.set_title("Fuel consumption improvement vs aerodynamic efficiency\n"
-                     "(GE9X-105B1A, takeoff phase)")
-        ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left", fontsize=8)
-        fig.tight_layout()
-        fig.savefig(figures_dir / "fuel_saving_vs_clcd.png", dpi=300, bbox_inches="tight")
-        plt.close(fig)
 
 
 def _plot_sensitivity(ClCd_ref: float, figures_dir: Path) -> None:

@@ -419,38 +419,6 @@ def _fig_pitch_compromise_loss(
 # ---------------------------------------------------------------------------
 
 
-def _fig_work_distribution(
-    loading: List[StageLoadingResult],
-    figures_dir: Path,
-) -> None:
-    """W_spec [kJ/kg] per section × condition."""
-    conds    = _ordered_conditions(set(r.condition for r in loading))
-    sections = [s for s in BLADE_SECTIONS if s in set(r.section for r in loading)]
-    x        = np.arange(len(conds))
-    width    = 0.25
-
-    fig, ax = plt.subplots(figsize=(8, 5))
-    for i, section in enumerate(sections):
-        vals = []
-        for cond in conds:
-            row = next((r for r in loading if r.condition == cond and r.section == section), None)
-            vals.append(row.w_specific_kj_kg if row and not math.isnan(row.w_specific_kj_kg) else 0.0)
-        bars = ax.bar(x + i * width, vals, width,
-                      label=SECTION_LABELS.get(section, section),
-                      color=SECTION_COLORS[section],
-                      edgecolor="white", linewidth=0.6, zorder=3)
-        ax.bar_label(bars, fmt="%.1f", padding=3, fontsize=8)
-
-    ax.set_xticks(x + width * (len(sections) - 1) / 2)
-    ax.set_xticklabels([c.title() for c in conds])
-    ax.set_xlabel("Flight Condition")
-    ax.set_ylabel(r"Specific work $W = U \cdot \Delta V_\theta$ [kJ/kg]")
-    ax.set_title("Stage specific work per flight phase (Euler equation)", pad=8)
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(figures_dir / "work_distribution.png")
-    plt.close(fig)
-
 
 def _fig_loading_profile_spanwise(
     loading: List[StageLoadingResult],
@@ -1071,7 +1039,6 @@ def run_pitch_kinematics() -> None:
     _fig_pitch_compromise_loss(off_design_results, figures_dir)
 
     # Carga de etapa
-    _fig_work_distribution(loading_results, figures_dir)
     _fig_loading_profile_spanwise(loading_results, figures_dir)
 
     # Heredadas / actualizadas
