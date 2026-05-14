@@ -373,7 +373,7 @@ def compute_rotational_corrections_du_selig(
 
     for condition in conditions:
         va = va_map.get(condition, 150.0)
-        # Fan ω = ω_LPT / gear_ratio (PGB decouples fan from LPT shaft)
+        # ω_fan = ω_shaft / gear_ratio (1.0 for direct-drive)
         omega = rpm_map.get(condition, next(iter(rpm_map.values()))) * (2.0 * math.pi / 60.0) / gear_ratio
         for section in sections:
             r = radii.get(section, float("nan"))
@@ -883,7 +883,7 @@ def compute_kinematics(
     for adj in pitch_adjustments:
         va = va_dict.get(adj.condition, float("nan"))
         r = radii.get(adj.section, float("nan"))
-        # Fan ω = ω_LPT / gear_ratio (PGB decouples fan from LPT shaft)
+        # ω_fan = ω_shaft / gear_ratio (1.0 for direct-drive)
         omega = rpm_map.get(adj.condition, next(iter(rpm_map.values()))) * (2.0 * math.pi / 60.0) / gear_ratio
         u = omega * r if not math.isnan(r) else float("nan")
         phi = math.degrees(math.atan2(va, u)) if (u > 0 and not math.isnan(va)) else 0.0

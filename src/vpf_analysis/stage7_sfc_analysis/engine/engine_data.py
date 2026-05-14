@@ -7,7 +7,7 @@ import numpy as np
 # GE9X-105B1A (Boeing 777X) — public data
 GE9X_PARAMS: dict = {
     "name": "GE9X-105B1A",
-    "BPR": 15.0,             # UHBPR GTF target (enabled by VPF + gearbox)
+    "BPR": 15.0,             # UHBPR target (enabled by VPF)
     "OPR": 60.0,
     "T4_cruise": 1450.0,    # K — TET in cruise
     "T4_takeoff": 1800.0,   # K — TET at takeoff

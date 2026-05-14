@@ -1,8 +1,8 @@
-# Análisis de un Fan de Paso Variable como Habilitador de Ciclos UHBPR Engranados (GTF)
+# Fan de Paso Variable (VPF) como Habilitador de Ciclos UHBPR
 
-Python pipeline for the aerodynamic and propulsion analysis of a variable-pitch fan (VPF) as an enabling technology for Ultra-High Bypass Ratio (UHBPR) Geared Turbofan (GTF) engines. The project covers airfoil selection, XFOIL simulations, compressibility corrections, pitch kinematics with cascade and rotational effects, reverse-thrust mechanism weight, and specific fuel consumption (SFC) impact estimation.
+Python pipeline for the aerodynamic and propulsion analysis of a variable-pitch fan (VPF) as an enabling technology for Ultra-High Bypass Ratio (UHBPR) turbofan engines. The project covers airfoil selection, XFOIL simulations, compressibility corrections, pitch kinematics with cascade and rotational effects, reverse-thrust mechanism weight, and specific fuel consumption (SFC) impact estimation.
 
-The reference configuration models a UHBPR/GTF-class engine: BPR=15, fan pressure ratio FPR=1.30, 4.16 m fan diameter, planetary gearbox PGB=2.5, and 16 wide-chord blades, with operating points for takeoff, climb, cruise, descent, and hold.
+The study compares two configurations: a BPR≈10 direct-drive fan (GE9X-class baseline, fan diameter 3.40 m) and a BPR=15 UHBPR fan (enabled by VPF, fan diameter 4.16 m), both with FPR=1.30 and 16 wide-chord blades. VPF alone improves SFC by optimising blade pitch at each flight condition; VPF combined with a higher bypass ratio (GTF architecture) achieves further gains through improved propulsive efficiency.
 
 A fan pressure ratio of 1.30 demands very small blade incidence angles across the operating envelope. Without variable pitch, the reduced FPR required for UHBPR cycles forces the fan to operate close to stall during takeoff — the blade angle optimised for cruise leaves insufficient margin at high thrust. The VPF resolves this conflict: it adjusts blade pitch in real time so the fan operates at peak efficiency and safe stall margin at every flight condition, making FPR=1.30 viable without the stall-margin penalties that would otherwise limit UHBPR cycle performance.
 

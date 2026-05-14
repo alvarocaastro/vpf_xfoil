@@ -45,7 +45,7 @@ def compute_bypass_sensitivity_factor(bypass_ratio: float) -> float:
 
     For a turbofan, the specific thrust is shared between bypass and core streams.
     In the high-BPR limit the fan dominates: as BPR → ∞, k → 1 (all thrust from fan).
-    For BPR=15 (UHBPR/GTF): k = 15/16 = 0.9375.
+    For BPR=15 (UHBPR): k = 15/16 = 0.9375.
     Source: Saravanamuttoo et al. (2017), Gas Turbine Theory, §5.14.
     """
     if bypass_ratio <= 0:

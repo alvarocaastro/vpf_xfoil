@@ -399,17 +399,6 @@ Current detected twist values:
 | Interpretation | Higher bars indicate greater loss from not matching each section's optimum. |
 | Limitations | Loss is derived from corrected/3D modeled polars, not experimental fan maps. |
 
-#### `phi_psi_operating_map.png`
-
-| Field | Description |
-|---|---|
-| Generated in | `_fig_phi_psi_map()` |
-| Data used | `stage_loading.csv` and `stage_loading_single_actuator.csv`. |
-| Visual content | Flow coefficient `phi` versus work coefficient `psi`, with design zone and ideal/actual points. |
-| Purpose | Stage-loading diagnosis. |
-| Interpretation | Points outside the fixed-pitch design zone may represent a VPF trade-off rather than an error. |
-| Limitations | The design zone is an interpretive reference, not a hard pass/fail criterion. |
-
 #### `work_distribution.png`
 
 | Field | Description |

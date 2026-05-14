@@ -31,8 +31,8 @@ Stage 5 performs:
 1. Load raw and corrected aerodynamic polars.
 2. Compute cascade corrections using Weinig and Carter logic.
 3. Apply Weinig-corrected lift to working polars.
-4. Compute 3D rotational corrections using Snel.
-5. Compute an alternative Du-Selig correction for comparison.
+4. Compute 3D rotational corrections using Du-Selig (primary).
+5. Compute Snel correction for comparison.
 6. Build 3D polar maps.
 7. Compute 3D optimum incidence and `CL/CD`.
 8. Compute pitch adjustment relative to cruise.
@@ -172,15 +172,6 @@ It demonstrates:
 
 - which non-cruise cases lose most efficiency due to shared pitch command;
 - whether compromise loss is small or design-critical.
-
-### `phi_psi_operating_map.png`
-
-Shows flow coefficient `phi` versus work coefficient `psi`, with ideal and single-actuator points.
-
-It demonstrates:
-
-- loading regime relative to a fixed-pitch design zone;
-- displacement caused by the single-actuator compromise.
 
 ### `work_distribution.png`
 

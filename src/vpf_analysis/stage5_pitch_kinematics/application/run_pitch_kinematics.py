@@ -959,7 +959,7 @@ def run_pitch_kinematics() -> None:
     axial_vels   = get_axial_velocities()
     rpm_map      = get_fan_rpm()
     gear_ratio   = get_gear_ratio()
-    # Fan ω = ω_LPT / gear_ratio (PGB decouples fan from LPT shaft)
+    # ω_fan = ω_shaft / gear_ratio (1.0 for direct-drive)
     omega_map    = {cond: r * (2.0 * math.pi / 60.0) / gear_ratio for cond, r in rpm_map.items()}
     omega_cruise = omega_map.get("cruise", next(iter(omega_map.values())))
 

@@ -168,7 +168,7 @@ def _plot_efficiency_gain_map(
                       label="BPR 10 + VPF",
                       color="#4477AA", edgecolor="white", linewidth=0.5, zorder=3)
     bars_b15 = ax.bar(x + w, gain_vpf_bpr15, w,
-                      label="BPR 15 + VPF (UHBPR/GTF)",
+                      label="BPR 15 + VPF (UHBPR)",
                       color="#228833", edgecolor="white", linewidth=0.5, zorder=3)
 
     # Reference bars are always 0 % — label them so the baseline is visible

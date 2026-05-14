@@ -120,7 +120,7 @@ def get_blade_geometry() -> dict[str, Any]:
 
 
 def get_gear_ratio() -> float:
-    """Gearbox planetary gear ratio from engine_parameters.yaml (1.0 = direct drive)."""
+    """Shaft-to-fan speed ratio from engine_parameters.yaml (1.0 = direct-drive)."""
     engine_cfg_path = base_config.ROOT_DIR / "config" / "engine_parameters.yaml"
     with engine_cfg_path.open("r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)

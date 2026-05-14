@@ -44,8 +44,7 @@ def compute_pitch_map(
     rpm : LPT rotational speed [RPM] per flight condition
     radii : dict section_name -> radius [m]
     axial_velocities : dict flight_name -> axial velocity Va [m/s]
-    gear_ratio : planetary gearbox ratio (fan RPM = LPT RPM / gear_ratio).
-        Set to 1.0 for direct-drive fans (default).
+    gear_ratio : shaft-to-fan speed ratio (1.0 = direct-drive, fan RPM = shaft RPM).
 
     Returns
     -------
@@ -60,7 +59,7 @@ def compute_pitch_map(
         va = axial_velocities.get(flight)
         if r is None or va is None:
             continue
-        # Fan angular velocity accounts for PGB: ω_fan = ω_LPT / gear_ratio
+        # ω_fan = ω_shaft / gear_ratio (1.0 for direct-drive)
         omega = 2.0 * math.pi * rpm.get(flight, next(iter(rpm.values()))) / (60.0 * gear_ratio)
         u = omega * r                            # fan blade speed [m/s]
         phi_rad = math.atan2(va, u)              # flow angle [rad]
