@@ -141,18 +141,18 @@ Run targeted tests for focused changes:
 | Column resolution | Downstream stages rely on expected names and priority order. |
 | Stage 5 section ordering | Many plots and calculations assume root, mid-span, tip. |
 | Stage 7 SFC caps | Small changes can strongly affect headline SFC results. |
-| Reverse thrust BEM support | Present but not fully integrated into the main Stage 6 workflow. |
+| Stage 7 SFC caps | Small changes to tau or EPSILON_CAP can strongly affect per-section breakdown and headline SFC results. |
 
 ## Detected Technical Debt
 
 | Item | Impact | Suggested Improvement |
 |---|---|---|
-| `scipy` used but not declared | Full reverse BEM support may fail. | Add `scipy` if the BEM path is officially supported, or remove the dependency. |
+| `scipy` present in environment but not declared in deps | If environment changes, imports may silently fail. | Add `scipy` to `pyproject.toml` or confirm it is not used after BEM removal. |
 | Fixed condition and section order in several modules | Makes extension harder. | Centralize ordering from settings and update plots dynamically. |
 | `results/` is not versioned | Reproducibility depends on local files. | Add result archiving workflow or checksums for report snapshots. |
 | Stage numbering mismatch | Resolved: CLI options now use analysis stages 1 through 7. | Keep documentation and CLI help aligned with `run_analysis.py`. |
 | Root README may drift from current outputs | Conflicting docs can confuse users. | Make `docs/` the authoritative documentation set or update README after major changes. |
-| Reverse-thrust aerodynamic model is partial in main flow | Could be misread as validated reverse thrust prediction. | Clearly label Stage 6 as mechanism-weight analysis unless BEM is validated. |
+| Stage 6 aerodynamic prediction intentionally absent | Stage 6 reports weight and theoretical SFC penalty only. No BEM simulation. | See design_decisions.md §9 for rationale. Do not add aerodynamic Stage 6 prediction without validated post-stall polars. |
 
 ## Future Improvements
 

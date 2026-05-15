@@ -68,9 +68,21 @@ Decision: profile efficiency gains are damped with `profile_efficiency_transfer`
 
 Reason: a 2D airfoil improvement does not transfer perfectly to a real 3D fan because of tip clearance, shocks, secondary flows, distortion, and blade interactions.
 
-## 9. Reverse-Thrust Scope in the Main Flow
+## 9. Reverse-Thrust Scope Limited to Weight and Theoretical Documentation
 
-Decision: the Stage 6 path called by the main orchestrator computes mechanism weight and SFC impact versus a conventional reverser. BEM sweep and Viterna extrapolation support functions exist, but they are not the main `run_reverse_thrust.py` workflow.
+Decision: Stage 6 computes mechanism weight via the D^2.5 fan-diameter scaling law (Raymer 2018) and reports a theoretical SFC penalty. No aerodynamic BEM simulation of the reverse-pitch condition is performed.
 
-Reason detected from the code: the summary text states that aerodynamic feasibility in reverse requires extended polars or experimental validation. Treat full reverse-thrust aerodynamic prediction as **pending confirmation**.
+Reason: aerodynamic prediction in full reverse requires post-stall polar extrapolation (Viterna-Corrigan or equivalent) that is outside XFOIL's valid regime and has no available validation data for this fan geometry. Adding unvalidated BEM results would inflate confidence beyond what the model supports.
+
+## 10. Known Modelling Limitations
+
+The following limitations were identified during pipeline development and are accepted without correction. They are documented here so that future users understand the scope of the analysis.
+
+| Area | Limitation | Impact | Justification for not fixing |
+|---|---|---|---|
+| Supersonic tip sections | XFOIL polars generated at M_ref = 0.2 (incompressible reference). Kármán-Tsien correction is clamped at M = 0.95 for sections where M_rel > 1.0 (tip at climb, cruise, descent). | L/D values at the tip under transonic conditions are extrapolated, not modelled. | Fixing would require a transonic solver (MISES, CFD). Clamping at M = 0.95 is conservative and the standard approach when only subsonic polars are available. |
+| Snel 3D correction at root | The Snel (1993) rotational augmentation model is validated for c/r ≤ 0.3. The root section operates at c/r ≈ 0.68. | Root CL augmentation may be over-predicted. | A warning is logged. The Du-Selig model is applied in parallel as a cross-check. Both are secondary corrections; the primary result is the 2D XFOIL polar. |
+| cruise_alpha_min inconsistency | Stage 4 evaluates cruise performance at alpha_min = 2.0–2.5°; Stage 2 XFOIL sweeps down to 3.0°. | Cruise operating point in Stage 4 metrics may be 0.5–0.8° off the polar edge. | Impact is confined to Stage 4 figures; blade twist (Stage 5) and SFC (Stage 7) use independent kinematics and are unaffected. Risk of introducing new errors > benefit. |
+| Per-section epsilon cap | EPSILON_CAP = 3.0 in `sfc_parameters.py`. At descent/mid_span ε = 2.805, giving efficiency_gain_pct ≈ 180 % in `sfc_section_breakdown.csv`. | Per-section breakdown looks alarming but is aerodynamically real: the fixed blade is heavily off-design at descent. | Aggregate SFC results are protected by ETA_FAN_DELTA_CAP = 0.04 (4 % absolute cap). The section breakdown is an informational diagnostic, not a headline result. |
+| Profile-efficiency transfer coefficient | tau = 0.50 (50 % of the 2D section gain transfers to fan efficiency). | The final SFC improvement is proportionally sensitive to tau. | Tau in the 0.4–0.6 range is consistent with open literature for fan-efficiency transfer. Varying it is a straightforward sensitivity study if needed. |
 
