@@ -61,7 +61,7 @@ def generate_stage1_summary(stage_dir: Path, selected_airfoil_name: str) -> str:
     lines += [
         f"Selected airfoil : {selected_airfoil_name}",
         f"Alpha range      : {alpha['min']:.1f}° → {alpha['max']:.1f}° (step {alpha['step']:.2f}°)",
-        "Scoring criteria : (CL/CD)_2nd·1.20  +  robustness_LD·0.35  +  stability_margin·0.80",
+        "Scoring criteria : (CL/CD)_2nd·0.75  +  robustness_LD·0.80  +  stability_margin·1.00  (sum=2.55, min-max normalised)",
         "  (normalised per condition, then mission-weighted)",
         "",
         "Mission conditions evaluated:",
