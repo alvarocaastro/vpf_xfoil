@@ -70,53 +70,23 @@ fleet_co2:
   flights_per_day_per_aircraft: 2      # Typical medium/long-haul utilisation
 
 # ── Reverse thrust (Stage 6) ──────────────────────────────────────────────────
-# VPF achieves reverse thrust by rotating blade pitch to negative angles while
-# the fan keeps spinning in the same direction. No blocker doors or cascade ducts.
+# Stage 6 computes mechanism weight and SFC cruise penalty only.
+# No aerodynamic sweep is performed (requires validated post-stall polars).
+# See docs/design_decisions.md §9 for rationale.
 reverse_thrust:
-  n1_fraction: 0.65          # Fan speed during reverse as fraction of design N1
-  va_landing_m_s: 60.0       # Mean axial airspeed over ground roll [m/s]
-                              # (reversers engaged at ~75 m/s, averaged to ~60 m/s)
-
-  # Pitch sweep range (Δβ relative to β_metal_cruise from Stage 5)
-  delta_beta_min_deg: -25.0  # Most negative offset
-  delta_beta_max_deg:  -5.0  # Least negative (near feathering)
-  delta_beta_steps: 41       # Number of sweep points
-
-  # Performance criterion
-  target_thrust_fraction: 0.40  # Required: |T_rev| ≥ 40% of forward takeoff thrust
-
   # Mechanism weight — basis for Stage 7 SFC cruise penalty.
-  # VPF actuator (ring + pitch links + reinforced blade root): ~4% of engine dry weight.
-  # Conventional cascade reverser: cold-stream type on B777X ≈ 450 kg/engine.
   # Sources:
   #   engine_dry_weight_kg : EASA TCDS E.110 (GE9X-1B, rev. 10) — 8 276 kg (18 247 lb)
-  #   conventional_reverser: Boeing AMM / industry data for cold-stream reversers on
-  #                          UHBR fans ≈ 400–500 kg per engine; 450 kg chosen as central
-  #                          estimate. 450 / 8 276 = 0.054 → rounded to 0.057 for margin.
-  #                          Previous value of 0.10 (793 kg) overestimated by ~1.8×.
-  #   aircraft_L_D         : B777X cruise L/D ≈ 20–21 (GE Aviation & Boeing public data).
-  #                          Central value 20.5 used; previous value 18.0 was too conservative.
+  #   conventional_reverser: full cascade TRU system (blocker doors, D-duct, actuator
+  #                          fairings) ≈ 9.5 % of engine dry weight (≈ 786 kg/engine).
+  #                          Ref: Howe (2000), Aircraft Conceptual Design Synthesis;
+  #                               Leylekian et al. (2014) nacelle weight breakdown.
+  #   aircraft_L_D         : B777X cruise L/D ≈ 20–21 (GE/Boeing public data).
   engine_dry_weight_kg: 8276.0          # GE9X-1B dry weight per engine [kg] — EASA TCDS E.110
-  mechanism_weight_fraction: 0.04       # VPF pitch-change mechanism (ring + links + blade root)
-                                        # ≈ 4 % of engine dry weight
-  conventional_reverser_fraction: 0.095 # Cascade TRU elimination credit: ~30 % nacelle weight
-                                        # ≈ 9.5 % of engine dry weight (≈ 786 kg/engine).
-                                        # Previous value 0.057 applied only to cold-stream duct;
-                                        # UHBPR cascade also includes blocker doors, D-duct, and
-                                        # actuator fairings — revised to full TRU system weight.
-                                        # Ref: Howe (2000), Aircraft Conceptual Design Synthesis;
-                                        #      Leylekian et al. (2014) nacelle weight breakdown.
-  aircraft_L_D: 20.5                    # B777X cruise lift-to-drag ratio (GE/Boeing public data)
+  mechanism_weight_fraction: 0.04       # VPF pitch-change mechanism ≈ 4 % of engine dry weight
+  conventional_reverser_fraction: 0.095 # Cascade TRU elimination credit ≈ 9.5 % of engine dry weight
+  aircraft_L_D: 20.5                    # B777X cruise lift-to-drag ratio
 
-  # Fan diameter scaling — D^2.5 mechanism weight law (Raymer, 2018; Roskam Vol. V).
-  # fan_diameter_ratio = D_uhbpr / D_ref = sqrt(BPR_uhbpr / BPR_ref) = sqrt(15/10) ≈ 1.224
-  # d_scale = fan_diameter_ratio^2.5 applied directly in reverse_thrust_core.py.
-  fan_diameter_ratio: 1.224            # D_uhbpr/D_ref = sqrt(15/10); ref BPR≈10, target BPR=15
-
-  # Reverse-thrust effectiveness by mechanism type
-  # VPF "through-feather": blade passes through flat pitch into negative pitch angles.
-  # Achieves higher effectiveness than cascade "flat-feather" (limited by blocker geometry).
-  through_feather_effectiveness_max: 0.40   # Upper bound: 35–40 % of forward takeoff thrust
-  through_feather_effectiveness_min: 0.35   # Lower bound
-  flat_feather_effectiveness_max: 0.30      # Cascade TRU upper bound: 20–30 %
-  flat_feather_effectiveness_min: 0.20      # Cascade TRU lower bound
+  # Fan diameter scaling — D^2.5 law (Raymer 2018; Roskam Vol. V).
+  # fan_diameter_ratio = sqrt(BPR_uhbpr / BPR_ref) = sqrt(15/10) ≈ 1.224
+  fan_diameter_ratio: 1.224            # D_uhbpr/D_ref; ref BPR≈10, target BPR=15

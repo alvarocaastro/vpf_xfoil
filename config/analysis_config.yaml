@@ -4,11 +4,10 @@
 # Reference Mach number for XFOIL simulations (incompressible baseline)
 reference_mach: 0.2
 
-# Target Mach numbers for compressibility correction (per flight condition)
-# Values represent M_rel at mid-span section (W_rel/a), the physically correct
-# Mach for 2D airfoil compressibility corrections on a rotating fan blade.
+# Condition-level Mach numbers (mid-span M_rel) used by Stage 5 kinematics and
+# the pipeline summary. Values represent W_rel/a at mid-span.
 # Derived from fan_geometry: M_tip_design × r_rel_mid / sqrt(r_rel_mid² + phi²)
-# Kept for backward-compatibility; per-section values below supersede these.
+# Per-section values in target_mach_per_section are used by Stage 3 corrections.
 target_mach:
   takeoff: 0.90   # W_mid/a = 305/340 = 0.90 (ISA SL, phi=0.429, M_tip=1.234)
   climb:   0.86   # W_mid/a = 278/322 = 0.86 (FL150, phi=0.396, M_tip=1.217)
