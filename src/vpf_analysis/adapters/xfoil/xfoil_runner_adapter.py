@@ -24,11 +24,18 @@ class XfoilRunnerAdapter:
         final_analysis: bool = True,
     ) -> None:
         cfg = get_settings().xfoil
-        self._timeout = timeout_override if timeout_override is not None else (cfg.TIMEOUT_FINAL_S if final_analysis else cfg.TIMEOUT_SELECTION_S)
-        self._max_retries = max_retries_override if max_retries_override is not None else cfg.MAX_RETRIES
+        self._timeout = (
+            timeout_override
+            if timeout_override is not None
+            else (cfg.TIMEOUT_FINAL_S if final_analysis else cfg.TIMEOUT_SELECTION_S)
+        )
+        self._max_retries = (
+            max_retries_override
+            if max_retries_override is not None
+            else cfg.MAX_RETRIES
+        )
 
     def run_polar(self, airfoil_dat: Path, condition: SimulationCondition, output_file: Path) -> XfoilPolarResult:
-        """Compute the polar for the given condition."""
         result = run_xfoil_polar(
             XfoilPolarRequest(
                 airfoil_dat=airfoil_dat,
