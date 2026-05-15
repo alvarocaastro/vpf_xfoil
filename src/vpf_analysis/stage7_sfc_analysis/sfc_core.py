@@ -436,7 +436,7 @@ def _compute_section_result(condition: str, row: pd.Series, tau: float) -> SfcSe
 
     epsilon_eff = min(epsilon, EPSILON_CAP)
     delta_eta_profile = (epsilon_eff - 1.0) * tau
-    efficiency_gain_pct = (epsilon - 1.0) * 100.0
+    efficiency_gain_pct = (epsilon_eff - 1.0) * 100.0
 
     return SfcSectionResult(
         condition=condition,
@@ -528,7 +528,7 @@ def _compute_section_result_stage5(
 
     epsilon_eff = min(epsilon, EPSILON_CAP)
     delta_eta_profile = (epsilon_eff - 1.0) * tau
-    efficiency_gain_pct = (epsilon - 1.0) * 100.0
+    efficiency_gain_pct = (epsilon_eff - 1.0) * 100.0
 
     return SfcSectionResult(
         condition=condition,
