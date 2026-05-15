@@ -71,22 +71,15 @@ class TestAirfoilReader:
         """Verify that coordinates are loaded correctly from .dat file."""
         df = read_airfoil_dat(sample_airfoil_dat)
 
-        # Should have x and y columns
-        assert "x" in df.columns
-        assert "y" in df.columns
-
-        # Should have data
-        assert len(df) > 0
+        assert list(df.columns) == ["x", "y"]
+        assert len(df) == 131  # naca_0012.dat has 131 coordinate rows
 
     def test_number_of_points_is_reasonable(
         self, sample_airfoil_dat: Path
     ) -> None:
-        """Verify that the number of points is reasonable."""
+        """naca_0012.dat has exactly 131 coordinate rows."""
         df = read_airfoil_dat(sample_airfoil_dat)
-
-        # Airfoil files typically have 50-200 points
-        assert len(df) >= 50, "Too few points in airfoil file"
-        assert len(df) <= 500, "Too many points in airfoil file"
+        assert len(df) == 131
 
     def test_x_coordinates_within_valid_range(
         self, sample_airfoil_dat: Path
@@ -97,17 +90,6 @@ class TestAirfoilReader:
         # X coordinates should be between 0 and 1 (normalized chord)
         assert (df["x"] >= 0.0).all(), "X coordinates should be >= 0"
         assert (df["x"] <= 1.0).all(), "X coordinates should be <= 1"
-
-    def test_parser_does_not_crash_for_valid_file(
-        self, sample_airfoil_dat: Path
-    ) -> None:
-        """Verify that parser does not crash for valid .dat files."""
-        # Should not raise any exceptions
-        df = read_airfoil_dat(sample_airfoil_dat)
-
-        # Should return a valid DataFrame
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) > 0
 
     def test_file_not_found_raises_error(self, tmp_path: Path) -> None:
         """Test that missing file raises FileNotFoundError."""

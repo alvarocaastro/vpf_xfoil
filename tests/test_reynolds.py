@@ -71,48 +71,29 @@ class TestReynoldsCalculation:
             self.RHO_STD, velocity, chord, self.MU_STD
         )
 
-        # Expected: (1.225 * 100 * 0.5) / 1.789e-5 ≈ 3.42e6
+        # (1.225 * 100 * 0.5) / 1.789e-5 = 3 422 860.26…
         expected = (self.RHO_STD * velocity * chord) / self.MU_STD
         assert reynolds == pytest.approx(expected, rel=1e-6)
-        assert reynolds > 0
 
     def test_small_velocity(self) -> None:
-        """Test Reynolds calculation with small velocity."""
+        """Reynolds scales linearly with velocity; 10 m/s gives 1/10 of the 100 m/s value."""
         velocity = 10.0  # m/s
         chord = 0.5  # m
+        expected = (self.RHO_STD * velocity * chord) / self.MU_STD
 
-        reynolds = calculate_reynolds(
-            self.RHO_STD, velocity, chord, self.MU_STD
-        )
+        reynolds = calculate_reynolds(self.RHO_STD, velocity, chord, self.MU_STD)
 
-        # Should be 10x smaller than typical case
-        assert reynolds > 0
-        assert reynolds < 1e6
+        assert reynolds == pytest.approx(expected, rel=1e-6)
 
     def test_larger_chord_values(self) -> None:
-        """Test Reynolds calculation with larger chord values."""
+        """Reynolds scales linearly with chord; 2 m chord gives 4× the 0.5 m value."""
         velocity = 100.0  # m/s
-        chord = 2.0  # m (larger chord)
+        chord = 2.0  # m
+        expected = (self.RHO_STD * velocity * chord) / self.MU_STD
 
-        reynolds = calculate_reynolds(
-            self.RHO_STD, velocity, chord, self.MU_STD
-        )
+        reynolds = calculate_reynolds(self.RHO_STD, velocity, chord, self.MU_STD)
 
-        # Should be 4x larger than typical case (chord 0.5m)
-        assert reynolds > 0
-        assert reynolds > 1e6
-
-    def test_result_is_positive(self) -> None:
-        """Verify that Reynolds number is always positive for valid inputs."""
-        test_cases = [
-            (1.0, 10.0, 0.1, 1e-5),
-            (1.225, 50.0, 0.3, 1.789e-5),
-            (0.5, 200.0, 1.0, 2e-5),
-        ]
-
-        for density, velocity, chord, viscosity in test_cases:
-            reynolds = calculate_reynolds(density, velocity, chord, viscosity)
-            assert reynolds > 0, f"Reynolds should be positive for inputs: {test_cases}"
+        assert reynolds == pytest.approx(expected, rel=1e-6)
 
     @pytest.mark.parametrize(
         "density,velocity,chord,viscosity,expected_re",

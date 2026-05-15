@@ -58,9 +58,7 @@ class TestEfficiencyCalculation:
 
         efficiency = calculate_efficiency(cl, cd)
 
-        # Should handle small values correctly
-        assert efficiency > 0
-        assert efficiency == pytest.approx(cl / cd, abs=1e-6)
+        assert efficiency == pytest.approx(500.0, abs=1e-6)
 
     def test_division_by_zero_returns_nan(self) -> None:
         """Test that division by zero (CD=0) returns NaN."""
@@ -97,18 +95,13 @@ class TestEfficiencyCalculation:
         assert efficiency == pytest.approx(expected_efficiency, abs=1e-6)
 
     def test_efficiency_in_dataframe(self, sample_polar_data: pd.DataFrame) -> None:
-        """Test efficiency calculation in a DataFrame context."""
+        """Efficiency column must equal CL/CD element-wise for all rows."""
         df = sample_polar_data.copy()
 
-        # Calculate efficiency
         df["efficiency"] = df.apply(
             lambda row: calculate_efficiency(row["cl"], row["cd"]), axis=1
         )
 
-        # Verify all efficiencies are positive
-        assert (df["efficiency"] > 0).all()
-
-        # Verify efficiency matches CL/CD
         expected_efficiency = df["cl"] / df["cd"]
         assert df["efficiency"].equals(expected_efficiency)
 

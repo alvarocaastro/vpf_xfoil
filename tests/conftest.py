@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Generator
-
 import pandas as pd
 import pytest
 
@@ -17,7 +15,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from vpf_analysis.core.domain.airfoil import Airfoil
-from vpf_analysis.core.domain.simulation_condition import SimulationCondition
 
 
 @pytest.fixture
@@ -52,20 +49,6 @@ def sample_airfoil(sample_airfoil_dat: Path) -> Airfoil:
 
 
 @pytest.fixture
-def sample_simulation_condition() -> SimulationCondition:
-    """Create a sample simulation condition."""
-    return SimulationCondition(
-        name="Test",
-        mach_rel=0.2,
-        reynolds=3.0e6,
-        alpha_min=-5.0,
-        alpha_max=20.0,
-        alpha_step=0.5,
-        ncrit=7.0,
-    )
-
-
-@pytest.fixture
 def sample_polar_data() -> pd.DataFrame:
     """Create sample polar data for testing."""
     return pd.DataFrame(
@@ -77,9 +60,3 @@ def sample_polar_data() -> pd.DataFrame:
             "ld": [10.0, 15.0, 20.0, 18.0, 13.75],
         }
     )
-
-
-@pytest.fixture
-def empty_polar_data() -> pd.DataFrame:
-    """Create an empty polar DataFrame."""
-    return pd.DataFrame(columns=["alpha", "cl", "cd", "cm", "ld"])
