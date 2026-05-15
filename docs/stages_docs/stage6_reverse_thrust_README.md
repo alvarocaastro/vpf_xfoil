@@ -47,11 +47,11 @@ The current main Stage 6 workflow:
 
 | Metric | Value | Meaning |
 |---|---:|---|
-| `mechanism_weight_kg` | 634.4 kg | Estimated VPF mechanism weight for both engines. |
-| `conventional_reverser_weight_kg` | 1586.0 kg | Estimated conventional cascade reverser weight for both engines. |
-| `weight_saving_vs_conventional_kg` | 951.6 kg | Estimated weight saving versus conventional reverser. |
-| `sfc_cruise_penalty_pct` | 0.6586% | Penalty relative to no reverser. |
-| `sfc_benefit_vs_conventional_pct` | 0.9879% | Benefit relative to conventional reverser. |
+| `mechanism_weight_kg` | 1097.4 kg | Estimated VPF mechanism weight for both engines. |
+| `conventional_reverser_weight_kg` | 2606.3 kg | Estimated conventional cascade reverser (full TRU system) for both engines. |
+| `weight_saving_vs_conventional_kg` | 1508.9 kg | Estimated weight saving versus conventional reverser. |
+| `sfc_cruise_penalty_pct` | 0.225% | Penalty relative to no reverser. |
+| `sfc_benefit_vs_conventional_pct` | 0.309% | Benefit relative to conventional reverser. |
 
 Interpretation:
 
@@ -82,7 +82,7 @@ It demonstrates:
 - This stage is primarily a **weight and SFC trade study**.
 - It does not validate whether the VPF can aerodynamically generate the required reverse thrust.
 - The summary explicitly notes that reverse-thrust aerodynamic feasibility would need extended polar data or experimental validation.
-- `reverse_thrust_core.py` contains BEM and Viterna-Corrigan support functions, but they are not the current main Stage 6 output path.
+- Stage 6 does not validate whether the VPF can aerodynamically generate the required reverse thrust — that would require post-stall polar data or experimental validation (see design_decisions.md §9).
 
 ## Model Restrictions
 
@@ -92,7 +92,7 @@ It demonstrates:
 | No detailed structural model | Hardware mass is estimated parametrically. |
 | No validated reverse-flow aerodynamics | Reverse thrust force is not proven by this stage. |
 | Aircraft L/D conversion is simplified | SFC penalty from weight is estimated through equivalent cruise thrust. |
-| Optional BEM path is not fully productionized | It references `scipy` and requires careful validation. |
+| No validated reverse-flow aerodynamics | Reverse thrust force is not proven by this stage. |
 
 ## Downstream Role
 

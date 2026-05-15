@@ -91,16 +91,6 @@ The root section receives the strongest modeled rotational lift correction becau
 
 ## Figure Interpretation
 
-### `cascade_solidity_profile.png`
-
-Shows solidity versus radius and labels flow-regime bands.
-
-It demonstrates:
-
-- root has high solidity;
-- tip has lower solidity;
-- cascade effects are not uniform along the blade span.
-
 ### `cascade_cl_correction.png`
 
 Compares isolated 2D `CL` with cascade-corrected `CL`.
@@ -172,15 +162,6 @@ It demonstrates:
 
 - which non-cruise cases lose most efficiency due to shared pitch command;
 - whether compromise loss is small or design-critical.
-
-### `work_distribution.png`
-
-Shows specific work by condition and section.
-
-It demonstrates:
-
-- which radial sections perform more specific work;
-- how work distribution changes by flight condition.
 
 ### `loading_profile_spanwise.png`
 
