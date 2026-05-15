@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List
 
 
 @dataclass(frozen=True)
@@ -31,12 +30,6 @@ class PhysicsConstants:
     # Cascade corrections
     CARTER_M_NACA6: float = 0.23
     """Carter's rule m coefficient for NACA 6-series (a/c = 0.5)."""
-
-    WEINIG_SIGMA_MIN: float = 0.10
-    """Minimum solidity for Weinig factor validity."""
-
-    WEINIG_SIGMA_MAX: float = 2.50
-    """Maximum solidity for Weinig factor validity."""
 
     # 3D rotational corrections
     SNEL_A: float = 3.0
@@ -63,10 +56,8 @@ class PhysicsConstants:
     PSI_DESIGN_MIN: float = 0.25
     PSI_DESIGN_MAX: float = 0.50
 
-    # Minimum quality of a valid polar
+    # Minimum number of rows for a valid polar
     POLAR_MIN_ROWS: int = 10
-    POLAR_CL_MAX_PHYSICAL: float = 2.5
-    POLAR_CD_MIN_PHYSICAL: float = 1e-6
 
     # Physical operating ranges
     REYNOLDS_MIN: float = 1e4
@@ -84,13 +75,6 @@ class XfoilSettings:
     TIMEOUT_FINAL_S: float = 180.0
     MAX_RETRIES: int = 3
     RETRY_WAIT_S: float = 1.0
-    CONVERGENCE_WARN_KEYWORDS: tuple = (
-        "VISCAL",
-        "Convergence failed",
-        "RMSBL",
-        "MRCHDU",
-        "MRCHD",
-    )
 
 
 @dataclass
@@ -110,15 +94,15 @@ class FanGeometry:
         radii_m            — absolute blade radii [m] per section
         axial_velocity_m_s — axial velocity Va [m/s] per condition
     """
-    M_tip: Dict[str, float]
-    phi_tip: Dict[str, float]
-    r_rel: Dict[str, float]
+    M_tip: dict[str, float]
+    phi_tip: dict[str, float]
+    r_rel: dict[str, float]
     r_tip_m: float
     hub_to_tip_ratio: float
-    altitude_m: Dict[str, float]
-    omega_rad_s: Dict[str, float]
-    radii_m: Dict[str, float]
-    axial_velocity_m_s: Dict[str, float]
+    altitude_m: dict[str, float]
+    omega_rad_s: dict[str, float]
+    radii_m: dict[str, float]
+    axial_velocity_m_s: dict[str, float]
 
 
 @dataclass
@@ -130,7 +114,7 @@ class BladeGeometry:
     (e.g. BEM thrust integration in Stage 6).
     """
     num_blades: int
-    solidity: Dict[str, float]
+    solidity: dict[str, float]
     theta_camber_deg: float
 
 
@@ -165,17 +149,17 @@ class PipelineSettings:
     physics: PhysicsConstants = field(default_factory=PhysicsConstants)
     xfoil: XfoilSettings = field(default_factory=XfoilSettings)
 
-    flight_conditions: List[str] = field(default_factory=list)
-    blade_sections: List[str] = field(default_factory=list)
+    flight_conditions: list[str] = field(default_factory=list)
+    blade_sections: list[str] = field(default_factory=list)
 
-    reynolds_table: Dict[str, Dict[str, float]] = field(default_factory=dict)
-    ncrit_table: Dict[str, float] = field(default_factory=dict)
-    target_mach: Dict[str, float] = field(default_factory=dict)
+    reynolds_table: dict[str, dict[str, float]] = field(default_factory=dict)
+    ncrit_table: dict[str, float] = field(default_factory=dict)
+    target_mach: dict[str, float] = field(default_factory=dict)
     # Per-section relative Mach numbers: {condition: {section: M_rel}}.
     # Supersonic sections (M_rel >= 1.0) are skipped in KT correction.
     # Populated from analysis_config.yaml target_mach_per_section; empty dict means fallback
     # to condition-level target_mach.
-    target_mach_per_section: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    target_mach_per_section: dict[str, dict[str, float]] = field(default_factory=dict)
     reference_mach: float = 0.2
 
     alpha_min: float = -5.0
@@ -189,7 +173,7 @@ class PipelineSettings:
 
     # Mission-weighted conditions evaluated during airfoil selection (Stage 1).
     # Populated by settings.py from analysis_config.yaml selection.conditions[].
-    selection_conditions: List[ResolvedSelectionCondition] = field(default_factory=list)
+    selection_conditions: list[ResolvedSelectionCondition] = field(default_factory=list)
 
     fan: FanGeometry = field(default_factory=lambda: FanGeometry(
         M_tip={}, phi_tip={}, r_rel={}, r_tip_m=1.70,
@@ -206,7 +190,7 @@ class PipelineSettings:
     # Per-section minimum alpha for peak search at the cruise (design) condition.
     # Wave drag at M=0.93 shifts the polar peak structure; a lower alpha_min than
     # the global ALPHA_MIN_OPT_DEG is needed to capture the stabilised operating point.
-    cruise_alpha_min: Dict[str, float] = field(default_factory=lambda: {
+    cruise_alpha_min: dict[str, float] = field(default_factory=lambda: {
         "root": 2.5, "mid_span": 2.2, "tip": 2.0,
     })
 
